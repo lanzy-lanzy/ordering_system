@@ -1,0 +1,370 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Categories - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Categories{% endblock page_title %}
+{% block page_subtitle %}Manage your menu categories{% endblock page_subtitle %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div class="relative">
+        <input type="text" id="search-categories" placeholder="Search categories..."
+            class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold pl-10">
+        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+    </div>
+    <button id="add-category-btn" class="btn-primary px-4 py-2 rounded-lg text-sm font-bold">
+        <i class="fas fa-plus mr-2"></i>Add Category
+    </button>
+</div>
+
+<!-- Add Category Modal -->
+<div id="add-category-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Add New Category</h3>
+            <button id="close-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="category-form" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="category-name" class="block text-white font-medium mb-2">Category Name</label>
+                <input type="text" id="category-name" name="name" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+            </div>
+            <div class="mb-4">
+                <label for="category-description" class="block text-white font-medium mb-2">Description</label>
+                <textarea id="category-description" name="description" rows="3"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="category-image" class="block text-white font-medium mb-2">Image (Optional)</label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="category-image" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-gray-500 text-2xl mb-2"></i>
+                            <p class="text-sm text-gray-400">
+                                <span class="font-medium">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500">PNG, JPG or WEBP (MAX. 2MB)</p>
+                        </div>
+                        <input id="category-image" name="image" type="file" class="hidden" accept="image/*" />
+                    </label>
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="is-active" name="is_active" checked
+                        class="w-4 h-4 text-food-gold bg-gray-800 border-gray-700 rounded focus:ring-food-gold">
+                    <label for="is-active" class="ml-2 text-white">Active</label>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="cancel-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                    Add Category
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Categories Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for category in categories %}
+    <div class="card p-6 shadow-lg border border-gray-800 hover:border-food-gold transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center">
+                {% if category.image %}
+                <img src="{{ category.image.url }}" alt="{{ category.name }}" class="w-12 h-12 rounded-lg object-cover mr-4">
+                {% else %}
+                <div class="w-12 h-12 rounded-lg bg-gray-700 mr-4 flex items-center justify-center">
+                    <i class="fas fa-list text-gray-500"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="text-white font-bold text-lg">{{ category.name }}</h3>
+                    <p class="text-gray-400 text-sm">{{ category.item_count }} items</p>
+                </div>
+            </div>
+            <div class="flex">
+                {% if category.is_active %}
+                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Active</span>
+                {% else %}
+                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Inactive</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if category.description %}
+        <p class="text-gray-400 text-sm mb-4">{{ category.description|truncatechars:100 }}</p>
+        {% endif %}
+
+        <div class="flex justify-between items-center">
+            <a href="#" class="text-food-gold hover:text-food-red transition duration-300 text-sm">
+                View Items <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+            <div class="flex space-x-2">
+                <button class="edit-category-btn text-gray-400 hover:text-food-gold transition duration-300"
+                        data-id="{{ category.id }}"
+                        data-name="{{ category.name }}"
+                        data-description="{{ category.description|default:'' }}"
+                        data-active="{{ category.is_active|yesno:'true,false' }}"
+                        title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="delete-category-btn text-gray-400 hover:text-red-500 transition duration-300"
+                        data-id="{{ category.id }}"
+                        data-name="{{ category.name }}"
+                        title="Delete">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full py-12 text-center text-gray-500">
+        <div class="flex flex-col items-center">
+            <i class="fas fa-list text-4xl mb-3"></i>
+            <p class="mb-2">No categories found</p>
+            <button id="empty-add-category-btn" class="text-food-gold hover:text-food-red transition duration-300">
+                Add your first category
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Edit Category Modal -->
+<div id="edit-category-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Edit Category</h3>
+            <button id="close-edit-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="edit-category-form" method="post" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="edit-category-name" class="block text-white font-medium mb-2">Category Name</label>
+                <input type="text" id="edit-category-name" name="name" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+            </div>
+            <div class="mb-4">
+                <label for="edit-category-description" class="block text-white font-medium mb-2">Description</label>
+                <textarea id="edit-category-description" name="description" rows="3"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
+            </div>
+            <div class="mb-4">
+                <label for="edit-category-image" class="block text-white font-medium mb-2">Image (Optional)</label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="edit-category-image" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-gray-500 text-2xl mb-2"></i>
+                            <p class="text-sm text-gray-400">
+                                <span class="font-medium">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500">PNG, JPG or WEBP (MAX. 2MB)</p>
+                        </div>
+                        <input id="edit-category-image" name="image" type="file" class="hidden" accept="image/*" />
+                    </label>
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="edit-is-active" name="is_active"
+                        class="w-4 h-4 text-food-gold bg-gray-800 border-gray-700 rounded focus:ring-food-gold">
+                    <label for="edit-is-active" class="ml-2 text-white">Active</label>
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="cancel-edit-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-category-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Confirm Deletion</h3>
+            <button id="close-delete-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <p class="text-gray-300 mb-6">Are you sure you want to delete <span id="delete-category-name" class="text-white font-semibold"></span>?</p>
+        <p class="text-gray-400 mb-6">If this category contains menu items, you'll be asked how to handle them.</p>
+        <div class="flex justify-end">
+            <button id="cancel-delete-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                Cancel
+            </button>
+            <a id="confirm-delete-btn" href="" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-300">
+                Continue
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal functionality
+        const addCategoryBtn = document.getElementById('add-category-btn');
+        const emptyAddCategoryBtn = document.getElementById('empty-add-category-btn');
+        const addCategoryModal = document.getElementById('add-category-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        function openModal() {
+            addCategoryModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            addCategoryModal.classList.add('hidden');
+        }
+
+        addCategoryBtn.addEventListener('click', openModal);
+        if (emptyAddCategoryBtn) {
+            emptyAddCategoryBtn.addEventListener('click', openModal);
+        }
+        closeModalBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+
+        // Search functionality
+        const searchInput = document.getElementById('search-categories');
+        const categoryCards = document.querySelectorAll('.card');
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+
+            categoryCards.forEach(card => {
+                const categoryName = card.querySelector('h3').textContent.toLowerCase();
+                if (categoryName.includes(searchTerm)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // Image preview
+        const imageInput = document.getElementById('category-image');
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const uploadArea = imageInput.parentElement;
+                    uploadArea.style.backgroundImage = `url(${e.target.result})`;
+                    uploadArea.style.backgroundSize = 'cover';
+                    uploadArea.style.backgroundPosition = 'center';
+                    uploadArea.querySelector('div').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Edit Category Modal
+        const editCategoryModal = document.getElementById('edit-category-modal');
+        const editCategoryForm = document.getElementById('edit-category-form');
+        const closeEditModalBtn = document.getElementById('close-edit-modal');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const editCategoryBtns = document.querySelectorAll('.edit-category-btn');
+
+        // Edit form fields
+        const editCategoryNameInput = document.getElementById('edit-category-name');
+        const editCategoryDescriptionInput = document.getElementById('edit-category-description');
+        const editIsActiveCheckbox = document.getElementById('edit-is-active');
+
+        function openEditModal(categoryId, categoryData) {
+            // Set form action
+            editCategoryForm.action = `/dashboard/categories/edit/${categoryId}/`;
+
+            // Populate form fields
+            editCategoryNameInput.value = categoryData.name;
+            editCategoryDescriptionInput.value = categoryData.description;
+            editIsActiveCheckbox.checked = categoryData.active === 'true';
+
+            // Show modal
+            editCategoryModal.classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            editCategoryModal.classList.add('hidden');
+            editCategoryForm.reset();
+        }
+
+        editCategoryBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const categoryId = this.dataset.id;
+                const categoryData = {
+                    name: this.dataset.name,
+                    description: this.dataset.description,
+                    active: this.dataset.active
+                };
+                openEditModal(categoryId, categoryData);
+            });
+        });
+
+        closeEditModalBtn.addEventListener('click', closeEditModal);
+        cancelEditBtn.addEventListener('click', closeEditModal);
+
+        // Delete Confirmation Modal
+        const deleteCategoryModal = document.getElementById('delete-category-modal');
+        const closeDeleteModalBtn = document.getElementById('close-delete-modal');
+        const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+        const deleteCategoryNameSpan = document.getElementById('delete-category-name');
+        const deleteCategoryBtns = document.querySelectorAll('.delete-category-btn');
+
+        function openDeleteModal(categoryId, categoryName) {
+            deleteCategoryNameSpan.textContent = categoryName;
+            confirmDeleteBtn.href = `/dashboard/categories/delete/${categoryId}/`;
+            deleteCategoryModal.classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            deleteCategoryModal.classList.add('hidden');
+        }
+
+        deleteCategoryBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const categoryId = this.dataset.id;
+                const categoryName = this.dataset.name;
+                openDeleteModal(categoryId, categoryName);
+            });
+        });
+
+        closeDeleteModalBtn.addEventListener('click', closeDeleteModal);
+        cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+
+        // Edit image preview
+        const editImageInput = document.getElementById('edit-category-image');
+        editImageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const uploadArea = editImageInput.parentElement;
+                    uploadArea.style.backgroundImage = `url(${e.target.result})`;
+                    uploadArea.style.backgroundSize = 'cover';
+                    uploadArea.style.backgroundPosition = 'center';
+                    uploadArea.querySelector('div').style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}

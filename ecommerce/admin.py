@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count, Sum, Avg
 from .models import (
-    Category, MenuItem, Reservation, Order, 
+    Category, MenuItem, Reservation, Order,
     OrderItem, Review, Cart, CartItem
 )
 
@@ -59,7 +59,7 @@ class ReservationAdmin(admin.ModelAdmin):
     search_fields = ('name', 'email', 'phone')
     readonly_fields = ('created_at', 'updated_at')
     date_hierarchy = 'date'
-    
+
     fieldsets = (
         ('Guest Information', {
             'fields': ('name', 'email', 'phone')
@@ -134,7 +134,7 @@ from datetime import timedelta
 def admin_dashboard(request):
     # Get today's date
     today = timezone.now().date()
-    
+
     # Calculate statistics
     context = {
         'total_orders': Order.objects.count(),
@@ -146,5 +146,8 @@ def admin_dashboard(request):
         'popular_items': MenuItem.objects.annotate(order_count=Count('orderitem')).order_by('-order_count')[:5],
         'recent_reviews': Review.objects.select_related('user', 'menu_item').order_by('-created_at')[:5],
     }
-    
+
+    # Render the dashboard template with the context
+    return render(request, 'admin/dashboard.html', context)
+
 # Register your models here.

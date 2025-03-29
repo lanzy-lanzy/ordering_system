@@ -1,0 +1,42 @@
+{% extends 'accounts/customer_base.html' %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h1 class="text-2xl font-bold mb-4">My Orders</h1>
+        
+        <div class="space-y-4">
+            {% for order in orders %}
+            <div class="bg-gray-700 rounded-lg p-4">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="font-medium">Order #{{ order.id }}</div>
+                        <div class="text-sm text-gray-400">{{ order.created_at|date:"M d, Y" }}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold">${{ order.total_amount|floatformat:2 }}</div>
+                        <div class="text-sm mt-1">
+                            <span class="px-2 py-1 rounded-full text-xs 
+                                {% if order.status == 'PENDING' %}bg-yellow-900 text-yellow-300
+                                {% elif order.status == 'PREPARING' %}bg-blue-900 text-blue-300
+                                {% elif order.status == 'READY' %}bg-green-900 text-green-300
+                                {% elif order.status == 'COMPLETED' %}bg-gray-700 text-gray-300
+                                {% elif order.status == 'CANCELLED' %}bg-red-900 text-red-300{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4 text-gray-400">
+                <p>No orders yet</p>
+                <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light mt-2 inline-block">
+                    Browse Menu <i class="fas fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

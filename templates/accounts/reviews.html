@@ -1,0 +1,243 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Reviews - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Customer Reviews{% endblock page_title %}
+{% block page_subtitle %}Manage and respond to customer feedback{% endblock page_subtitle %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'reviews' %}" class="px-4 py-2 rounded-lg {% if not rating_filter %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            All Ratings
+        </a>
+        {% for i in "54321"|make_list %}
+        <a href="{% url 'reviews' %}?rating={{ i }}" class="px-4 py-2 rounded-lg {% if rating_filter == i %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            {{ i }} <i class="fas fa-star text-yellow-500 ml-1"></i>
+        </a>
+        {% endfor %}
+    </div>
+    <div class="relative">
+        <input type="text" id="search-reviews" placeholder="Search reviews..." 
+            class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold pl-10">
+        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+    </div>
+</div>
+
+<!-- Reviews Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {% for review in reviews %}
+    <div class="card p-6 shadow-lg border border-gray-800 hover:border-food-gold transition-all duration-300">
+        <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center">
+                <div class="w-10 h-10 rounded-full bg-gray-700 mr-3 flex items-center justify-center">
+                    <i class="fas fa-user text-gray-500"></i>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold">{{ review.user.username }}</h3>
+                    <p class="text-gray-400 text-xs">{{ review.created_at|date:"M d, Y" }}</p>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <div class="text-yellow-500 mr-2">
+                    {% for i in "12345"|make_list %}
+                        {% if forloop.counter <= review.rating %}
+                        <i class="fas fa-star"></i>
+                        {% else %}
+                        <i class="far fa-star"></i>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <span class="text-white font-bold">{{ review.rating }}.0</span>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-utensils text-food-gold mr-2"></i>
+                <span class="text-white">{{ review.menu_item.name }}</span>
+            </div>
+            <p class="text-gray-400">{{ review.comment }}</p>
+        </div>
+        
+        {% if review.response %}
+        <div class="bg-gray-800 rounded-lg p-4 mb-4">
+            <div class="flex items-center mb-2">
+                <div class="w-8 h-8 rounded-full bg-food-gold mr-2 flex items-center justify-center">
+                    <i class="fas fa-store text-food-black"></i>
+                </div>
+                <div>
+                    <h4 class="text-white font-bold">Restaurant Response</h4>
+                    <p class="text-gray-400 text-xs">{{ review.response_date|date:"M d, Y" }}</p>
+                </div>
+            </div>
+            <p class="text-gray-400">{{ review.response }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="flex justify-end space-x-2">
+            {% if not review.response %}
+            <button class="respond-btn bg-food-gold text-food-black px-3 py-1 rounded-lg text-sm font-bold hover:bg-food-red hover:text-white transition duration-300" data-review-id="{{ review.id }}">
+                Respond
+            </button>
+            {% endif %}
+            <button class="text-gray-400 hover:text-red-500 transition duration-300" title="Delete Review">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full py-12 text-center text-gray-500">
+        <div class="flex flex-col items-center">
+            <i class="fas fa-star text-4xl mb-3"></i>
+            <p>No reviews found</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Respond to Review Modal -->
+<div id="respond-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Respond to Review</h3>
+            <button id="close-respond-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="review-content" class="mb-4 p-4 bg-gray-800 rounded-lg">
+            <!-- Review content will be loaded here -->
+        </div>
+        <form id="respond-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="review-id-input" name="review_id">
+            <div class="mb-4">
+                <label for="response-text" class="block text-white font-medium mb-2">Your Response</label>
+                <textarea id="response-text" name="response" rows="4" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="cancel-respond-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                    Submit Response
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if reviews.has_other_pages %}
+<div class="flex justify-center mt-6">
+    <div class="flex space-x-1">
+        {% if reviews.has_previous %}
+        <a href="?page={{ reviews.previous_page_number }}{% if rating_filter %}&rating={{ rating_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-800 text-gray-600 rounded-md cursor-not-allowed">
+            <i class="fas fa-chevron-left"></i>
+        </span>
+        {% endif %}
+        
+        {% for i in reviews.paginator.page_range %}
+            {% if reviews.number == i %}
+            <span class="px-3 py-2 bg-food-gold text-food-black rounded-md">{{ i }}</span>
+            {% else %}
+            <a href="?page={{ i }}{% if rating_filter %}&rating={{ rating_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">{{ i }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if reviews.has_next %}
+        <a href="?page={{ reviews.next_page_number }}{% if rating_filter %}&rating={{ rating_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-800 text-gray-600 rounded-md cursor-not-allowed">
+            <i class="fas fa-chevron-right"></i>
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        const searchInput = document.getElementById('search-reviews');
+        const reviewCards = document.querySelectorAll('.card');
+        
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            reviewCards.forEach(card => {
+                const username = card.querySelector('h3').textContent.toLowerCase();
+                const menuItem = card.querySelector('.text-white:not(h3)').textContent.toLowerCase();
+                const comment = card.querySelector('p.text-gray-400').textContent.toLowerCase();
+                
+                if (username.includes(searchTerm) || menuItem.includes(searchTerm) || comment.includes(searchTerm)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+        
+        // Respond to review modal
+        const respondModal = document.getElementById('respond-modal');
+        const closeRespondModalBtn = document.getElementById('close-respond-modal');
+        const cancelRespondBtn = document.getElementById('cancel-respond-btn');
+        const respondBtns = document.querySelectorAll('.respond-btn');
+        const reviewIdInput = document.getElementById('review-id-input');
+        const reviewContent = document.getElementById('review-content');
+        
+        function openRespondModal(reviewId, reviewElement) {
+            respondModal.classList.remove('hidden');
+            reviewIdInput.value = reviewId;
+            
+            // Get review content to display in the modal
+            const username = reviewElement.querySelector('h3').textContent;
+            const date = reviewElement.querySelector('p.text-xs').textContent;
+            const rating = reviewElement.querySelector('.text-white.font-bold').textContent;
+            const menuItem = reviewElement.querySelector('.text-white:not(h3)').textContent;
+            const comment = reviewElement.querySelector('p.text-gray-400').textContent;
+            
+            // Display review content in the modal
+            reviewContent.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="text-white font-bold">${username}</h4>
+                        <p class="text-gray-400 text-xs">${date}</p>
+                    </div>
+                    <div class="text-yellow-500">
+                        ${'<i class="fas fa-star"></i>'.repeat(parseInt(rating))}
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <span class="text-food-gold">${menuItem}</span>
+                </div>
+                <p class="text-gray-400">${comment}</p>
+            `;
+        }
+        
+        function closeRespondModal() {
+            respondModal.classList.add('hidden');
+        }
+        
+        respondBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const reviewId = this.dataset.reviewId;
+                const reviewCard = this.closest('.card');
+                openRespondModal(reviewId, reviewCard);
+            });
+        });
+        
+        closeRespondModalBtn.addEventListener('click', closeRespondModal);
+        cancelRespondBtn.addEventListener('click', closeRespondModal);
+    });
+</script>
+{% endblock extra_scripts %}

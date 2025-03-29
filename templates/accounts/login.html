@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block extra_head %}
+<style>
+    .login-bg {
+        background-color: #111111;
+        position: relative;
+    }
+    .login-content {
+        position: relative;
+        z-index: 2;
+    }
+    .form-container {
+        background-color: #111111;
+    }
+    .input-with-icon {
+        position: relative;
+    }
+    .input-with-icon input {
+        width: 100%;
+        background-color: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(71, 85, 105, 0.5);
+    }
+    .input-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #ffffff;
+        z-index: 10;
+        pointer-events: none;
+        transition: all 0.2s ease;
+    }
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .animate-fadeInUp {
+        animation: fadeInUp 0.5s ease forwards;
+    }
+    .animate-delay-100 {
+        animation-delay: 0.1s;
+    }
+    .animate-delay-200 {
+        animation-delay: 0.2s;
+    }
+    .animate-delay-300 {
+        animation-delay: 0.3s;
+    }
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+<section class="min-h-screen flex items-center justify-center login-bg py-12 px-4 sm:px-6 lg:px-8">
+    <div class="login-content max-w-sm w-full">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold text-white">
+                Welcome Back
+            </h2>
+            <p class="text-gray-400 text-sm mt-1">Sign in to your account to continue</p>
+        </div>
+
+        <div class="form-container space-y-4">
+            <div>
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mt-4 text-center text-sm p-3 rounded-lg {% if message.tags == 'error' %}bg-red-900/50 text-red-200{% else %}bg-green-900/50 text-green-200{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <form class="space-y-4" method="POST">
+                {% csrf_token %}
+                <div class="space-y-4">
+                    <div class="input-with-icon">
+                        <i class="fas fa-user input-icon"></i>
+                        <label for="username" class="sr-only">Username</label>
+                        <input id="username" name="username" type="text" required
+                            class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-700 bg-gray-800/80 text-white rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 sm:text-sm"
+                            placeholder="Username">
+                    </div>
+                    <div class="input-with-icon">
+                        <i class="fas fa-lock input-icon"></i>
+                        <label for="password" class="sr-only">Password</label>
+                        <input id="password" name="password" type="password" required
+                            class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-700 bg-gray-800/80 text-white rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 sm:text-sm"
+                            placeholder="Password">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" name="remember" id="remember"
+                            class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 border-gray-700 bg-gray-800 rounded">
+                        <label for="remember" class="ml-2 block text-sm text-gray-300">
+                            Remember me
+                        </label>
+                    </div>
+                    <div class="text-sm">
+                        <a href="#" class="font-medium text-yellow-500 hover:text-yellow-600 transition-colors duration-200">
+                            Forgot password?
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit"
+                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-yellow-500 to-red-500 hover:from-yellow-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-200 hover:shadow-lg hover:shadow-yellow-500/20">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <i class="fas fa-sign-in-alt text-white"></i>
+                        </span>
+                        Sign in
+                    </button>
+                </div>
+            </form>
+        </div>
+
+
+    </div>
+</section>
+{% endblock content %}

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard - 5th Avenue Grill and Restobar{% endblock title %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.8.2/dist/alpine.min.js" defer></script>
+
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --food-gold: #FFB800;
+            --food-red: #E63946;
+            --food-black: #1A1A1A;
+            --sidebar-width: 260px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #121212;
+            color: white;
+        }
+
+        .gold-text-gradient {
+            background: linear-gradient(to right, var(--food-gold), #FF8C00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #1E1E1E;
+            transition: all 0.3s;
+        }
+
+        .sidebar-collapsed {
+            width: 80px;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            transition: all 0.3s;
+        }
+
+        .main-content-expanded {
+            margin-left: 80px;
+        }
+
+        .nav-link {
+            border-left: 4px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 184, 0, 0.1);
+            border-left-color: var(--food-gold);
+        }
+
+        .nav-link.active {
+            background-color: rgba(255, 184, 0, 0.15);
+            border-left-color: var(--food-gold);
+        }
+
+        .card {
+            background-color: #1E1E1E;
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #1E1E1E, #252525);
+            border-radius: 12px;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(to right, var(--food-gold), #FF8C00);
+            color: #1A1A1A;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(to right, var(--food-red), #FF5252);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .table-row {
+            transition: all 0.2s;
+        }
+
+        .table-row:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1A1A1A;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--food-gold);
+        }
+
+        /* Mobile Sidebar */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -100%;
+                z-index: 50;
+                transition: all 0.3s;
+            }
+
+            .sidebar.open {
+                left: 0;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .main-content-expanded {
+                margin-left: 0;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock extra_css %}
+</head>
+<body class="min-h-screen" x-data="{ sidebarOpen: true, mobileSidebarOpen: false }">
+    <!-- Mobile Menu Toggle -->
+    <div class="fixed top-4 left-4 z-50 md:hidden">
+        <button @click="mobileSidebarOpen = !mobileSidebarOpen" class="bg-gray-800 p-2 rounded-lg text-white focus:outline-none">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar fixed h-full overflow-y-auto z-40 shadow-lg"
+           :class="{ 'sidebar-collapsed': !sidebarOpen && !$screen('md'), 'open': mobileSidebarOpen }"
+           @click.away="mobileSidebarOpen = false">
+
+        <!-- Sidebar Header -->
+        <div class="flex items-center justify-between p-4 border-b border-gray-800">
+            <div class="flex items-center space-x-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
+                <div class="relative">
+                    <i class="fas fa-utensils text-white text-2xl"></i>
+                    <i class="fas fa-fire absolute -top-1 -right-1 text-food-gold text-xs animate-pulse"></i>
+                </div>
+                <div>
+                    <div class="text-xl font-bold text-white">5th Avenue</div>
+                    <div class="text-xs font-medium gold-text-gradient">ADMIN DASHBOARD</div>
+                </div>
+            </div>
+            <button @click="sidebarOpen = !sidebarOpen" class="text-gray-400 hover:text-white focus:outline-none hidden md:block">
+                <i class="fas" :class="sidebarOpen ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
+            </button>
+            <button @click="mobileSidebarOpen = false" class="text-gray-400 hover:text-white focus:outline-none md:hidden">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Navigation -->
+        <nav class="py-4">
+            <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
+                Main
+            </div>
+
+            <!-- Dashboard Link -->
+            <a href="{% url 'dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Dashboard</span>
+            </a>
+
+            <!-- Menu Management -->
+            <a href="{% url 'menu_items' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'menu_items' %}active{% endif %}">
+                <i class="fas fa-utensils w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Menu Items</span>
+            </a>
+
+            <!-- Categories -->
+            <a href="{% url 'categories' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'categories' %}active{% endif %}">
+                <i class="fas fa-list w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Categories</span>
+            </a>
+
+            <!-- Orders -->
+            <a href="{% url 'orders' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'orders' %}active{% endif %}">
+                <i class="fas fa-shopping-bag w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Orders</span>
+                {% with pending_orders=pending_orders|default:0 %}
+                {% if pending_orders > 0 %}
+                <span class="ml-auto bg-food-red text-white text-xs font-bold px-2 py-1 rounded-full" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">{{ pending_orders }}</span>
+                {% endif %}
+                {% endwith %}
+            </a>
+
+            <!-- Reservations -->
+            <a href="{% url 'reservations' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'reservations' %}active{% endif %}">
+                <i class="fas fa-calendar-alt w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Reservations</span>
+            </a>
+
+            <!-- Reviews -->
+            <a href="{% url 'reviews' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'reviews' %}active{% endif %}">
+                <i class="fas fa-star w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Reviews</span>
+            </a>
+
+            <div class="border-t border-gray-800 my-4"></div>
+
+            <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
+                Settings
+            </div>
+
+            <!-- Profile -->
+            <a href="{% url 'user_profile' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'profile' %}active{% endif %}">
+                <i class="fas fa-user w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Profile</span>
+            </a>
+
+            <!-- Settings -->
+            <a href="{% url 'user_settings' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'settings' %}active{% endif %}">
+                <i class="fas fa-cog w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Settings</span>
+            </a>
+
+            <!-- Logout -->
+            <a href="{% url 'logout' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
+                <i class="fas fa-sign-out-alt w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Logout</span>
+            </a>
+
+            <!-- Back to Website -->
+            <div class="px-4 mt-8" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
+                <a href="{% url 'home' %}" class="flex items-center justify-center py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition duration-300">
+                    <i class="fas fa-globe mr-2"></i>
+                    Back to Website
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content min-h-screen py-6 px-4 md:px-8" :class="{ 'main-content-expanded': !sidebarOpen && !$screen('md') }">
+        <!-- Page Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold">{% block page_title %}Dashboard{% endblock page_title %}</h1>
+                <p class="text-gray-400">{% block page_subtitle %}Welcome to your restaurant management dashboard{% endblock page_subtitle %}</p>
+            </div>
+
+            <!-- User Menu -->
+            <div class="relative" x-data="{ userMenuOpen: false }">
+                <button @click="userMenuOpen = !userMenuOpen" class="flex items-center space-x-3 focus:outline-none">
+                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                        <i class="fas fa-user text-gray-300"></i>
+                    </div>
+                    <div class="hidden md:block text-right">
+                        <div class="text-sm font-medium">{{ request.user.username }}</div>
+                        <div class="text-xs text-gray-400">Administrator</div>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
+                </button>
+
+                <div x-show="userMenuOpen" @click.away="userMenuOpen = false" class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-2 z-50">
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-user mr-2"></i> Profile
+                    </a>
+                    <a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-cog mr-2"></i> Settings
+                    </a>
+                    <div class="border-t border-gray-700 my-1"></div>
+                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        {% block content %}{% endblock content %}
+    </main>
+
+    <!-- Notification Toast -->
+    {% if messages %}
+    <div class="fixed bottom-4 right-4 z-50">
+        {% for message in messages %}
+        <div class="mb-3 p-4 rounded-lg shadow-lg {% if message.tags == 'error' %}bg-red-900 text-white{% elif message.tags == 'success' %}bg-green-900 text-white{% else %}bg-gray-800 text-white{% endif %} flex items-center justify-between"
+             x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)">
+            <div class="flex items-center">
+                {% if message.tags == 'error' %}
+                <i class="fas fa-exclamation-circle mr-3 text-red-300"></i>
+                {% elif message.tags == 'success' %}
+                <i class="fas fa-check-circle mr-3 text-green-300"></i>
+                {% else %}
+                <i class="fas fa-info-circle mr-3 text-blue-300"></i>
+                {% endif %}
+                <span>{{ message }}</span>
+            </div>
+            <button @click="show = false" class="ml-4 text-gray-400 hover:text-white focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Scripts -->
+    {% block extra_scripts %}{% endblock extra_scripts %}
+</body>
+</html>

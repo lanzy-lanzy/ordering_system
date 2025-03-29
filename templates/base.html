@@ -2,6 +2,16 @@
 <html lang="en">
 <head>
     {% include 'components/base/head.html' %}
+    <!-- Add performance optimizations -->
+    <script>
+        // Disable transitions on page load for better performance
+        document.documentElement.classList.add('no-transitions');
+        window.addEventListener('load', function() {
+            requestAnimationFrame(function() {
+                document.documentElement.classList.remove('no-transitions');
+            });
+        });
+    </script>
 </head>
 <body class="bg-food-black text-white min-h-screen">
     {% include 'components/header/nav.html' %}

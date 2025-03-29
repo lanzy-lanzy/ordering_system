@@ -1,0 +1,306 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Dashboard Overview{% endblock page_title %}
+{% block page_subtitle %}Monitor your restaurant's performance and manage operations{% endblock page_subtitle %}
+
+{% block content %}
+
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total Orders -->
+    <div class="stat-card p-6 shadow-lg border border-gray-800 hover:border-food-gold transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-gray-400 font-medium">Total Orders</h3>
+            <div class="bg-food-gold bg-opacity-20 p-2 rounded-lg">
+                <i class="fas fa-shopping-bag text-food-gold"></i>
+            </div>
+        </div>
+        <div class="text-3xl font-bold text-white mb-1">{{ total_orders }}</div>
+        <div class="text-sm text-gray-500">
+            <span class="text-green-500"><i class="fas fa-arrow-up mr-1"></i>{{ today_orders }}</span> today
+        </div>
+    </div>
+
+    <!-- Revenue -->
+    <div class="stat-card p-6 shadow-lg border border-gray-800 hover:border-food-gold transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-gray-400 font-medium">Total Revenue</h3>
+            <div class="bg-food-gold bg-opacity-20 p-2 rounded-lg">
+                <i class="fas fa-dollar-sign text-food-gold"></i>
+            </div>
+        </div>
+        <div class="text-3xl font-bold text-white mb-1">${{ total_revenue|floatformat:2 }}</div>
+        <div class="text-sm text-gray-500">
+            <span class="text-green-500"><i class="fas fa-arrow-up mr-1"></i>${{ today_revenue|floatformat:2 }}</span> today
+        </div>
+    </div>
+
+    <!-- Menu Items -->
+    <div class="stat-card p-6 shadow-lg border border-gray-800 hover:border-food-gold transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-gray-400 font-medium">Menu Items</h3>
+            <div class="bg-food-gold bg-opacity-20 p-2 rounded-lg">
+                <i class="fas fa-utensils text-food-gold"></i>
+            </div>
+        </div>
+        <div class="text-3xl font-bold text-white mb-1">{{ menu_items.count }}</div>
+        <div class="text-sm text-gray-500">
+            Across {{ categories.count }} categories
+        </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="stat-card p-6 shadow-lg border border-gray-800 hover:border-food-gold transition-all duration-300">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-gray-400 font-medium">Reviews</h3>
+            <div class="bg-food-gold bg-opacity-20 p-2 rounded-lg">
+                <i class="fas fa-star text-food-gold"></i>
+            </div>
+        </div>
+        <div class="text-3xl font-bold text-white mb-1">{{ recent_reviews.count }}</div>
+        <div class="text-sm text-gray-500">
+            Customer feedback
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard Content -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Menu Management Section -->
+    <div class="lg:col-span-2">
+        <div class="card p-6 shadow-lg border border-gray-800 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Menu Management</h2>
+                <a href="{% url 'add_menu_item' %}" class="btn-primary px-4 py-2 rounded-lg text-sm font-bold">
+                    <i class="fas fa-plus mr-2"></i>Add Item
+                </a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Item</th>
+                            <th class="pb-3">Category</th>
+                            <th class="pb-3">Price</th>
+                            <th class="pb-3">Status</th>
+                            <th class="pb-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in menu_items|slice:":8" %}
+                        <tr class="table-row border-b border-gray-800">
+                            <td class="py-4">
+                                <div class="flex items-center">
+                                    {% if item.image %}
+                                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-10 h-10 rounded-md object-cover mr-3">
+                                    {% else %}
+                                    <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    {% endif %}
+                                    <span class="text-white font-medium">{{ item.name }}</span>
+                                </div>
+                            </td>
+                            <td class="py-4 text-gray-400">{{ item.category.name }}</td>
+                            <td class="py-4 text-white font-medium">${{ item.price }}</td>
+                            <td class="py-4">
+                                {% if item.is_available %}
+                                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Available</span>
+                                {% else %}
+                                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Unavailable</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-4">
+                                <div class="flex space-x-2">
+                                    <button class="text-gray-400 hover:text-food-gold transition duration-300">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-500 transition duration-300">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="py-4 text-center text-gray-500">No menu items found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if menu_items.count > 8 %}
+            <div class="mt-4 text-center">
+                <a href="#" class="text-food-gold hover:text-food-red transition duration-300">
+                    View all {{ menu_items.count }} menu items <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="card p-6 shadow-lg border border-gray-800">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Recent Orders</h2>
+                <a href="#" class="text-food-gold hover:text-food-red transition duration-300 text-sm">
+                    View All <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <div class="space-y-4">
+                {% for order in recent_orders %}
+                <div class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition duration-300">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="text-white font-medium">Order #{{ order.id }}</div>
+                            <div class="text-gray-400 text-sm">{{ order.created_at|date:"M d, Y" }} at {{ order.created_at|time:"H:i" }}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-white font-bold">${{ order.total_amount }}</div>
+                            <div class="mt-1">
+                                {% if order.status == 'PENDING' %}
+                                <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                                {% elif order.status == 'PREPARING' %}
+                                <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Preparing</span>
+                                {% elif order.status == 'READY' %}
+                                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                                {% elif order.status == 'COMPLETED' %}
+                                <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                                {% elif order.status == 'CANCELLED' %}
+                                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-shopping-bag text-3xl mb-2"></i>
+                    <p>No orders yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-8">
+        <!-- Popular Items -->
+        <div class="card p-6 shadow-lg border border-gray-800">
+            <h2 class="text-xl font-bold text-white mb-6">Popular Items</h2>
+
+            <div class="space-y-4">
+                {% for item in popular_items %}
+                <div class="flex items-center">
+                    {% if item.image %}
+                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-12 h-12 rounded-lg object-cover mr-4">
+                    {% else %}
+                    <div class="w-12 h-12 rounded-lg bg-gray-700 mr-4 flex items-center justify-center">
+                        <i class="fas fa-utensils text-gray-500"></i>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="text-white font-medium">{{ item.name }}</div>
+                        <div class="text-gray-400 text-sm">
+                            {% if item.order_count %}
+                            Ordered {{ item.order_count }} times
+                            {% else %}
+                            New item
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-gray-500">
+                    No popular items yet
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Reviews -->
+        <div class="card p-6 shadow-lg border border-gray-800">
+            <h2 class="text-xl font-bold text-white mb-6">Recent Reviews</h2>
+
+            <div class="space-y-6">
+                {% for review in recent_reviews %}
+                <div class="border-b border-gray-800 pb-4 last:border-0 last:pb-0">
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="text-white font-medium">{{ review.menu_item.name }}</div>
+                        <div class="text-food-gold">
+                            {% for i in "12345"|make_list %}
+                                {% if forloop.counter <= review.rating %}
+                                <i class="fas fa-star"></i>
+                                {% else %}
+                                <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-2">{{ review.comment|truncatechars:100 }}</p>
+                    <div class="text-gray-500 text-xs">
+                        By {{ review.user.username }} - {{ review.created_at|timesince }} ago
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-gray-500">
+                    No reviews yet
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Category Management -->
+        <div class="card p-6 shadow-lg border border-gray-800">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Categories</h2>
+                <button class="text-food-gold hover:text-food-red transition duration-300">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                {% for category in categories %}
+                <div class="flex items-center justify-between bg-gray-800 rounded-lg p-3 hover:bg-gray-700 transition duration-300">
+                    <div class="flex items-center">
+                        {% if category.image %}
+                        <img src="{{ category.image.url }}" alt="{{ category.name }}" class="w-8 h-8 rounded-md object-cover mr-3">
+                        {% else %}
+                        <div class="w-8 h-8 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                            <i class="fas fa-list text-gray-500"></i>
+                        </div>
+                        {% endif %}
+                        <span class="text-white">{{ category.name }}</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="text-gray-400 hover:text-food-gold transition duration-300">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="text-gray-400 hover:text-red-500 transition duration-300">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4 text-gray-500">
+                    No categories yet
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    // Dashboard charts and interactivity could be added here
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Dashboard loaded');
+    });
+</script>
+{% endblock extra_scripts %}

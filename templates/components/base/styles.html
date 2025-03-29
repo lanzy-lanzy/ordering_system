@@ -12,14 +12,43 @@
         background: linear-gradient(to right, #F9A826, #FF8C00);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
+    
+    /* Simplified hover scale with hardware acceleration */
     .hover-scale {
-        transition: transform 0.3s ease;
+        transform: translateZ(0); /* Hardware acceleration */
+        transition: transform 0.2s ease;
+        will-change: transform;
     }
     .hover-scale:hover {
-        transform: scale(1.05);
+        transform: translateZ(0) scale(1.03);
     }
-    .card-shadow {
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    
+    /* Optimized transitions for interactive elements */
+    a, button {
+        transition: color 0.2s ease, background-color 0.2s ease;
+        will-change: color, background-color;
+    }
+    
+    /* Remove heavy transitions */
+    .mobile-menu-transition {
+        transition: transform 0.2s ease;
+        will-change: transform;
+    }
+    
+    /* Optimize scroll behavior */
+    html {
+        scroll-behavior: auto; /* Remove smooth scroll for better performance */
+    }
+    
+    /* Simplified fade-in animation */
+    .fade-in {
+        animation: simpleFadeIn 0.3s ease forwards;
+    }
+    
+    @keyframes simpleFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 </style>

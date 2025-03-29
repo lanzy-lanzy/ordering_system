@@ -1,0 +1,421 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Reservations - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Reservations{% endblock page_title %}
+{% block page_subtitle %}Manage customer reservations{% endblock page_subtitle %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+    <div class="flex flex-wrap gap-2">
+        <!-- Date filters -->
+        <a href="{% url 'reservations' %}?date=all{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" 
+           class="px-4 py-2 rounded-lg {% if date_filter == 'all' %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            All Dates
+        </a>
+        <a href="{% url 'reservations' %}?date=today{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" 
+           class="px-4 py-2 rounded-lg {% if date_filter == 'today' %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            Today
+        </a>
+        <a href="{% url 'reservations' %}?date=upcoming{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" 
+           class="px-4 py-2 rounded-lg {% if date_filter == 'upcoming' %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            Upcoming
+        </a>
+        <a href="{% url 'reservations' %}?date=past{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" 
+           class="px-4 py-2 rounded-lg {% if date_filter == 'past' %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            Past
+        </a>
+    </div>
+    
+    <div class="flex flex-wrap gap-2">
+        <!-- Status filters -->
+        <a href="{% url 'reservations' %}?status=all{% if date_filter != 'all' %}&date={{ date_filter }}{% endif %}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == 'all' %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            All Status
+        </a>
+        {% for status_code, status_name in status_choices %}
+        <a href="{% url 'reservations' %}?status={{ status_code }}{% if date_filter != 'all' %}&date={{ date_filter }}{% endif %}" 
+           class="px-4 py-2 rounded-lg {% if status_filter == status_code %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            {{ status_name }}
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="mb-4 flex justify-between items-center">
+    <div class="relative">
+        <input type="text" id="search-reservations" placeholder="Search reservations..." 
+            class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold pl-10">
+        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+    </div>
+    <button id="add-reservation-btn" class="btn-primary px-4 py-2 rounded-lg text-sm font-bold">
+        <i class="fas fa-plus mr-2"></i>Add Reservation
+    </button>
+</div>
+
+<div class="card p-6 shadow-lg border border-gray-800">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="text-left text-gray-400 border-b border-gray-800">
+                    <th class="pb-3">Guest</th>
+                    <th class="pb-3">Date & Time</th>
+                    <th class="pb-3">Party Size</th>
+                    <th class="pb-3">Contact</th>
+                    <th class="pb-3">Status</th>
+                    <th class="pb-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="reservations-table">
+                {% for reservation in reservations %}
+                <tr class="table-row border-b border-gray-800">
+                    <td class="py-4 text-white font-medium">{{ reservation.name }}</td>
+                    <td class="py-4 text-gray-400">{{ reservation.date|date:"M d, Y" }} at {{ reservation.time|time:"H:i" }}</td>
+                    <td class="py-4 text-gray-400">{{ reservation.party_size }} people</td>
+                    <td class="py-4 text-gray-400">
+                        <div>{{ reservation.phone }}</div>
+                        <div class="text-xs">{{ reservation.email }}</div>
+                    </td>
+                    <td class="py-4">
+                        {% if reservation.status == 'PENDING' %}
+                        <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                        {% elif reservation.status == 'CONFIRMED' %}
+                        <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Confirmed</span>
+                        {% elif reservation.status == 'CANCELLED' %}
+                        <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4">
+                        <div class="flex space-x-2">
+                            <button class="view-reservation-btn text-gray-400 hover:text-food-gold transition duration-300" data-reservation-id="{{ reservation.id }}" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="update-status-btn text-gray-400 hover:text-blue-500 transition duration-300" data-reservation-id="{{ reservation.id }}" title="Update Status">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% if reservation.status == 'PENDING' %}
+                            <button class="cancel-reservation-btn text-gray-400 hover:text-red-500 transition duration-300" data-reservation-id="{{ reservation.id }}" title="Cancel Reservation">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="py-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-calendar-alt text-4xl mb-3"></i>
+                            <p>No reservations found</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Reservation Details Modal -->
+<div id="reservation-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-lg">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Reservation Details</h3>
+            <button id="close-details-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="reservation-details-content">
+            <!-- Content will be loaded dynamically -->
+            <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-food-gold"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Status Modal -->
+<div id="update-status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Update Reservation Status</h3>
+            <button id="close-status-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="update-status-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="reservation-id-input" name="reservation_id">
+            <div class="mb-4">
+                <label for="reservation-status" class="block text-white font-medium mb-2">Status</label>
+                <select id="reservation-status" name="status" class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                    {% for status_code, status_name in status_choices %}
+                    <option value="{{ status_code }}">{{ status_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="cancel-status-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                    Update Status
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Reservation Modal -->
+<div id="add-reservation-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Add New Reservation</h3>
+            <button id="close-add-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="add-reservation-form" method="post">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="guest-name" class="block text-white font-medium mb-2">Guest Name</label>
+                    <input type="text" id="guest-name" name="name" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                </div>
+                <div>
+                    <label for="party-size" class="block text-white font-medium mb-2">Party Size</label>
+                    <input type="number" id="party-size" name="party_size" min="1" max="20" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="reservation-date" class="block text-white font-medium mb-2">Date</label>
+                    <input type="date" id="reservation-date" name="date" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                </div>
+                <div>
+                    <label for="reservation-time" class="block text-white font-medium mb-2">Time</label>
+                    <input type="time" id="reservation-time" name="time" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="guest-email" class="block text-white font-medium mb-2">Email</label>
+                    <input type="email" id="guest-email" name="email" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                </div>
+                <div>
+                    <label for="guest-phone" class="block text-white font-medium mb-2">Phone</label>
+                    <input type="tel" id="guest-phone" name="phone" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="special-requests" class="block text-white font-medium mb-2">Special Requests</label>
+                <textarea id="special-requests" name="special_requests" rows="3"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
+            </div>
+            
+            <div class="flex justify-end">
+                <button type="button" id="cancel-add-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                    Add Reservation
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if reservations.has_other_pages %}
+<div class="flex justify-center mt-6">
+    <div class="flex space-x-1">
+        {% if reservations.has_previous %}
+        <a href="?page={{ reservations.previous_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if date_filter != 'all' %}&date={{ date_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-800 text-gray-600 rounded-md cursor-not-allowed">
+            <i class="fas fa-chevron-left"></i>
+        </span>
+        {% endif %}
+        
+        {% for i in reservations.paginator.page_range %}
+            {% if reservations.number == i %}
+            <span class="px-3 py-2 bg-food-gold text-food-black rounded-md">{{ i }}</span>
+            {% else %}
+            <a href="?page={{ i }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if date_filter != 'all' %}&date={{ date_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">{{ i }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if reservations.has_next %}
+        <a href="?page={{ reservations.next_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}{% if date_filter != 'all' %}&date={{ date_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-800 text-gray-600 rounded-md cursor-not-allowed">
+            <i class="fas fa-chevron-right"></i>
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        const searchInput = document.getElementById('search-reservations');
+        const reservationsTable = document.getElementById('reservations-table');
+        const reservationRows = reservationsTable.querySelectorAll('tr');
+        
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            reservationRows.forEach(row => {
+                if (row.querySelector('td')) {
+                    const guestName = row.querySelector('td:first-child').textContent.toLowerCase();
+                    const contactInfo = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                    
+                    if (guestName.includes(searchTerm) || contactInfo.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+        
+        // Reservation details modal
+        const reservationDetailsModal = document.getElementById('reservation-details-modal');
+        const closeDetailsModalBtn = document.getElementById('close-details-modal');
+        const reservationDetailsContent = document.getElementById('reservation-details-content');
+        const viewReservationBtns = document.querySelectorAll('.view-reservation-btn');
+        
+        function openReservationDetailsModal(reservationId) {
+            reservationDetailsModal.classList.remove('hidden');
+            
+            // Simulate loading reservation details (in a real app, you'd fetch this from the server)
+            setTimeout(() => {
+                reservationDetailsContent.innerHTML = `
+                    <div class="mb-4 pb-4 border-b border-gray-800">
+                        <div class="flex justify-between">
+                            <div>
+                                <h4 class="text-white font-bold">Reservation #${reservationId}</h4>
+                                <p class="text-gray-400 text-sm">Created on June 10, 2023</p>
+                            </div>
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full h-fit">Confirmed</span>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <h4 class="text-white font-bold mb-2">Guest Information</h4>
+                            <p class="text-gray-400">John Doe</p>
+                            <p class="text-gray-400">john.doe@example.com</p>
+                            <p class="text-gray-400">+1 (555) 123-4567</p>
+                        </div>
+                        <div>
+                            <h4 class="text-white font-bold mb-2">Reservation Details</h4>
+                            <p class="text-gray-400">Date: June 15, 2023</p>
+                            <p class="text-gray-400">Time: 7:30 PM</p>
+                            <p class="text-gray-400">Party Size: 4 people</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-white font-bold mb-2">Special Requests</h4>
+                        <p class="text-gray-400">We would like a table by the window if possible. Also, we'll be celebrating a birthday.</p>
+                    </div>
+                    
+                    <div class="flex justify-end mt-6 space-x-2">
+                        <button class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300">
+                            <i class="fas fa-print mr-2"></i> Print
+                        </button>
+                        <button class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300">
+                            <i class="fas fa-check mr-2"></i> Confirm
+                        </button>
+                    </div>
+                `;
+            }, 500);
+        }
+        
+        function closeReservationDetailsModal() {
+            reservationDetailsModal.classList.add('hidden');
+        }
+        
+        viewReservationBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const reservationId = this.dataset.reservationId;
+                openReservationDetailsModal(reservationId);
+            });
+        });
+        
+        closeDetailsModalBtn.addEventListener('click', closeReservationDetailsModal);
+        
+        // Update status modal
+        const updateStatusModal = document.getElementById('update-status-modal');
+        const closeStatusModalBtn = document.getElementById('close-status-modal');
+        const cancelStatusBtn = document.getElementById('cancel-status-btn');
+        const updateStatusBtns = document.querySelectorAll('.update-status-btn');
+        const reservationIdInput = document.getElementById('reservation-id-input');
+        
+        function openUpdateStatusModal(reservationId) {
+            updateStatusModal.classList.remove('hidden');
+            reservationIdInput.value = reservationId;
+        }
+        
+        function closeUpdateStatusModal() {
+            updateStatusModal.classList.add('hidden');
+        }
+        
+        updateStatusBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const reservationId = this.dataset.reservationId;
+                openUpdateStatusModal(reservationId);
+            });
+        });
+        
+        closeStatusModalBtn.addEventListener('click', closeUpdateStatusModal);
+        cancelStatusBtn.addEventListener('click', closeUpdateStatusModal);
+        
+        // Add reservation modal
+        const addReservationModal = document.getElementById('add-reservation-modal');
+        const addReservationBtn = document.getElementById('add-reservation-btn');
+        const closeAddModalBtn = document.getElementById('close-add-modal');
+        const cancelAddBtn = document.getElementById('cancel-add-btn');
+        
+        function openAddReservationModal() {
+            addReservationModal.classList.remove('hidden');
+            
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('reservation-date').value = today;
+            
+            // Set default time to current time rounded to nearest half hour
+            const now = new Date();
+            now.setMinutes(Math.ceil(now.getMinutes() / 30) * 30);
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('reservation-time').value = `${hours}:${minutes}`;
+        }
+        
+        function closeAddReservationModal() {
+            addReservationModal.classList.add('hidden');
+        }
+        
+        addReservationBtn.addEventListener('click', openAddReservationModal);
+        closeAddModalBtn.addEventListener('click', closeAddReservationModal);
+        cancelAddBtn.addEventListener('click', closeAddReservationModal);
+    });
+</script>
+{% endblock extra_scripts %}

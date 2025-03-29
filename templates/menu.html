@@ -49,16 +49,16 @@
 <script>
     document.body.addEventListener('htmx:afterSwap', function(event) {
         if (event.detail.target.id === 'cart-count') {
-            // Show notification
             const notification = document.getElementById('cart-notification');
-            notification.classList.remove('scale-0');
-            notification.classList.add('scale-100');
+            notification.style.display = 'block';
+            notification.style.opacity = '1';
             
-            // Hide notification after 2 seconds
             setTimeout(function() {
-                notification.classList.remove('scale-100');
-                notification.classList.add('scale-0');
-            }, 2000);
+                notification.style.opacity = '0';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 200);
+            }, 1500);
         }
     });
 </script>

@@ -1,0 +1,135 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Add Menu Item - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Add New Menu Item{% endblock page_title %}
+{% block page_subtitle %}Create a new delicious item for your restaurant menu{% endblock page_subtitle %}
+
+{% block content %}
+
+<div class="max-w-2xl mx-auto">
+    <div class="card p-8 shadow-lg border border-gray-800">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Name -->
+            <div class="mb-6">
+                <label for="name" class="block text-white font-medium mb-2">Item Name</label>
+                <input type="text" id="name" name="name" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+            </div>
+
+            <!-- Category -->
+            <div class="mb-6">
+                <label for="category" class="block text-white font-medium mb-2">Category</label>
+                <select id="category" name="category" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                    <option value="" disabled selected>Select a category</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Price -->
+            <div class="mb-6">
+                <label for="price" class="block text-white font-medium mb-2">Price ($)</label>
+                <input type="number" id="price" name="price" step="0.01" min="0" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+            </div>
+
+            <!-- Description -->
+            <div class="mb-6">
+                <label for="description" class="block text-white font-medium mb-2">Description</label>
+                <textarea id="description" name="description" rows="4" required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
+            </div>
+
+            <!-- Image -->
+            <div class="mb-6">
+                <label for="image" class="block text-white font-medium mb-2">Image</label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="image" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer bg-gray-800 hover:bg-gray-700">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-gray-500 text-2xl mb-2"></i>
+                            <p class="text-sm text-gray-400">
+                                <span class="font-medium">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500">PNG, JPG or WEBP (MAX. 2MB)</p>
+                        </div>
+                        <input id="image" name="image" type="file" class="hidden" accept="image/*" />
+                    </label>
+                </div>
+            </div>
+
+            <!-- Options -->
+            <div class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex items-center">
+                    <input type="checkbox" id="is_available" name="is_available" checked
+                        class="w-4 h-4 text-food-gold bg-gray-800 border-gray-700 rounded focus:ring-food-gold">
+                    <label for="is_available" class="ml-2 text-white">Available</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="is_featured" name="is_featured"
+                        class="w-4 h-4 text-food-gold bg-gray-800 border-gray-700 rounded focus:ring-food-gold">
+                    <label for="is_featured" class="ml-2 text-white">Featured Item</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="is_vegetarian" name="is_vegetarian"
+                        class="w-4 h-4 text-food-gold bg-gray-800 border-gray-700 rounded focus:ring-food-gold">
+                    <label for="is_vegetarian" class="ml-2 text-white">Vegetarian</label>
+                </div>
+            </div>
+
+            <!-- Spice Level -->
+            <div class="mb-8">
+                <label class="block text-white font-medium mb-2">Spice Level</label>
+                <div class="flex items-center space-x-2">
+                    <input type="range" id="spice_level" name="spice_level" min="0" max="5" value="0"
+                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                    <span id="spice_level_display" class="text-white min-w-[30px]">0</span>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end">
+                <a href="{% url 'dashboard' %}" class="bg-gray-700 text-white px-6 py-3 rounded-lg mr-4 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </a>
+                <button type="submit" class="btn-primary px-6 py-3 rounded-lg font-medium">
+                    Add Menu Item
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    // Update spice level display
+    const spiceLevelInput = document.getElementById('spice_level');
+    const spiceLevelDisplay = document.getElementById('spice_level_display');
+
+    spiceLevelInput.addEventListener('input', function() {
+        spiceLevelDisplay.textContent = this.value;
+    });
+
+    // Preview uploaded image
+    const imageInput = document.getElementById('image');
+    imageInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const uploadArea = imageInput.parentElement;
+                uploadArea.style.backgroundImage = `url(${e.target.result})`;
+                uploadArea.style.backgroundSize = 'cover';
+                uploadArea.style.backgroundPosition = 'center';
+                uploadArea.querySelector('div').style.display = 'none';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+{% endblock extra_scripts %}

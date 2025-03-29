@@ -1,0 +1,191 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Delete Category - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Delete Category{% endblock page_title %}
+{% block page_subtitle %}Manage menu items in this category before deletion{% endblock page_subtitle %}
+
+{% block content %}
+<div class="card p-6 shadow-lg border border-gray-800 mb-8">
+    <div class="mb-6">
+        <h2 class="text-xl font-bold text-white mb-2">Warning: Category "{{ category.name }}" has {{ menu_items_count }} menu items</h2>
+        <p class="text-gray-400">Please choose one of the following options:</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Option 1: Reassign to another category -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-bold text-white mb-4">Option 1: Reassign Menu Items</h3>
+            <p class="text-gray-400 mb-4">Move all menu items to another category before deleting this one.</p>
+
+            {% if other_categories %}
+            <form method="post" action="{% url 'delete_category' category.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reassign">
+
+                <div class="mb-4">
+                    <label for="new-category" class="block text-white font-medium mb-2">Select Target Category</label>
+                    <select id="new-category" name="new_category" required class="w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                        <option value="" disabled selected>Choose a category</option>
+                        {% for other_category in other_categories %}
+                        <option value="{{ other_category.id }}">{{ other_category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="flex justify-end">
+                    <a href="{% url 'categories' %}" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                        Cancel
+                    </a>
+                    <button type="submit" class="bg-food-gold text-food-black px-4 py-2 rounded-lg hover:bg-food-red hover:text-white transition duration-300">
+                        Reassign & Delete
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="p-4 bg-gray-900 rounded-lg border border-gray-700 mb-4">
+                <p class="text-yellow-400"><i class="fas fa-exclamation-triangle mr-2"></i> No other categories available for reassignment.</p>
+                <p class="text-gray-400 mt-2">You must either create another category first or delete all menu items.</p>
+            </div>
+            <div class="flex justify-end">
+                <a href="{% url 'categories' %}" class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300">
+                    Back to Categories
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Option 2: Keep menu items without category -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-bold text-white mb-4">Option 2: Keep Menu Items</h3>
+            <p class="text-gray-400 mb-4">Keep all menu items but remove their category assignment. Items will appear as "No Category".</p>
+
+            <form method="post" action="{% url 'delete_category' category.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="orphan">
+
+                <div class="mb-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="confirm-orphan" name="confirm_orphan" required
+                            class="w-4 h-4 text-yellow-600 bg-gray-900 border-gray-700 rounded focus:ring-yellow-500">
+                        <label for="confirm-orphan" class="ml-2 text-white">
+                            I understand that {{ menu_items_count }} menu items will have no category
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <a href="{% url 'categories' %}" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                        Cancel
+                    </a>
+                    <button type="submit" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition duration-300" id="orphan-btn" disabled>
+                        Remove Category
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Option 3: Delete all menu items -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-bold text-white mb-4">Option 3: Delete All Menu Items</h3>
+            <p class="text-gray-400 mb-4">Delete all menu items in this category along with the category itself. <span class="text-red-400">This action cannot be undone!</span></p>
+
+            <form method="post" action="{% url 'delete_category' category.id %}" id="delete-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+
+                <div class="mb-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="confirm-delete" name="confirm_delete" required
+                            class="w-4 h-4 text-red-600 bg-gray-900 border-gray-700 rounded focus:ring-red-500">
+                        <label for="confirm-delete" class="ml-2 text-white">
+                            I understand that this will permanently delete {{ menu_items_count }} menu items
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <a href="{% url 'categories' %}" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                        Cancel
+                    </a>
+                    <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-300" id="delete-btn" disabled>
+                        Delete Everything
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Preview of menu items that will be affected -->
+<div class="card p-6 shadow-lg border border-gray-800">
+    <h2 class="text-xl font-bold text-white mb-6">Menu Items in this Category</h2>
+
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="text-left text-gray-400 border-b border-gray-800">
+                    <th class="pb-3">Item</th>
+                    <th class="pb-3">Price</th>
+                    <th class="pb-3">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in category.menu_items.all %}
+                <tr class="border-b border-gray-800">
+                    <td class="py-4">
+                        <div class="flex items-center">
+                            {% if item.image %}
+                            <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-10 h-10 rounded-md object-cover mr-3">
+                            {% else %}
+                            <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                <i class="fas fa-utensils text-gray-500"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <span class="text-white font-medium">{{ item.name }}</span>
+                                <p class="text-gray-400 text-xs mt-1">{{ item.description|truncatechars:50 }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4 text-white font-medium">${{ item.price }}</td>
+                    <td class="py-4">
+                        {% if item.is_available %}
+                        <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Available</span>
+                        {% else %}
+                        <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Unavailable</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enable/disable delete button based on checkbox
+        const confirmDeleteCheckbox = document.getElementById('confirm-delete');
+        const deleteBtn = document.getElementById('delete-btn');
+
+        if (confirmDeleteCheckbox) {
+            confirmDeleteCheckbox.addEventListener('change', function() {
+                deleteBtn.disabled = !this.checked;
+            });
+        }
+
+        // Enable/disable orphan button based on checkbox
+        const confirmOrphanCheckbox = document.getElementById('confirm-orphan');
+        const orphanBtn = document.getElementById('orphan-btn');
+
+        if (confirmOrphanCheckbox) {
+            confirmOrphanCheckbox.addEventListener('change', function() {
+                orphanBtn.disabled = !this.checked;
+            });
+        }
+    });
+</script>
+{% endblock extra_scripts %}

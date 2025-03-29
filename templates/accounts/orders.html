@@ -1,0 +1,324 @@
+{% extends 'accounts/dashboard_base.html' %}
+
+{% block title %}Orders - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Orders{% endblock page_title %}
+{% block page_subtitle %}Manage customer orders{% endblock page_subtitle %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'orders' %}" class="px-4 py-2 rounded-lg {% if status_filter == 'all' %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            All
+        </a>
+        {% for status_code, status_name in status_choices %}
+        <a href="{% url 'orders' %}?status={{ status_code }}" class="px-4 py-2 rounded-lg {% if status_filter == status_code %}bg-food-gold text-food-black{% else %}bg-gray-800 text-gray-300 hover:bg-gray-700{% endif %}">
+            {{ status_name }}
+        </a>
+        {% endfor %}
+    </div>
+    <div class="relative">
+        <input type="text" id="search-orders" placeholder="Search orders..." 
+            class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold pl-10">
+        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+    </div>
+</div>
+
+<div class="card p-6 shadow-lg border border-gray-800">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="text-left text-gray-400 border-b border-gray-800">
+                    <th class="pb-3">Order ID</th>
+                    <th class="pb-3">Customer</th>
+                    <th class="pb-3">Date</th>
+                    <th class="pb-3">Total</th>
+                    <th class="pb-3">Status</th>
+                    <th class="pb-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="orders-table">
+                {% for order in orders %}
+                <tr class="table-row border-b border-gray-800">
+                    <td class="py-4 text-white font-medium">#{{ order.id }}</td>
+                    <td class="py-4 text-gray-400">{{ order.user.username }}</td>
+                    <td class="py-4 text-gray-400">{{ order.created_at|date:"M d, Y" }} at {{ order.created_at|time:"H:i" }}</td>
+                    <td class="py-4 text-white font-medium">${{ order.total_amount }}</td>
+                    <td class="py-4">
+                        {% if order.status == 'PENDING' %}
+                        <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                        {% elif order.status == 'PREPARING' %}
+                        <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Preparing</span>
+                        {% elif order.status == 'READY' %}
+                        <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                        {% elif order.status == 'COMPLETED' %}
+                        <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                        {% elif order.status == 'CANCELLED' %}
+                        <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4">
+                        <div class="flex space-x-2">
+                            <button class="view-order-btn text-gray-400 hover:text-food-gold transition duration-300" data-order-id="{{ order.id }}" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="update-status-btn text-gray-400 hover:text-blue-500 transition duration-300" data-order-id="{{ order.id }}" title="Update Status">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            {% if order.status == 'PENDING' %}
+                            <button class="cancel-order-btn text-gray-400 hover:text-red-500 transition duration-300" data-order-id="{{ order.id }}" title="Cancel Order">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="py-8 text-center text-gray-500">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-shopping-bag text-4xl mb-3"></i>
+                            <p>No orders found</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div id="order-details-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Order Details</h3>
+            <button id="close-details-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="order-details-content">
+            <!-- Content will be loaded dynamically -->
+            <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-food-gold"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Status Modal -->
+<div id="update-status-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-900 rounded-xl p-6 shadow-lg border border-gray-800 w-full max-w-md">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Update Order Status</h3>
+            <button id="close-status-modal" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="update-status-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="order-id-input" name="order_id">
+            <div class="mb-4">
+                <label for="order-status" class="block text-white font-medium mb-2">Status</label>
+                <select id="order-status" name="status" class="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                    {% for status_code, status_name in status_choices %}
+                    <option value="{{ status_code }}">{{ status_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end">
+                <button type="button" id="cancel-status-btn" class="bg-gray-700 text-white px-4 py-2 rounded-lg mr-2 hover:bg-gray-600 transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-lg">
+                    Update Status
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if orders.has_other_pages %}
+<div class="flex justify-center mt-6">
+    <div class="flex space-x-1">
+        {% if orders.has_previous %}
+        <a href="?page={{ orders.previous_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-800 text-gray-600 rounded-md cursor-not-allowed">
+            <i class="fas fa-chevron-left"></i>
+        </span>
+        {% endif %}
+        
+        {% for i in orders.paginator.page_range %}
+            {% if orders.number == i %}
+            <span class="px-3 py-2 bg-food-gold text-food-black rounded-md">{{ i }}</span>
+            {% else %}
+            <a href="?page={{ i }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">{{ i }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if orders.has_next %}
+        <a href="?page={{ orders.next_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% else %}
+        <span class="px-3 py-2 bg-gray-800 text-gray-600 rounded-md cursor-not-allowed">
+            <i class="fas fa-chevron-right"></i>
+        </span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search functionality
+        const searchInput = document.getElementById('search-orders');
+        const ordersTable = document.getElementById('orders-table');
+        const orderRows = ordersTable.querySelectorAll('tr');
+        
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            orderRows.forEach(row => {
+                if (row.querySelector('td')) {
+                    const orderId = row.querySelector('td:first-child').textContent.toLowerCase();
+                    const customer = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                    
+                    if (orderId.includes(searchTerm) || customer.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+        
+        // Order details modal
+        const orderDetailsModal = document.getElementById('order-details-modal');
+        const closeDetailsModalBtn = document.getElementById('close-details-modal');
+        const orderDetailsContent = document.getElementById('order-details-content');
+        const viewOrderBtns = document.querySelectorAll('.view-order-btn');
+        
+        function openOrderDetailsModal(orderId) {
+            orderDetailsModal.classList.remove('hidden');
+            
+            // Simulate loading order details (in a real app, you'd fetch this from the server)
+            setTimeout(() => {
+                orderDetailsContent.innerHTML = `
+                    <div class="mb-4 pb-4 border-b border-gray-800">
+                        <div class="flex justify-between">
+                            <div>
+                                <h4 class="text-white font-bold">Order #${orderId}</h4>
+                                <p class="text-gray-400 text-sm">Placed on June 15, 2023 at 19:30</p>
+                            </div>
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full h-fit">Pending</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="text-white font-bold mb-2">Customer Information</h4>
+                        <p class="text-gray-400">John Doe</p>
+                        <p class="text-gray-400">john.doe@example.com</p>
+                        <p class="text-gray-400">+1 (555) 123-4567</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4 class="text-white font-bold mb-2">Order Items</h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-white">Grilled Salmon</p>
+                                        <p class="text-gray-400 text-xs">Quantity: 2</p>
+                                    </div>
+                                </div>
+                                <p class="text-white font-medium">$45.90</p>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    <div>
+                                        <p class="text-white">Caesar Salad</p>
+                                        <p class="text-gray-400 text-xs">Quantity: 1</p>
+                                    </div>
+                                </div>
+                                <p class="text-white font-medium">$12.50</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4 pt-4 border-t border-gray-800">
+                        <div class="flex justify-between mb-2">
+                            <p class="text-gray-400">Subtotal</p>
+                            <p class="text-white">$58.40</p>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <p class="text-gray-400">Tax</p>
+                            <p class="text-white">$5.84</p>
+                        </div>
+                        <div class="flex justify-between font-bold">
+                            <p class="text-white">Total</p>
+                            <p class="text-food-gold">$64.24</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 class="text-white font-bold mb-2">Special Instructions</h4>
+                        <p class="text-gray-400">Please make sure the salmon is well-done and add extra dressing to the salad.</p>
+                    </div>
+                `;
+            }, 500);
+        }
+        
+        function closeOrderDetailsModal() {
+            orderDetailsModal.classList.add('hidden');
+        }
+        
+        viewOrderBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const orderId = this.dataset.orderId;
+                openOrderDetailsModal(orderId);
+            });
+        });
+        
+        closeDetailsModalBtn.addEventListener('click', closeOrderDetailsModal);
+        
+        // Update status modal
+        const updateStatusModal = document.getElementById('update-status-modal');
+        const closeStatusModalBtn = document.getElementById('close-status-modal');
+        const cancelStatusBtn = document.getElementById('cancel-status-btn');
+        const updateStatusBtns = document.querySelectorAll('.update-status-btn');
+        const orderIdInput = document.getElementById('order-id-input');
+        
+        function openUpdateStatusModal(orderId) {
+            updateStatusModal.classList.remove('hidden');
+            orderIdInput.value = orderId;
+        }
+        
+        function closeUpdateStatusModal() {
+            updateStatusModal.classList.add('hidden');
+        }
+        
+        updateStatusBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const orderId = this.dataset.orderId;
+                openUpdateStatusModal(orderId);
+            });
+        });
+        
+        closeStatusModalBtn.addEventListener('click', closeUpdateStatusModal);
+        cancelStatusBtn.addEventListener('click', closeUpdateStatusModal);
+    });
+</script>
+{% endblock extra_scripts %}
