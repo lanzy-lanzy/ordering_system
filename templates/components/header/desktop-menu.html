@@ -1,0 +1,22 @@
+<div class="hidden md:flex space-x-6">
+    <a href="/" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+        <i class="fas fa-home mr-1 text-food-gold"></i> Home
+    </a>
+    <a href="{% url 'menu' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+        <i class="fas fa-utensils mr-1 text-food-gold"></i> Menu
+    </a>
+    <a href="/#reservations" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+        <i class="far fa-calendar-alt mr-1 text-food-gold"></i> Reservations
+    </a>
+    <a href="/#about" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+        <i class="fas fa-info-circle mr-1 text-food-gold"></i> About Us
+    </a>
+    <a href="/#contact" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+        <i class="fas fa-envelope mr-1 text-food-gold"></i> Contact
+    </a>
+    <a href="#" class="bg-white text-food-red hover:bg-food-black hover:text-white px-5 py-2 rounded-full font-bold transition duration-300 flex items-center shadow-lg hover-scale relative">
+        <i class="fas fa-shopping-cart mr-2"></i>
+        Cart
+        <span id="cart-count" class="absolute -top-2 -right-2 bg-food-gold text-food-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{{ cart_count }}</span>
+    </a>
+</div>

@@ -1,0 +1,23 @@
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    'food-black': '#111111',
+                    'food-red': '#E63946',
+                    'food-gold': '#F9A826',
+                    'food-orange': '#FF8C00'
+                },
+                backgroundImage: {
+                    'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    'gold-gradient': 'linear-gradient(to right, #F9A826, #FF8C00)',
+                    'red-gold-gradient': 'linear-gradient(135deg, #E63946, #F9A826, #FF8C00)'
+                },
+                animation: {
+                    'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    'bounce-slow': 'bounce 2s infinite'
+                }
+            }
+        }
+    }
+</script>

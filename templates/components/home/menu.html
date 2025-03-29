@@ -1,0 +1,60 @@
+<section id="menu" class="py-20 bg-food-black">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl md:text-5xl font-bold mb-4">
+                <span class="gold-text-gradient">Our Menu</span>
+            </h2>
+            <p class="text-xl text-gray-300 max-w-3xl mx-auto">
+                Discover our carefully crafted dishes made with the finest ingredients
+            </p>
+        </div>
+
+        <!-- Menu Categories -->
+        <div class="flex flex-wrap justify-center gap-4 mb-12">
+            <button hx-get="{% url 'filter_menu' %}"
+                    hx-target="#menu-items-container"
+                    hx-swap="innerHTML"
+                    class="bg-gradient-to-r from-food-gold to-food-orange text-white font-bold py-2 px-6 rounded-full hover:from-food-red hover:to-food-gold transition duration-300 hover-scale shadow-lg">
+                All
+            </button>
+            {% for category in categories %}
+            <button hx-get="{% url 'filter_menu' %}?category={{ category.id }}"
+                    hx-target="#menu-items-container"
+                    hx-swap="innerHTML"
+                    class="bg-transparent border-2 border-food-gold text-white font-bold py-2 px-6 rounded-full hover:bg-food-gold hover:text-food-black transition duration-300 hover-scale shadow-lg">
+                {{ category.name }}
+            </button>
+            {% empty %}
+            <button class="bg-transparent border-2 border-food-gold text-white font-bold py-2 px-6 rounded-full hover:bg-food-gold hover:text-food-black transition duration-300 hover-scale shadow-lg">
+                Appetizers
+            </button>
+            <button class="bg-transparent border-2 border-food-gold text-white font-bold py-2 px-6 rounded-full hover:bg-food-gold hover:text-food-black transition duration-300 hover-scale shadow-lg">
+                Main Course
+            </button>
+            <button class="bg-transparent border-2 border-food-gold text-white font-bold py-2 px-6 rounded-full hover:bg-food-gold hover:text-food-black transition duration-300 hover-scale shadow-lg">
+                Desserts
+            </button>
+            <button class="bg-transparent border-2 border-food-gold text-white font-bold py-2 px-6 rounded-full hover:bg-food-gold hover:text-food-black transition duration-300 hover-scale shadow-lg">
+                Drinks
+            </button>
+            {% endfor %}
+        </div>
+
+        <!-- Menu Items Grid Container -->
+        <div id="menu-items-container">
+            {% include 'components/home/menu_items_grid.html' %}
+        </div>
+
+        <!-- View Full Menu Button -->
+        <div class="text-center mt-12">
+            <a href="{% url 'menu' %}" class="inline-block bg-gradient-to-r from-food-red to-food-gold text-white font-bold py-3 px-8 rounded-full hover:from-food-gold hover:to-food-orange transition duration-300 hover-scale shadow-lg">
+                <i class="fas fa-book-open mr-2"></i> View Full Menu
+            </a>
+        </div>
+
+        <!-- Cart Count Indicator -->
+        <div id="cart-notification" class="fixed bottom-6 right-6 bg-food-gold text-food-black p-4 rounded-full shadow-lg transform transition-transform duration-300 scale-0 z-50">
+            Item added to cart!
+        </div>
+    </div>
+</section>
