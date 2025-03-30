@@ -1,0 +1,318 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Inventory Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Inventory Dashboard{% endblock page_title %}
+{% block page_subtitle %}Manage your product inventory and stock levels{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Inventory Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Total Products</h3>
+                    <p class="text-2xl font-bold mt-1">{{ menu_items.count }}</p>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-full">
+                    <i class="fas fa-utensils text-food-gold text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Low Stock Items</h3>
+                    <p class="text-2xl font-bold mt-1 text-yellow-500">{{ low_stock_items.count }}</p>
+                </div>
+                <div class="bg-yellow-900 p-3 rounded-full">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Out of Stock</h3>
+                    <p class="text-2xl font-bold mt-1 text-red-500">{{ out_of_stock_items.count }}</p>
+                </div>
+                <div class="bg-red-900 p-3 rounded-full">
+                    <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap gap-4">
+        <a href="{% url 'add_inventory' %}" class="btn-primary px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-plus mr-2"></i> Add Inventory
+        </a>
+        <a href="{% url 'inventory_history' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-history mr-2"></i> View History
+        </a>
+        <a href="{% url 'price_history' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-tags mr-2"></i> Price History
+        </a>
+        <a href="{% url 'sales_dashboard' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-chart-line mr-2"></i> Sales Analysis
+        </a>
+    </div>
+
+    <!-- Stock Alerts -->
+    {% if low_stock_items or out_of_stock_items %}
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Stock Alerts</h2>
+
+        {% if out_of_stock_items %}
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-3 text-red-500">
+                <i class="fas fa-exclamation-circle mr-2"></i> Out of Stock Items
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Item</th>
+                            <th class="pb-3">Category</th>
+                            <th class="pb-3">Stock</th>
+                            <th class="pb-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in out_of_stock_items %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">
+                                <div class="flex items-center">
+                                    {% if item.image %}
+                                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-10 h-10 rounded-md object-cover mr-3">
+                                    {% else %}
+                                    <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    {% endif %}
+                                    <span>{{ item.name }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3">{{ item.category.name|default:"No Category" }}</td>
+                            <td class="py-3">
+                                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">
+                                    Out of Stock
+                                </span>
+                            </td>
+                            <td class="py-3">
+                                <a href="{% url 'add_inventory' %}?item={{ item.id }}" class="text-food-gold hover:text-food-gold-light mr-3">
+                                    <i class="fas fa-plus-circle"></i> Add Stock
+                                </a>
+                                <a href="{% url 'item_inventory_history' item.id %}" class="text-gray-400 hover:text-white">
+                                    <i class="fas fa-history"></i> History
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if low_stock_items %}
+        <div>
+            <h3 class="text-lg font-semibold mb-3 text-yellow-500">
+                <i class="fas fa-exclamation-triangle mr-2"></i> Low Stock Items
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Item</th>
+                            <th class="pb-3">Category</th>
+                            <th class="pb-3">Current Stock</th>
+                            <th class="pb-3">Threshold</th>
+                            <th class="pb-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in low_stock_items %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">
+                                <div class="flex items-center">
+                                    {% if item.image %}
+                                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-10 h-10 rounded-md object-cover mr-3">
+                                    {% else %}
+                                    <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    {% endif %}
+                                    <span>{{ item.name }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3">{{ item.category.name|default:"No Category" }}</td>
+                            <td class="py-3">
+                                <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">
+                                    {{ item.current_stock }} left
+                                </span>
+                            </td>
+                            <td class="py-3">{{ item.stock_alert_threshold }}</td>
+                            <td class="py-3">
+                                <a href="{% url 'add_inventory' %}?item={{ item.id }}" class="text-food-gold hover:text-food-gold-light mr-3">
+                                    <i class="fas fa-plus-circle"></i> Add Stock
+                                </a>
+                                <a href="{% url 'item_inventory_history' item.id %}" class="text-gray-400 hover:text-white">
+                                    <i class="fas fa-history"></i> History
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Recent Transactions -->
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Recent Inventory Transactions</h2>
+            <a href="{% url 'inventory_history' %}" class="text-food-gold hover:text-food-gold-light text-sm">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Date</th>
+                        <th class="pb-3">Item</th>
+                        <th class="pb-3">Type</th>
+                        <th class="pb-3">Quantity</th>
+                        <th class="pb-3">Previous Stock</th>
+                        <th class="pb-3">New Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in recent_transactions %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="py-3">{{ transaction.menu_item.name }}</td>
+                        <td class="py-3">
+                            {% if transaction.transaction_type == 'PURCHASE' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Purchase</span>
+                            {% elif transaction.transaction_type == 'SALE' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Sale</span>
+                            {% elif transaction.transaction_type == 'ADJUSTMENT' %}
+                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Adjustment</span>
+                            {% elif transaction.transaction_type == 'WASTE' %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Waste</span>
+                            {% elif transaction.transaction_type == 'RETURN' %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Return</span>
+                            {% else %}
+                            <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">{{ transaction.transaction_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 {% if transaction.quantity < 0 %}text-red-400{% else %}text-green-400{% endif %}">
+                            {{ transaction.quantity }}
+                        </td>
+                        <td class="py-3">{{ transaction.previous_stock }}</td>
+                        <td class="py-3">{{ transaction.new_stock }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-4 text-center text-gray-500">No recent transactions found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- All Products Inventory -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">All Products Inventory</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Item</th>
+                        <th class="pb-3">Category</th>
+                        <th class="pb-3">Current Stock</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Cost Price</th>
+                        <th class="pb-3">Selling Price</th>
+                        <th class="pb-3">Margin</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in menu_items %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">
+                            <div class="flex items-center">
+                                {% if item.image %}
+                                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-10 h-10 rounded-md object-cover mr-3">
+                                {% else %}
+                                <div class="w-10 h-10 rounded-md bg-gray-700 mr-3 flex items-center justify-center">
+                                    <i class="fas fa-utensils text-gray-500"></i>
+                                </div>
+                                {% endif %}
+                                <span>{{ item.name }}</span>
+                            </div>
+                        </td>
+                        <td class="py-3">{{ item.category.name|default:"No Category" }}</td>
+                        <td class="py-3">{{ item.current_stock }}</td>
+                        <td class="py-3">
+                            {% if item.current_stock <= 0 %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Out of Stock</span>
+                            {% elif item.current_stock < item.stock_alert_threshold %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Low Stock</span>
+                            {% else %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">${{ item.cost_price }}</td>
+                        <td class="py-3">${{ item.price }}</td>
+                        <td class="py-3">
+                            {% if item.profit_margin > 30 %}
+                            <span class="text-green-400">{{ item.profit_margin|floatformat:1 }}%</span>
+                            {% elif item.profit_margin > 15 %}
+                            <span class="text-yellow-400">{{ item.profit_margin|floatformat:1 }}%</span>
+                            {% else %}
+                            <span class="text-red-400">{{ item.profit_margin|floatformat:1 }}%</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'add_inventory' %}?item={{ item.id }}" class="text-food-gold hover:text-food-gold-light" title="Add Stock">
+                                    <i class="fas fa-plus-circle"></i>
+                                </a>
+                                <a href="{% url 'item_inventory_history' item.id %}" class="text-gray-400 hover:text-white" title="View History">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                                <a href="{% url 'item_sales_history' item.id %}" class="text-gray-400 hover:text-white" title="Sales History">
+                                    <i class="fas fa-chart-line"></i>
+                                </a>
+                                <a href="{% url 'item_price_history' item.id %}" class="text-gray-400 hover:text-white" title="Price History">
+                                    <i class="fas fa-tags"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="py-4 text-center text-gray-500">No products found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}

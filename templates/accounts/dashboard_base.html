@@ -245,6 +245,40 @@
                 <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Reviews</span>
             </a>
 
+            <!-- Inventory -->
+            <a href="{% url 'inventory_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'inventory' %}active{% endif %}">
+                <i class="fas fa-boxes w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Inventory</span>
+            </a>
+
+            <!-- Sales Analysis -->
+            <a href="{% url 'sales_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'sales' %}active{% endif %}">
+                <i class="fas fa-chart-line w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Sales Analysis</span>
+            </a>
+
+            {% if perms.ecommerce.manage_staff %}
+            <!-- Staff Management -->
+            <a href="{% url 'staff_list' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'staff' %}active{% endif %}">
+                <i class="fas fa-users w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Staff Management</span>
+            </a>
+
+            <!-- Staff Activity -->
+            <a href="{% url 'staff_activity' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'staff_activity' %}active{% endif %}">
+                <i class="fas fa-history w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Activity Logs</span>
+            </a>
+            {% endif %}
+
+            {% if request.user.staff_profile.role == 'CASHIER' %}
+            <!-- Cashier Dashboard -->
+            <a href="{% url 'cashier_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
+                <i class="fas fa-cash-register w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Cashier Dashboard</span>
+            </a>
+            {% endif %}
+
             <div class="border-t border-gray-800 my-4"></div>
 
             <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
@@ -252,10 +286,17 @@
             </div>
 
             <!-- Profile -->
+            {% if request.user.is_staff %}
+            <a href="{% url 'staff_profile' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'profile' %}active{% endif %}">
+                <i class="fas fa-user w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">My Profile</span>
+            </a>
+            {% else %}
             <a href="{% url 'user_profile' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'profile' %}active{% endif %}">
                 <i class="fas fa-user w-6 text-center"></i>
                 <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Profile</span>
             </a>
+            {% endif %}
 
             <!-- Settings -->
             <a href="{% url 'user_settings' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'settings' %}active{% endif %}">
@@ -291,21 +332,25 @@
             <!-- User Menu -->
             <div class="relative" x-data="{ userMenuOpen: false }">
                 <button @click="userMenuOpen = !userMenuOpen" class="flex items-center space-x-3 focus:outline-none">
+                    {% if request.user.staff_profile.profile_picture %}
+                    <img src="{{ request.user.staff_profile.profile_picture.url }}" alt="Profile Picture" class="w-10 h-10 rounded-full object-cover">
+                    {% else %}
                     <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
                         <i class="fas fa-user text-gray-300"></i>
                     </div>
+                    {% endif %}
                     <div class="hidden md:block text-right">
-                        <div class="text-sm font-medium">{{ request.user.username }}</div>
-                        <div class="text-xs text-gray-400">Administrator</div>
+                        <div class="text-sm font-medium">{{ request.user.get_full_name|default:request.user.username }}</div>
+                        <div class="text-xs text-gray-400">{{ request.user.staff_profile.get_role_display }}</div>
                     </div>
                     <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
                 </button>
 
                 <div x-show="userMenuOpen" @click.away="userMenuOpen = false" class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-2 z-50">
-                    <a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                    <a href="{% url 'staff_profile' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-user mr-2"></i> Profile
                     </a>
-                    <a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                    <a href="{% url 'user_settings' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
                         <i class="fas fa-cog mr-2"></i> Settings
                     </a>
                     <div class="border-t border-gray-700 my-1"></div>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt - Order #{{ order.id }}</title>
+    <style>
+        @media print {
+            body {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                margin: 0;
+                padding: 0;
+                width: 80mm; /* Standard receipt width */
+            }
+            
+            .receipt {
+                padding: 10px;
+            }
+            
+            .header {
+                text-align: center;
+                margin-bottom: 10px;
+            }
+            
+            .logo {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+            
+            .info {
+                margin-bottom: 10px;
+            }
+            
+            .divider {
+                border-top: 1px dashed #000;
+                margin: 10px 0;
+            }
+            
+            .items {
+                width: 100%;
+            }
+            
+            .items th {
+                text-align: left;
+                padding-bottom: 5px;
+            }
+            
+            .items td {
+                padding: 2px 0;
+            }
+            
+            .total {
+                text-align: right;
+                margin-top: 10px;
+                font-weight: bold;
+            }
+            
+            .footer {
+                text-align: center;
+                margin-top: 20px;
+                font-size: 10px;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        /* Styles for screen preview */
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .receipt {
+            background-color: white;
+            width: 80mm;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .info {
+            margin-bottom: 15px;
+        }
+        
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 15px 0;
+        }
+        
+        .items {
+            width: 100%;
+        }
+        
+        .items th {
+            text-align: left;
+            padding-bottom: 8px;
+        }
+        
+        .items td {
+            padding: 3px 0;
+        }
+        
+        .total {
+            text-align: right;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            font-size: 12px;
+        }
+        
+        .no-print {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .print-btn {
+            background-color: #F9A826;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .back-btn {
+            background-color: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <div class="logo">5TH AVENUE GRILL</div>
+            <div>Grill and Restobar</div>
+            <div>123 Main Street, Anytown</div>
+            <div>Tel: (123) 456-7890</div>
+        </div>
+        
+        <div class="info">
+            <div><strong>Order #:</strong> {{ order.id }}</div>
+            <div><strong>Date:</strong> {{ print_date|date:"M d, Y" }}</div>
+            <div><strong>Time:</strong> {{ print_date|date:"H:i:s" }}</div>
+            <div><strong>Cashier:</strong> {{ cashier_name }}</div>
+            <div><strong>Customer:</strong> {{ order.customer_name }}</div>
+            {% if order.table_number %}
+            <div><strong>Table:</strong> {{ order.table_number }}</div>
+            {% endif %}
+            <div><strong>Type:</strong> {{ order.get_order_type_display }}</div>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td>{{ item.menu_item.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>${{ item.price }}</td>
+                    <td>${{ item.subtotal }}</td>
+                </tr>
+                {% if item.special_instructions %}
+                <tr>
+                    <td colspan="4">* {{ item.special_instructions }}</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="divider"></div>
+        
+        <div class="total">
+            <div>TOTAL: ${{ order.total_amount }}</div>
+        </div>
+        
+        {% if order.special_instructions %}
+        <div class="divider"></div>
+        <div>
+            <strong>Special Instructions:</strong>
+            <div>{{ order.special_instructions }}</div>
+        </div>
+        {% endif %}
+        
+        <div class="divider"></div>
+        
+        <div class="footer">
+            <div>Thank you for dining with us!</div>
+            <div>Please come again</div>
+            <div>www.5thavenuegrill.com</div>
+        </div>
+        
+        <div class="no-print">
+            <button class="print-btn" onclick="window.print()">Print Receipt</button>
+            <a href="{% url 'view_order' order.id %}"><button class="back-btn">Back to Order</button></a>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-print when page loads
+        window.onload = function() {
+            // Uncomment the line below to automatically print when the page loads
+            // window.print();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}My Profile - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}My Profile{% endblock page_title %}
+{% block page_subtitle %}View and update your account information{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Profile Information -->
+    <div class="card p-6">
+        <div class="flex flex-col md:flex-row md:items-center mb-6">
+            <div class="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
+                {% if request.user.staff_profile.profile_picture %}
+                <img src="{{ request.user.staff_profile.profile_picture.url }}" alt="Profile Picture" class="w-20 h-20 rounded-full object-cover">
+                {% else %}
+                <div class="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-2xl">
+                    {{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex-grow">
+                <h2 class="text-xl font-bold">{{ request.user.get_full_name }}</h2>
+                <p class="text-gray-400 mb-2">@{{ request.user.username }}</p>
+                <div class="flex items-center">
+                    <span class="px-2 py-1 rounded-full text-xs mr-2
+                        {% if staff_profile.role == 'ADMIN' %}bg-purple-900 text-purple-300
+                        {% elif staff_profile.role == 'MANAGER' %}bg-blue-900 text-blue-300
+                        {% elif staff_profile.role == 'CASHIER' %}bg-green-900 text-green-300
+                        {% elif staff_profile.role == 'KITCHEN' %}bg-yellow-900 text-yellow-300
+                        {% elif staff_profile.role == 'WAITER' %}bg-pink-900 text-pink-300
+                        {% elif staff_profile.role == 'DELIVERY' %}bg-indigo-900 text-indigo-300
+                        {% else %}bg-gray-700 text-gray-300{% endif %}">
+                        {{ staff_profile.get_role_display }}
+                    </span>
+                    <span class="text-sm text-gray-400">Employee ID: {{ staff_profile.employee_id|default:"Not assigned" }}</span>
+                </div>
+            </div>
+
+            <div class="mt-4 md:mt-0 md:ml-6">
+                <a href="{% url 'change_password' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-key mr-2"></i> Change Password
+                </a>
+            </div>
+        </div>
+
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-800 text-green-200{% else %}bg-red-800 text-red-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" class="space-y-6" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Profile Picture Upload -->
+            <div class="space-y-6 md:col-span-2">
+                <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Profile Picture</h3>
+
+                <div class="flex items-center space-x-4">
+                    <div>
+                        <label for="profile_picture" class="block text-sm font-medium text-gray-400 mb-2">Upload New Picture</label>
+                        <input type="file" name="profile_picture" id="profile_picture" accept="image/*"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <p class="text-xs text-gray-500 mt-1">Recommended size: 500x500 pixels (JPG, PNG)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Personal Information -->
+                <div class="space-y-6 md:col-span-2">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Personal Information</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-400 mb-2">First Name *</label>
+                            <input type="text" name="first_name" id="first_name" value="{{ request.user.first_name }}" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-400 mb-2">Last Name *</label>
+                            <input type="text" name="last_name" id="last_name" value="{{ request.user.last_name }}" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-400 mb-2">Email *</label>
+                            <input type="email" name="email" id="email" value="{{ request.user.email }}" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-400 mb-2">Phone Number</label>
+                            <input type="tel" name="phone" id="phone" value="{{ staff_profile.phone }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Information -->
+                <div class="space-y-6 md:col-span-2">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Additional Information</h3>
+
+                    <div>
+                        <label for="address" class="block text-sm font-medium text-gray-400 mb-2">Address</label>
+                        <textarea name="address" id="address" rows="2"
+                                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">{{ staff_profile.address }}</textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="emergency_contact" class="block text-sm font-medium text-gray-400 mb-2">Emergency Contact</label>
+                            <input type="text" name="emergency_contact" id="emergency_contact" value="{{ staff_profile.emergency_contact }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+
+                        <div>
+                            <label for="emergency_phone" class="block text-sm font-medium text-gray-400 mb-2">Emergency Phone</label>
+                            <input type="tel" name="emergency_phone" id="emergency_phone" value="{{ staff_profile.emergency_phone }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4">
+                <button type="submit"
+                        class="px-6 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Recent Activity</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Timestamp</th>
+                        <th class="pb-3">Action</th>
+                        <th class="pb-3">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in recent_activities %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3 whitespace-nowrap">{{ activity.timestamp|date:"M d, Y H:i:s" }}</td>
+                        <td class="py-3">
+                            <span class="px-2 py-1 rounded-full text-xs
+                                {% if activity.action == 'LOGIN' %}bg-green-900 text-green-300
+                                {% elif activity.action == 'LOGOUT' %}bg-blue-900 text-blue-300
+                                {% elif activity.action == 'CREATE_ORDER' %}bg-purple-900 text-purple-300
+                                {% elif activity.action == 'UPDATE_ORDER' %}bg-indigo-900 text-indigo-300
+                                {% elif activity.action == 'CANCEL_ORDER' %}bg-red-900 text-red-300
+                                {% elif activity.action == 'ADD_ITEM' %}bg-yellow-900 text-yellow-300
+                                {% elif activity.action == 'UPDATE_ITEM' %}bg-orange-900 text-orange-300
+                                {% elif activity.action == 'DELETE_ITEM' %}bg-pink-900 text-pink-300
+                                {% elif activity.action == 'ADD_INVENTORY' %}bg-teal-900 text-teal-300
+                                {% else %}bg-gray-700 text-gray-300{% endif %}">
+                                {{ activity.get_action_display }}
+                            </span>
+                        </td>
+                        <td class="py-3">{{ activity.details }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="py-4 text-center text-gray-500">No recent activity</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4 text-right">
+            <a href="{% url 'staff_activity' %}?staff_id={{ request.user.id }}" class="text-food-gold hover:text-food-gold-light text-sm">
+                View All Activity <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,348 @@
+{% extends 'cashier/base.html' %}
+{% load math_filters %}
+
+{% block title %}New Order - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}New Order{% endblock page_title %}
+{% block page_subtitle %}Create a new customer order{% endblock page_subtitle %}
+
+{% block extra_css %}
+<style>
+    .menu-item {
+        transition: all 0.2s ease;
+    }
+    
+    .menu-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    .menu-item.selected {
+        border: 2px solid #F9A826;
+    }
+    
+    .category-tab {
+        transition: all 0.2s ease;
+    }
+    
+    .category-tab.active {
+        background-color: #F9A826;
+        color: white;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="space-y-8" x-data="orderApp()">
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-800 text-green-200{% else %}bg-red-800 text-red-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <form method="POST" @submit="validateForm">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Customer Information -->
+            <div class="lg:col-span-1">
+                <div class="card p-6 space-y-6">
+                    <h2 class="text-xl font-bold">Customer Information</h2>
+                    
+                    <div>
+                        <label for="customer_name" class="block text-sm font-medium text-gray-400 mb-2">Customer Name</label>
+                        <input type="text" name="customer_name" id="customer_name" x-model="customerName"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    </div>
+                    
+                    <div>
+                        <label for="customer_phone" class="block text-sm font-medium text-gray-400 mb-2">Phone Number</label>
+                        <input type="tel" name="customer_phone" id="customer_phone" x-model="customerPhone"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    </div>
+                    
+                    <div>
+                        <label for="order_type" class="block text-sm font-medium text-gray-400 mb-2">Order Type</label>
+                        <select name="order_type" id="order_type" x-model="orderType"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                            <option value="DINE_IN">Dine In</option>
+                            <option value="TAKEOUT">Takeout</option>
+                            <option value="DELIVERY">Delivery</option>
+                        </select>
+                    </div>
+                    
+                    <div x-show="orderType === 'DINE_IN'">
+                        <label for="table_number" class="block text-sm font-medium text-gray-400 mb-2">Table Number</label>
+                        <input type="text" name="table_number" id="table_number" x-model="tableNumber"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    </div>
+                    
+                    <div>
+                        <label for="special_instructions" class="block text-sm font-medium text-gray-400 mb-2">Special Instructions</label>
+                        <textarea name="special_instructions" id="special_instructions" rows="2" x-model="specialInstructions"
+                                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold"></textarea>
+                    </div>
+                </div>
+                
+                <!-- Order Summary -->
+                <div class="card p-6 mt-6 space-y-6">
+                    <h2 class="text-xl font-bold">Order Summary</h2>
+                    
+                    <div x-show="orderItems.length === 0" class="text-center py-4 text-gray-400">
+                        <p>No items added yet</p>
+                    </div>
+                    
+                    <div x-show="orderItems.length > 0" class="space-y-4">
+                        <div class="max-h-64 overflow-y-auto">
+                            <template x-for="(item, index) in orderItems" :key="index">
+                                <div class="flex justify-between items-center py-2 border-b border-gray-800">
+                                    <div class="flex-1">
+                                        <div class="flex items-center">
+                                            <span class="font-medium" x-text="item.name"></span>
+                                            <span class="ml-2 text-sm text-gray-400" x-text="`x${item.quantity}`"></span>
+                                        </div>
+                                        <div class="text-sm text-gray-400" x-show="item.instructions">
+                                            <span x-text="item.instructions"></span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-medium" x-text="'$' + (item.price * item.quantity).toFixed(2)"></div>
+                                        <button type="button" @click="removeItem(index)" class="text-red-400 hover:text-red-300 text-sm">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <div class="border-t border-gray-800 pt-4">
+                            <div class="flex justify-between font-bold text-lg">
+                                <span>Total:</span>
+                                <span x-text="'$' + calculateTotal().toFixed(2)"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden inputs to store order items -->
+                    <template x-for="(item, index) in orderItems" :key="index">
+                        <div>
+                            <input type="hidden" :name="'item_id[]'" :value="item.id">
+                            <input type="hidden" :name="'quantity[]'" :value="item.quantity">
+                            <input type="hidden" :name="'item_instructions[]'" :value="item.instructions">
+                        </div>
+                    </template>
+                    
+                    <div class="pt-4">
+                        <button type="submit" 
+                                class="w-full px-6 py-3 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200 font-bold"
+                                :disabled="orderItems.length === 0">
+                            <i class="fas fa-check-circle mr-2"></i> Complete Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Menu Items -->
+            <div class="lg:col-span-2">
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4">Menu Items</h2>
+                    
+                    <!-- Search and Filter -->
+                    <div class="mb-6">
+                        <div class="flex flex-wrap gap-2">
+                            <input type="text" placeholder="Search menu items..." x-model="searchQuery" @input="filterItems"
+                                   class="flex-grow px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                    </div>
+                    
+                    <!-- Category Tabs -->
+                    <div class="mb-6 overflow-x-auto">
+                        <div class="flex space-x-2 pb-2">
+                            <button type="button" @click="selectedCategory = ''; filterItems()" 
+                                    class="category-tab px-4 py-2 rounded-lg whitespace-nowrap"
+                                    :class="selectedCategory === '' ? 'active' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                                All Categories
+                            </button>
+                            
+                            {% regroup menu_items by category as category_list %}
+                            {% for category in category_list %}
+                            <button type="button" @click="selectedCategory = '{{ category.grouper.name }}'; filterItems()" 
+                                    class="category-tab px-4 py-2 rounded-lg whitespace-nowrap"
+                                    :class="selectedCategory === '{{ category.grouper.name }}' ? 'active' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                                {{ category.grouper.name }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- Menu Items Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for item in menu_items %}
+                        <div class="menu-item bg-gray-800 rounded-lg overflow-hidden" 
+                             x-show="isItemVisible('{{ item.name }}', '{{ item.category.name }}')"
+                             @click="openItemModal('{{ item.id }}', '{{ item.name }}', {{ item.price }})">
+                            <div class="h-32 bg-gray-700 flex items-center justify-center">
+                                {% if item.image %}
+                                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="h-full w-full object-cover">
+                                {% else %}
+                                <i class="fas fa-utensils text-gray-500 text-3xl"></i>
+                                {% endif %}
+                            </div>
+                            <div class="p-3">
+                                <h3 class="font-medium">{{ item.name }}</h3>
+                                <div class="flex justify-between items-center mt-1">
+                                    <span class="text-food-gold">${{ item.price }}</span>
+                                    <button type="button" class="text-sm bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Item Modal -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center" 
+         x-show="showItemModal" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click.away="showItemModal = false">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4" x-text="selectedItem.name"></h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Quantity</label>
+                    <div class="flex items-center">
+                        <button type="button" @click="selectedItem.quantity > 1 ? selectedItem.quantity-- : null" 
+                                class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-l-lg">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <input type="number" x-model.number="selectedItem.quantity" min="1" 
+                               class="w-16 px-3 py-1 bg-gray-700 border-t border-b border-gray-600 text-center focus:outline-none">
+                        <button type="button" @click="selectedItem.quantity++" 
+                                class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-r-lg">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="item_instructions" class="block text-sm font-medium text-gray-400 mb-2">Special Instructions</label>
+                    <textarea id="item_instructions" x-model="selectedItem.instructions" rows="2"
+                              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold"></textarea>
+                </div>
+                
+                <div class="flex justify-between items-center pt-2">
+                    <span class="font-bold">Total: <span x-text="'$' + (selectedItem.price * selectedItem.quantity).toFixed(2)"></span></span>
+                    <div class="flex space-x-2">
+                        <button type="button" @click="showItemModal = false" 
+                                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+                            Cancel
+                        </button>
+                        <button type="button" @click="addItemToOrder" 
+                                class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg">
+                            Add to Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    function orderApp() {
+        return {
+            customerName: '',
+            customerPhone: '',
+            orderType: 'DINE_IN',
+            tableNumber: '',
+            specialInstructions: '',
+            orderItems: [],
+            showItemModal: false,
+            selectedItem: {
+                id: '',
+                name: '',
+                price: 0,
+                quantity: 1,
+                instructions: ''
+            },
+            searchQuery: '',
+            selectedCategory: '',
+            
+            openItemModal(id, name, price) {
+                this.selectedItem = {
+                    id: id,
+                    name: name,
+                    price: price,
+                    quantity: 1,
+                    instructions: ''
+                };
+                this.showItemModal = true;
+            },
+            
+            addItemToOrder() {
+                this.orderItems.push({...this.selectedItem});
+                this.showItemModal = false;
+            },
+            
+            removeItem(index) {
+                this.orderItems.splice(index, 1);
+            },
+            
+            calculateTotal() {
+                return this.orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+            },
+            
+            validateForm(e) {
+                if (this.orderItems.length === 0) {
+                    e.preventDefault();
+                    alert('Please add at least one item to the order');
+                    return false;
+                }
+                
+                if (this.orderType === 'DINE_IN' && !this.tableNumber) {
+                    e.preventDefault();
+                    alert('Please enter a table number for dine-in orders');
+                    return false;
+                }
+                
+                return true;
+            },
+            
+            filterItems() {
+                // This function will be used with x-show to filter menu items
+            },
+            
+            isItemVisible(itemName, categoryName) {
+                // Check category filter
+                if (this.selectedCategory && this.selectedCategory !== categoryName) {
+                    return false;
+                }
+                
+                // Check search query
+                if (this.searchQuery && !itemName.toLowerCase().includes(this.searchQuery.toLowerCase())) {
+                    return false;
+                }
+                
+                return true;
+            }
+        }
+    }
+</script>
+{% endblock extra_scripts %}

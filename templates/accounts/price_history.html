@@ -1,0 +1,148 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}
+    {% if menu_item %}
+        Price History: {{ menu_item.name }} - 5th Avenue Grill and Restobar
+    {% else %}
+        Price History - 5th Avenue Grill and Restobar
+    {% endif %}
+{% endblock title %}
+
+{% block page_title %}
+    {% if menu_item %}
+        Price History: {{ menu_item.name }}
+    {% else %}
+        Price History
+    {% endif %}
+{% endblock page_title %}
+
+{% block page_subtitle %}
+    {% if menu_item %}
+        Track price changes for {{ menu_item.name }}
+    {% else %}
+        Track price changes across all menu items
+    {% endif %}
+{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Item Details (if viewing a specific item) -->
+    {% if menu_item %}
+    <div class="card p-6">
+        <div class="flex flex-col md:flex-row md:items-center">
+            <div class="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
+                {% if menu_item.image %}
+                <img src="{{ menu_item.image.url }}" alt="{{ menu_item.name }}" class="w-24 h-24 rounded-lg object-cover">
+                {% else %}
+                <div class="w-24 h-24 rounded-lg bg-gray-700 flex items-center justify-center">
+                    <i class="fas fa-utensils text-gray-500 text-3xl"></i>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex-grow">
+                <h2 class="text-xl font-bold">{{ menu_item.name }}</h2>
+                <p class="text-gray-400 mb-2">{{ menu_item.category.name|default:"No Category" }}</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                    <div>
+                        <span class="text-gray-400 text-sm">Current Price:</span>
+                        <p class="font-semibold">${{ menu_item.price }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-sm">Cost Price:</span>
+                        <p class="font-semibold">${{ menu_item.cost_price }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-sm">Profit Margin:</span>
+                        <p class="font-semibold {% if menu_item.profit_margin > 30 %}text-green-400{% elif menu_item.profit_margin > 15 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            {{ menu_item.profit_margin|floatformat:1 }}%
+                        </p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-sm">Current Stock:</span>
+                        <p class="font-semibold">{{ menu_item.current_stock }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 md:mt-0 md:ml-6 flex flex-col space-y-2">
+                <a href="{% url 'item_inventory_history' menu_item.id %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200 text-center">
+                    <i class="fas fa-history mr-2"></i> Inventory History
+                </a>
+                <a href="{% url 'item_sales_history' menu_item.id %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200 text-center">
+                    <i class="fas fa-chart-line mr-2"></i> Sales History
+                </a>
+                <a href="{% url 'edit_menu_item' menu_item.id %}" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200 text-center">
+                    <i class="fas fa-edit mr-2"></i> Edit Item
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Price History Table -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Price Change History</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Date</th>
+                        {% if not menu_item %}<th class="pb-3">Item</th>{% endif %}
+                        <th class="pb-3">Old Price</th>
+                        <th class="pb-3">New Price</th>
+                        <th class="pb-3">Change</th>
+                        <th class="pb-3">% Change</th>
+                        <th class="pb-3">Changed By</th>
+                        <th class="pb-3">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in history %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ record.changed_at|date:"M d, Y H:i" }}</td>
+                        {% if not menu_item %}
+                        <td class="py-3">
+                            <a href="{% url 'item_price_history' record.menu_item.id %}" class="text-food-gold hover:text-food-gold-light">
+                                {{ record.menu_item.name }}
+                            </a>
+                        </td>
+                        {% endif %}
+                        <td class="py-3">${{ record.old_price }}</td>
+                        <td class="py-3">${{ record.new_price }}</td>
+                        <td class="py-3 {% if record.new_price > record.old_price %}text-green-400{% elif record.new_price < record.old_price %}text-red-400{% else %}text-gray-400{% endif %}">
+                            {% if record.new_price > record.old_price %}
+                                +${{ record.new_price|sub:record.old_price|floatformat:2 }}
+                            {% elif record.new_price < record.old_price %}
+                                -${{ record.old_price|sub:record.new_price|floatformat:2 }}
+                            {% else %}
+                                $0.00
+                            {% endif %}
+                        </td>
+                        <td class="py-3 {% if record.new_price > record.old_price %}text-green-400{% elif record.new_price < record.old_price %}text-red-400{% else %}text-gray-400{% endif %}">
+                            {% if record.old_price and record.old_price > 0 %}
+                                {% with price_diff=record.new_price|sub:record.old_price %}
+                                    {% with percent_change=price_diff|div:record.old_price|mul:100 %}
+                                        {% if percent_change > 0 %}+{% endif %}{{ percent_change|floatformat:1 }}%
+                                    {% endwith %}
+                                {% endwith %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td class="py-3">{{ record.changed_by.username|default:"System" }}</td>
+                        <td class="py-3">{{ record.notes|default:"-"|truncatechars:30 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if menu_item %}7{% else %}8{% endif %}" class="py-4 text-center text-gray-500">No price history found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}

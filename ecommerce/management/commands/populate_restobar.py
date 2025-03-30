@@ -8,7 +8,8 @@ from django.conf import settings
 from decimal import Decimal
 from faker import Faker
 from ecommerce.models import (
-    Category, MenuItem, Reservation, Order, OrderItem, Review, Cart, CartItem
+    Category, MenuItem, Reservation, Order, OrderItem, Review, Cart, CartItem,
+    InventoryTransaction, PriceHistory, SalesSummary
 )
 
 fake = Faker()
@@ -332,8 +333,12 @@ class Command(BaseCommand):
 
         # Create admin user if it doesn't exist
         if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-            self.stdout.write(self.style.SUCCESS('Admin user created'))
+            admin_user = User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+            # Set admin user's staff profile role to ADMIN
+            if hasattr(admin_user, 'staff_profile'):
+                admin_user.staff_profile.role = 'ADMIN'
+                admin_user.staff_profile.save()
+            self.stdout.write(self.style.SUCCESS('Admin user created with ADMIN role'))
 
         # Create regular users
         self.create_users(num_users)
@@ -353,6 +358,15 @@ class Command(BaseCommand):
         # Create carts for some users
         self.create_carts()
 
+        # Create inventory transactions
+        self.create_inventory_transactions()
+
+        # Create price history
+        self.create_price_history()
+
+        # Create sales summaries
+        self.create_sales_summaries()
+
         self.stdout.write(self.style.SUCCESS('Database successfully populated!'))
 
     @transaction.atomic
@@ -361,7 +375,7 @@ class Command(BaseCommand):
 
         # Create users
         users = []
-        for i in range(num_users):
+        for _ in range(num_users):
             first_name = fake.first_name()
             last_name = fake.last_name()
             username = f"{first_name.lower()}{last_name.lower()}{random.randint(1, 999)}"
@@ -394,15 +408,27 @@ class Command(BaseCommand):
 
             menu_items = []
             for item_data in category_data['items']:
+                # Calculate cost price (60-80% of selling price)
+                price = Decimal(item_data['price'])
+                cost_percentage = Decimal(random.uniform(0.6, 0.8))
+                cost_price = (price * cost_percentage).quantize(Decimal('0.01'))
+
+                # Set random stock values
+                current_stock = random.randint(10, 100)
+                stock_alert_threshold = random.randint(5, 20)
+
                 menu_item = MenuItem(
                     category=category,
                     name=item_data['name'],
                     description=item_data['description'],
-                    price=Decimal(item_data['price']),
+                    price=price,
                     is_available=True,
                     is_featured=item_data.get('is_featured', False),
                     is_vegetarian=item_data.get('is_vegetarian', False),
-                    spice_level=item_data.get('spice_level', 0)
+                    spice_level=item_data.get('spice_level', 0),
+                    current_stock=current_stock,
+                    stock_alert_threshold=stock_alert_threshold,
+                    cost_price=cost_price
                 )
                 menu_items.append(menu_item)
 
@@ -516,13 +542,21 @@ class Command(BaseCommand):
 
                     # Create order items
                     for item_data in order_items:
-                        OrderItem.objects.create(
+                        order_item = OrderItem.objects.create(
                             order=order,
                             menu_item=item_data['menu_item'],
                             quantity=item_data['quantity'],
                             price=item_data['price'],
-                            special_instructions=item_data['special_instructions']
+                            special_instructions=item_data['special_instructions'],
+                            inventory_updated=False  # Will be updated by the save method
                         )
+
+                        # The save method in OrderItem should handle inventory updates
+                        # If the order is COMPLETED, make sure inventory is updated
+                        if status == 'COMPLETED' and not order_item.inventory_updated:
+                            # Force inventory update by saving again
+                            order_item.inventory_updated = True
+                            order_item.save(update_fields=['inventory_updated'])
 
                     created_count += 1
             except Exception as e:
@@ -607,3 +641,175 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'Error creating cart: {e}'))
 
         self.stdout.write(self.style.SUCCESS(f'Created {created_count} carts with items'))
+
+    def create_inventory_transactions(self):
+        self.stdout.write('Creating inventory transactions...')
+
+        menu_items = list(MenuItem.objects.all())
+        users = list(User.objects.filter(is_staff=True))
+        admin_user = User.objects.filter(username='admin').first()
+
+        if not users and admin_user:
+            users = [admin_user]
+
+        transaction_types = ['PURCHASE', 'ADJUSTMENT', 'WASTE', 'RETURN']
+        transaction_count = 0
+
+        # Create initial purchase transactions for all menu items
+        for menu_item in menu_items:
+            try:
+                with transaction.atomic():
+                    # Initial stock purchase
+                    purchase_date = fake.date_time_between(
+                        start_date='-90d',
+                        end_date='-60d',
+                        tzinfo=timezone.get_current_timezone()
+                    )
+
+                    purchase_quantity = menu_item.current_stock + random.randint(10, 50)
+
+                    InventoryTransaction.objects.create(
+                        menu_item=menu_item,
+                        transaction_type='PURCHASE',
+                        quantity=purchase_quantity,
+                        unit_price=menu_item.cost_price,
+                        total_price=menu_item.cost_price * purchase_quantity,
+                        reference=f'Initial Purchase #{random.randint(1000, 9999)}',
+                        notes='Initial inventory stock purchase',
+                        created_by=random.choice(users) if users else None,
+                        created_at=purchase_date
+                    )
+                    transaction_count += 1
+
+                    # Add some random transactions
+                    for _ in range(random.randint(0, 3)):
+                        trans_type = random.choice(transaction_types)
+
+                        # Determine quantity based on transaction type
+                        if trans_type == 'PURCHASE':
+                            quantity = random.randint(5, 30)
+                        elif trans_type == 'WASTE' or trans_type == 'RETURN':
+                            quantity = -random.randint(1, 5)
+                        else:  # ADJUSTMENT
+                            quantity = random.randint(-3, 5)
+
+                        trans_date = fake.date_time_between(
+                            start_date='-60d',
+                            end_date='now',
+                            tzinfo=timezone.get_current_timezone()
+                        )
+
+                        unit_price = menu_item.cost_price
+                        total_price = unit_price * abs(quantity)
+
+                        InventoryTransaction.objects.create(
+                            menu_item=menu_item,
+                            transaction_type=trans_type,
+                            quantity=quantity,
+                            unit_price=unit_price,
+                            total_price=total_price,
+                            reference=f'{trans_type} #{random.randint(1000, 9999)}',
+                            notes=f'{trans_type} transaction for inventory management',
+                            created_by=random.choice(users) if users else None,
+                            created_at=trans_date
+                        )
+                        transaction_count += 1
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f'Error creating inventory transaction: {e}'))
+
+        self.stdout.write(self.style.SUCCESS(f'Created {transaction_count} inventory transactions'))
+
+    def create_price_history(self):
+        self.stdout.write('Creating price history records...')
+
+        menu_items = list(MenuItem.objects.all())
+        users = list(User.objects.filter(is_staff=True))
+        admin_user = User.objects.filter(username='admin').first()
+
+        if not users and admin_user:
+            users = [admin_user]
+
+        history_count = 0
+
+        # Create price history for some menu items
+        for menu_item in random.sample(menu_items, int(len(menu_items) * 0.4)):
+            try:
+                with transaction.atomic():
+                    # Get current price
+                    current_price = menu_item.price
+
+                    # Create 1-3 price history records
+                    for _ in range(random.randint(1, 3)):
+                        # Calculate old price (90-110% of current price)
+                        price_factor = Decimal(random.uniform(0.9, 1.1))
+                        old_price = (current_price * price_factor).quantize(Decimal('0.01'))
+
+                        # Ensure old price is different from current price
+                        if old_price == current_price:
+                            old_price = current_price - Decimal('1.00')
+
+                        # Create record with date in the past
+                        change_date = fake.date_time_between(
+                            start_date='-180d',
+                            end_date='-30d',
+                            tzinfo=timezone.get_current_timezone()
+                        )
+
+                        PriceHistory.objects.create(
+                            menu_item=menu_item,
+                            old_price=old_price,
+                            new_price=current_price,
+                            changed_by=random.choice(users) if users else None,
+                            changed_at=change_date,
+                            notes=f'Price adjustment due to {random.choice(["seasonal changes", "cost increases", "market demand", "promotional offer"])}'
+                        )
+
+                        # Set current price to old price for next iteration
+                        current_price = old_price
+                        history_count += 1
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f'Error creating price history: {e}'))
+
+        self.stdout.write(self.style.SUCCESS(f'Created {history_count} price history records'))
+
+    def create_sales_summaries(self):
+        self.stdout.write('Creating sales summary records...')
+
+        menu_items = list(MenuItem.objects.all())
+        summary_count = 0
+
+        # Create sales summaries for the past 30 days
+        end_date = timezone.now().date()
+        start_date = end_date - datetime.timedelta(days=30)
+
+        for menu_item in menu_items:
+            try:
+                current_date = start_date
+                while current_date <= end_date:
+                    # Generate random sales data
+                    quantity_sold = random.randint(0, 15)
+
+                    # Skip days with no sales
+                    if quantity_sold == 0 and random.random() < 0.3:
+                        current_date += datetime.timedelta(days=1)
+                        continue
+
+                    revenue = menu_item.price * quantity_sold
+                    cost = menu_item.cost_price * quantity_sold
+                    profit = revenue - cost
+
+                    SalesSummary.objects.create(
+                        menu_item=menu_item,
+                        date=current_date,
+                        quantity_sold=quantity_sold,
+                        revenue=revenue,
+                        cost=cost,
+                        profit=profit
+                    )
+
+                    summary_count += 1
+                    current_date += datetime.timedelta(days=1)
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f'Error creating sales summary: {e}'))
+
+        self.stdout.write(self.style.SUCCESS(f'Created {summary_count} sales summary records'))

@@ -1,0 +1,126 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Inventory History - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}
+    {% if menu_item %}
+        Inventory History: {{ menu_item.name }}
+    {% else %}
+        Inventory History
+    {% endif %}
+{% endblock page_title %}
+
+{% block page_subtitle %}
+    {% if menu_item %}
+        View all inventory transactions for {{ menu_item.name }}
+    {% else %}
+        View all inventory transactions across your menu items
+    {% endif %}
+{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="card p-6">
+        <!-- Filters -->
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-4">Filter Transactions</h3>
+            <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label for="transaction_type" class="block text-sm font-medium text-gray-400 mb-2">Transaction Type</label>
+                    <select name="transaction_type" id="transaction_type"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <option value="">All Types</option>
+                        {% for type_code, type_name in transaction_types %}
+                        <option value="{{ type_code }}" {% if transaction_type == type_code %}selected{% endif %}>{{ type_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">Date From</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
+
+                <div>
+                    <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">Date To</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                        Apply Filters
+                    </button>
+                    <a href="{% if menu_item %}{% url 'item_inventory_history' menu_item.id %}{% else %}{% url 'inventory_history' %}{% endif %}" class="ml-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                        Reset
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Date & Time</th>
+                        {% if not menu_item %}<th class="pb-3">Item</th>{% endif %}
+                        <th class="pb-3">Type</th>
+                        <th class="pb-3">Quantity</th>
+                        <th class="pb-3">Unit Price</th>
+                        <th class="pb-3">Total Price</th>
+                        <th class="pb-3">Previous Stock</th>
+                        <th class="pb-3">New Stock</th>
+                        <th class="pb-3">Reference</th>
+                        <th class="pb-3">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ transaction.created_at|date:"M d, Y H:i" }}</td>
+                        {% if not menu_item %}
+                        <td class="py-3">
+                            <a href="{% url 'item_inventory_history' transaction.menu_item.id %}" class="text-food-gold hover:text-food-gold-light">
+                                {{ transaction.menu_item.name }}
+                            </a>
+                        </td>
+                        {% endif %}
+                        <td class="py-3">
+                            {% if transaction.transaction_type == 'PURCHASE' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Purchase</span>
+                            {% elif transaction.transaction_type == 'SALE' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Sale</span>
+                            {% elif transaction.transaction_type == 'ADJUSTMENT' %}
+                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Adjustment</span>
+                            {% elif transaction.transaction_type == 'WASTE' %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Waste</span>
+                            {% elif transaction.transaction_type == 'RETURN' %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Return</span>
+                            {% else %}
+                            <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">{{ transaction.transaction_type }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 {% if transaction.quantity < 0 %}text-red-400{% else %}text-green-400{% endif %}">
+                            {{ transaction.quantity }}
+                        </td>
+                        <td class="py-3">{% if transaction.unit_price %}${{ transaction.unit_price }}{% else %}-{% endif %}</td>
+                        <td class="py-3">{% if transaction.total_price %}${{ transaction.total_price }}{% else %}-{% endif %}</td>
+                        <td class="py-3">{{ transaction.previous_stock }}</td>
+                        <td class="py-3">{{ transaction.new_stock }}</td>
+                        <td class="py-3">{{ transaction.reference|default:"-" }}</td>
+                        <td class="py-3">{{ transaction.notes|default:"-"|truncatechars:30 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="{% if menu_item %}9{% else %}10{% endif %}" class="py-4 text-center text-gray-500">No transactions found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}

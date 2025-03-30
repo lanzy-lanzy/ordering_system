@@ -1,0 +1,305 @@
+{% extends 'manager/base.html' %}
+{% load math_filters %}
+
+{% block title %}Manager Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Manager Dashboard{% endblock page_title %}
+{% block page_subtitle %}Overview of restaurant operations - {{ today_date|date:"F d, Y" }}{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Today's Sales</h3>
+                    <p class="text-2xl font-bold mt-1 text-green-400">${{ today_sales|floatformat:2 }}</p>
+                </div>
+                <div class="bg-green-900 p-3 rounded-full">
+                    <i class="fas fa-dollar-sign text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Weekly Sales</h3>
+                    <p class="text-2xl font-bold mt-1 text-blue-400">${{ week_sales|floatformat:2 }}</p>
+                </div>
+                <div class="bg-blue-900 p-3 rounded-full">
+                    <i class="fas fa-calendar-week text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Monthly Sales</h3>
+                    <p class="text-2xl font-bold mt-1 text-purple-400">${{ month_sales|floatformat:2 }}</p>
+                </div>
+                <div class="bg-purple-900 p-3 rounded-full">
+                    <i class="fas fa-calendar-alt text-purple-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Today's Orders</h3>
+                    <p class="text-2xl font-bold mt-1 text-food-gold">{{ today_orders }}</p>
+                </div>
+                <div class="bg-food-gold bg-opacity-20 p-3 rounded-full">
+                    <i class="fas fa-shopping-cart text-food-gold text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Pending Orders</h2>
+                <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">{{ pending_orders }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="text-gray-400">
+                    <p>Orders awaiting processing</p>
+                </div>
+                <a href="{% url 'cashier_orders_list' %}?status=PENDING" class="text-food-gold hover:text-food-gold-light">
+                    View Orders <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Inventory Alerts</h2>
+                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">{{ low_stock_items + out_of_stock_items }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="text-gray-400">
+                    <p>{{ low_stock_items }} low stock, {{ out_of_stock_items }} out of stock</p>
+                </div>
+                <a href="{% url 'inventory_overview' %}" class="text-food-gold hover:text-food-gold-light">
+                    View Inventory <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Active Staff</h2>
+                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">{{ active_staff }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="text-gray-400">
+                    <p>Staff members on duty</p>
+                </div>
+                <a href="{% url 'staff_overview' %}" class="text-food-gold hover:text-food-gold-light">
+                    View Staff <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Sales Chart -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Weekly Sales Performance</h2>
+        <div class="h-80">
+            <canvas id="weeklySalesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Top Selling Items -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Top Selling Items</h2>
+                <a href="{% url 'sales_report' %}" class="text-food-gold hover:text-food-gold-light text-sm">
+                    View All <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Item</th>
+                            <th class="pb-3">Quantity</th>
+                            <th class="pb-3">Sales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in top_items %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">{{ item.menu_item__name }}</td>
+                            <td class="py-3">{{ item.total_quantity }}</td>
+                            <td class="py-3">${{ item.total_sales|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="py-4 text-center text-gray-500">No sales data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Recent Activities</h2>
+                <a href="{% url 'staff_activity' %}" class="text-food-gold hover:text-food-gold-light text-sm">
+                    View All <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="overflow-y-auto max-h-80">
+                <div class="space-y-4">
+                    {% for activity in recent_activities %}
+                    <div class="flex items-start space-x-3 pb-3 border-b border-gray-800">
+                        <div class="flex-shrink-0">
+                            <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-xs">
+                                {{ activity.staff.first_name|first|upper }}{{ activity.staff.last_name|first|upper }}
+                            </div>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center">
+                                <span class="font-medium">{{ activity.staff.get_full_name }}</span>
+                                <span class="mx-2 text-gray-500">•</span>
+                                <span class="text-sm text-gray-400">{{ activity.timestamp|date:"M d, H:i" }}</span>
+                            </div>
+                            <div class="mt-1">
+                                <span class="px-2 py-1 rounded-full text-xs 
+                                    {% if activity.action == 'LOGIN' %}bg-green-900 text-green-300
+                                    {% elif activity.action == 'LOGOUT' %}bg-blue-900 text-blue-300
+                                    {% elif activity.action == 'CREATE_ORDER' %}bg-purple-900 text-purple-300
+                                    {% elif activity.action == 'UPDATE_ORDER' %}bg-indigo-900 text-indigo-300
+                                    {% elif activity.action == 'CANCEL_ORDER' %}bg-red-900 text-red-300
+                                    {% elif activity.action == 'ADD_ITEM' %}bg-yellow-900 text-yellow-300
+                                    {% elif activity.action == 'UPDATE_ITEM' %}bg-orange-900 text-orange-300
+                                    {% elif activity.action == 'DELETE_ITEM' %}bg-pink-900 text-pink-300
+                                    {% elif activity.action == 'ADD_INVENTORY' %}bg-teal-900 text-teal-300
+                                    {% else %}bg-gray-700 text-gray-300{% endif %}">
+                                    {{ activity.get_action_display }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-1">{{ activity.details }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4 text-gray-500">
+                        <p>No recent activities</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="{% url 'sales_report' %}" class="bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <i class="fas fa-chart-bar text-2xl mb-2"></i>
+                <span>Sales Reports</span>
+            </a>
+            
+            <a href="{% url 'inventory_overview' %}" class="bg-green-900 hover:bg-green-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <i class="fas fa-boxes text-2xl mb-2"></i>
+                <span>Inventory Management</span>
+            </a>
+            
+            <a href="{% url 'staff_overview' %}" class="bg-purple-900 hover:bg-purple-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <i class="fas fa-users text-2xl mb-2"></i>
+                <span>Staff Performance</span>
+            </a>
+            
+            <a href="{% url 'performance_metrics' %}" class="bg-food-gold hover:bg-food-gold-light text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <i class="fas fa-chart-line text-2xl mb-2"></i>
+                <span>Performance Metrics</span>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Weekly Sales Chart
+        const ctx = document.getElementById('weeklySalesChart').getContext('2d');
+        
+        const weeklySalesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [{
+                    label: 'Daily Sales',
+                    data: {{ chart_data|safe }},
+                    backgroundColor: 'rgba(249, 168, 38, 0.7)',
+                    borderColor: 'rgba(249, 168, 38, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#E5E7EB'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF',
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}

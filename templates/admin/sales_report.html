@@ -1,0 +1,681 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Sales Report - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Comprehensive Sales Report{% endblock page_title %}
+{% block page_subtitle %}Detailed sales analysis with filtering and printing options{% endblock page_subtitle %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .print-only {
+            display: block !important;
+        }
+
+        body {
+            background-color: white !important;
+            color: black !important;
+        }
+
+        .card {
+            background-color: white !important;
+            border: 1px solid #ddd !important;
+            box-shadow: none !important;
+            color: black !important;
+            break-inside: avoid;
+        }
+
+        .print-page-break {
+            page-break-before: always;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            color: black !important;
+        }
+
+        .text-white, .text-gray-400, .text-gray-500 {
+            color: black !important;
+        }
+
+        .bg-gray-800, .bg-gray-700 {
+            background-color: white !important;
+        }
+
+        .border-gray-800 {
+            border-color: #ddd !important;
+        }
+
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .print-header h1 {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .print-header p {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+    }
+
+    .print-only {
+        display: none;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+<!-- Print Header (only visible when printing) -->
+<div class="print-only print-header">
+    <h1>5th Avenue Grill and Restobar - Sales Report</h1>
+    <p>Period: {{ date_from }} to {{ date_to }}</p>
+    <p>Generated on: {% now "F d, Y H:i" %}</p>
+</div>
+
+<!-- Add this to ensure the template can handle empty data -->
+<script>
+    // Default empty arrays for charts if data is missing
+    var timeLabels = {{ time_labels|default:"[]" |safe }};
+    var timeValues = {{ time_values|default:"[]" |safe }};
+    var timeCount = {{ time_counts|default:"[]" |safe }};
+</script>
+
+<div class="space-y-8">
+    <!-- Filters -->
+    <div class="card p-6 no-print">
+        <h3 class="text-lg font-semibold mb-4">Filter Sales Data</h3>
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">Date From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">Date To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <div>
+                <label for="category" class="block text-sm font-medium text-gray-400 mb-2">Category</label>
+                <select name="category" id="category"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category_id == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="report_type" class="block text-sm font-medium text-gray-400 mb-2">Report Type</label>
+                <select name="report_type" id="report_type"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <option value="daily" {% if report_type == 'daily' %}selected{% endif %}>Daily</option>
+                    <option value="weekly" {% if report_type == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="monthly" {% if report_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                </select>
+            </div>
+
+            <!-- Payment method filter removed as it's not available in the Order model -->
+
+            <div class="md:col-span-3 flex gap-2">
+                <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    <i class="fas fa-filter mr-2"></i> Apply Filters
+                </button>
+                <a href="{% url 'admin_sales_report' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-times mr-2"></i> Clear Filters
+                </a>
+                <button type="button" onclick="window.print()" class="ml-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-print mr-2"></i> Print Report
+                </button>
+                <button type="button" id="exportCSV" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-file-csv mr-2"></i> Export CSV
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sales Summary -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales Summary</h2>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Revenue</h3>
+                        <p class="text-2xl font-bold mt-1 text-green-400">${{ total_revenue|floatformat:2 }}</p>
+                    </div>
+                    <div class="bg-green-900 p-3 rounded-full">
+                        <i class="fas fa-dollar-sign text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Profit</h3>
+                        <p class="text-2xl font-bold mt-1 text-blue-400">${{ total_profit|floatformat:2 }}</p>
+                    </div>
+                    <div class="bg-blue-900 p-3 rounded-full">
+                        <i class="fas fa-chart-line text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Orders</h3>
+                        <p class="text-2xl font-bold mt-1 text-purple-400">{{ order_count }}</p>
+                    </div>
+                    <div class="bg-purple-900 p-3 rounded-full">
+                        <i class="fas fa-shopping-cart text-purple-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Avg. Order Value</h3>
+                        <p class="text-2xl font-bold mt-1 text-yellow-400">${{ avg_order_value|floatformat:2 }}</p>
+                    </div>
+                    <div class="bg-yellow-900 p-3 rounded-full">
+                        <i class="fas fa-receipt text-yellow-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-gray-400 text-sm font-medium">Profit Margin</h3>
+                    <p class="text-sm font-medium text-gray-400">{{ overall_profit_margin|floatformat:1 }}%</p>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2.5">
+                    <div class="bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 h-2.5 rounded-full" style="width: {{ overall_profit_margin }}%"></div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-4 rounded-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-gray-400 text-sm font-medium">Cost vs Revenue</h3>
+                    <p class="text-sm font-medium text-gray-400">Cost: ${{ total_cost|floatformat:2 }}</p>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2.5">
+                    <div class="bg-red-500 h-2.5 rounded-full" style="width: {{ total_cost|div:total_revenue|mul:100 }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Over Time -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales Over Time</h2>
+        <div class="h-80">
+            <canvas id="timeSeriesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Sales by Hour -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales by Hour of Day</h2>
+        <div class="h-80">
+            <canvas id="hourlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Sales by Category -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales by Category</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="h-80">
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="overflow-y-auto max-h-80">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Category</th>
+                            <th class="pb-3">Revenue</th>
+                            <th class="pb-3">Quantity</th>
+                            <th class="pb-3">% of Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in category_sales %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">{{ category.menu_item__category__name|default:"No Category" }}</td>
+                            <td class="py-3">${{ category.revenue|floatformat:2 }}</td>
+                            <td class="py-3">{{ category.quantity }}</td>
+                            <td class="py-3">{{ category.revenue|percentage:total_revenue|floatformat:1 }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Sales Table -->
+    <div class="card p-6 print-page-break">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Detailed Sales by Item</h2>
+            <div class="no-print">
+                <input type="text" id="itemSearch" placeholder="Search items..."
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full" id="itemSalesTable">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Item</th>
+                        <th class="pb-3">Category</th>
+                        <th class="pb-3">Quantity</th>
+                        <th class="pb-3">Revenue</th>
+                        <th class="pb-3">Cost</th>
+                        <th class="pb-3">Profit</th>
+                        <th class="pb-3">Margin</th>
+                        <th class="pb-3">Orders</th>
+                        <th class="pb-3">% of Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in item_sales %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ item.menu_item__name }}</td>
+                        <td class="py-3">{{ item.menu_item__category__name|default:"No Category" }}</td>
+                        <td class="py-3">{{ item.quantity }}</td>
+                        <td class="py-3">${{ item.revenue|floatformat:2 }}</td>
+                        <td class="py-3">${{ item.cost|floatformat:2 }}</td>
+                        <td class="py-3">${{ item.profit|floatformat:2 }}</td>
+                        <td class="py-3">{{ item.profit_margin|floatformat:1 }}%</td>
+                        <td class="py-3">{{ item.orders }}</td>
+                        <td class="py-3">{{ item.revenue|percentage:total_revenue|floatformat:1 }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="py-4 text-center text-gray-500">No sales data found for the selected period</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Performers -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4">Top Items by Revenue</h2>
+            <div class="h-80">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4">Top Items by Profit</h2>
+            <div class="h-80">
+                <canvas id="profitChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Item search functionality
+        const itemSearch = document.getElementById('itemSearch');
+        const itemTable = document.getElementById('itemSalesTable');
+        const itemRows = itemTable.querySelectorAll('tbody tr');
+
+        itemSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+
+            itemRows.forEach(row => {
+                const itemName = row.querySelector('td:first-child').textContent.toLowerCase();
+                const categoryName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+
+                if (itemName.includes(searchTerm) || categoryName.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Export to CSV functionality
+        document.getElementById('exportCSV').addEventListener('click', function() {
+            // Prepare CSV content
+            let csvContent = "data:text/csv;charset=utf-8,";
+
+            // Add headers
+            csvContent += "Item,Category,Quantity,Revenue,Cost,Profit,Margin,Orders,% of Total\n";
+
+            // Add data rows
+            {% for item in item_sales|default:"" %}
+            csvContent += "{{ item.menu_item__name|escapejs }},";
+            csvContent += "{{ item.menu_item__category__name|default:'No Category'|escapejs }},";
+            csvContent += "{{ item.quantity }},";
+            csvContent += "{{ item.revenue|floatformat:2 }},";
+            csvContent += "{{ item.cost|floatformat:2 }},";
+            csvContent += "{{ item.profit|floatformat:2 }},";
+            csvContent += "{{ item.profit_margin|floatformat:1 }}%,";
+            csvContent += "{{ item.orders }},";
+            csvContent += "{{ item.revenue|percentage:total_revenue|floatformat:1 }}%\n";
+            {% endfor %}
+
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "sales_report_{{ date_from }}_to_{{ date_to }}.csv");
+            document.body.appendChild(link);
+
+            // Trigger download
+            link.click();
+        });
+
+        // Time Series Chart
+        const timeCtx = document.getElementById('timeSeriesChart').getContext('2d');
+        new Chart(timeCtx, {
+            type: 'line',
+            data: {
+                labels: {{ time_labels|default:"[]" |safe }},
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: {{ time_values|default:"[]" |safe }},
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#E5E7EB'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB',
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Hourly Sales Chart
+        const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+        new Chart(hourlyCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for hour in hour_data|default:"" %}'{{ hour.hour }}',{% endfor %}],
+                datasets: [
+                    {
+                        label: 'Revenue by Hour',
+                        data: [{% for hour in hour_data|default:"" %}{{ hour.total|floatformat:2 }},{% endfor %}],
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: '#3B82F6',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#E5E7EB'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.raw.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB',
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Category Sales Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for category in category_sales|default:"" %}'{{ category.menu_item__category__name|default:"No Category"|escapejs }}',{% endfor %}],
+                datasets: [
+                    {
+                        data: [{% for category in category_sales|default:"" %}{{ category.revenue|floatformat:2 }},{% endfor %}],
+                        backgroundColor: [
+                            '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899',
+                            '#F97316', '#14B8A6', '#6366F1', '#A855F7', '#D946EF',
+                            '#F43F5E', '#EF4444', '#84CC16', '#06B6D4', '#6B7280'
+                        ],
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: '#E5E7EB'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `$${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Top Items by Revenue Chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in item_sales|default:""|slice:":10" %}'{{ item.menu_item__name|escapejs }}',{% endfor %}],
+                datasets: [
+                    {
+                        label: 'Revenue',
+                        data: [{% for item in item_sales|default:""|slice:":10" %}{{ item.revenue|floatformat:2 }},{% endfor %}],
+                        backgroundColor: 'rgba(249, 168, 38, 0.7)',
+                        borderColor: '#F9A826',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#E5E7EB'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.raw.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB',
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Top Items by Profit Chart
+        const profitCtx = document.getElementById('profitChart').getContext('2d');
+        new Chart(profitCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in item_sales|default:""|slice:":10" %}'{{ item.menu_item__name|escapejs }}',{% endfor %}],
+                datasets: [
+                    {
+                        label: 'Profit',
+                        data: [{% for item in item_sales|default:""|slice:":10" %}{{ item.profit|floatformat:2 }},{% endfor %}],
+                        backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                        borderColor: '#10B981',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#E5E7EB'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.raw.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB',
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#E5E7EB'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}

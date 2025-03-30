@@ -104,7 +104,7 @@
         {% endif %}
 
         <div class="flex justify-between items-center">
-            <a href="#" class="text-food-gold hover:text-food-red transition duration-300 text-sm">
+            <a href="{% url 'menu_items' %}?category={{ category.id }}" class="text-food-gold hover:text-food-red transition duration-300 text-sm">
                 View Items <i class="fas fa-arrow-right ml-1"></i>
             </a>
             <div class="flex space-x-2">

@@ -1,0 +1,255 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Staff Management - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Staff Management{% endblock page_title %}
+{% block page_subtitle %}Manage restaurant staff members{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Search and Filter -->
+    <div class="card p-6">
+        <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-grow">
+                <label for="q" class="block text-sm font-medium text-gray-400 mb-2">Search Staff</label>
+                <input type="text" name="q" id="q" value="{{ query }}" placeholder="Search by name, email, ID..."
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+            
+            <div>
+                <label for="role" class="block text-sm font-medium text-gray-400 mb-2">Filter by Role</label>
+                <select name="role" id="role"
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <option value="">All Roles</option>
+                    {% for role_code, role_name in roles %}
+                    <option value="{{ role_code }}" {% if role_filter == role_code %}selected{% endif %}>{{ role_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="flex gap-2">
+                <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    <i class="fas fa-search mr-2"></i> Search
+                </button>
+                <a href="{% url 'staff_list' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-times mr-2"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap gap-4">
+        <a href="{% url 'add_staff' %}" class="btn-primary px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-user-plus mr-2"></i> Add Staff Member
+        </a>
+        <a href="{% url 'staff_activity' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center">
+            <i class="fas fa-history mr-2"></i> View Activity Logs
+        </a>
+    </div>
+
+    <!-- Staff List -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Staff Members</h2>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Name</th>
+                        <th class="pb-3">Employee ID</th>
+                        <th class="pb-3">Role</th>
+                        <th class="pb-3">Email</th>
+                        <th class="pb-3">Phone</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in staff_page %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 mr-3">
+                                    {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                                </div>
+                                <div>
+                                    <div class="font-medium">{{ user.get_full_name }}</div>
+                                    <div class="text-sm text-gray-400">@{{ user.username }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3">{{ user.staff_profile.employee_id|default:"-" }}</td>
+                        <td class="py-3">
+                            <span class="px-2 py-1 rounded-full text-xs 
+                                {% if user.staff_profile.role == 'ADMIN' %}bg-purple-900 text-purple-300
+                                {% elif user.staff_profile.role == 'MANAGER' %}bg-blue-900 text-blue-300
+                                {% elif user.staff_profile.role == 'CASHIER' %}bg-green-900 text-green-300
+                                {% elif user.staff_profile.role == 'KITCHEN' %}bg-yellow-900 text-yellow-300
+                                {% elif user.staff_profile.role == 'WAITER' %}bg-pink-900 text-pink-300
+                                {% elif user.staff_profile.role == 'DELIVERY' %}bg-indigo-900 text-indigo-300
+                                {% else %}bg-gray-700 text-gray-300{% endif %}">
+                                {{ user.staff_profile.get_role_display }}
+                            </span>
+                        </td>
+                        <td class="py-3">{{ user.email }}</td>
+                        <td class="py-3">{{ user.staff_profile.phone|default:"-" }}</td>
+                        <td class="py-3">
+                            {% if user.is_active %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Active</span>
+                            {% else %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'edit_staff' user.id %}" class="text-food-gold hover:text-food-gold-light" title="Edit Staff">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" onclick="openResetPasswordModal({{ user.id }}, '{{ user.get_full_name }}')" 
+                                        class="text-blue-400 hover:text-blue-300" title="Reset Password">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-4 text-center text-gray-500">No staff members found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if staff_page.has_other_pages %}
+        <div class="flex justify-center mt-6">
+            <div class="flex space-x-2">
+                {% if staff_page.has_previous %}
+                <a href="?page={{ staff_page.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}" 
+                   class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                
+                {% for num in staff_page.paginator.page_range %}
+                    {% if staff_page.number == num %}
+                    <span class="px-3 py-1 bg-food-gold text-white rounded-md">{{ num }}</span>
+                    {% elif num > staff_page.number|add:'-3' and num < staff_page.number|add:'3' %}
+                    <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}" 
+                       class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if staff_page.has_next %}
+                <a href="?page={{ staff_page.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if role_filter %}&role={{ role_filter }}{% endif %}" 
+                   class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-xl font-bold mb-4">Reset Password</h3>
+        <p class="mb-4">Enter a new password for <span id="staffName" class="font-semibold"></span>:</p>
+        
+        <form id="resetPasswordForm" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" id="staffId" name="staff_id">
+            
+            <div>
+                <label for="new_password" class="block text-sm font-medium text-gray-400 mb-2">New Password</label>
+                <input type="password" id="new_password" name="new_password" required
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+            
+            <div>
+                <label for="confirm_password" class="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                <p id="passwordError" class="text-red-500 text-sm mt-1 hidden">Passwords do not match</p>
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4">
+                <button type="button" onclick="closeResetPasswordModal()" 
+                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg">
+                    Reset Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    function openResetPasswordModal(userId, userName) {
+        document.getElementById('staffId').value = userId;
+        document.getElementById('staffName').textContent = userName;
+        document.getElementById('resetPasswordModal').classList.remove('hidden');
+        document.getElementById('new_password').value = '';
+        document.getElementById('confirm_password').value = '';
+        document.getElementById('passwordError').classList.add('hidden');
+    }
+    
+    function closeResetPasswordModal() {
+        document.getElementById('resetPasswordModal').classList.add('hidden');
+    }
+    
+    document.getElementById('resetPasswordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const staffId = document.getElementById('staffId').value;
+        
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            document.getElementById('passwordError').classList.remove('hidden');
+            return;
+        }
+        
+        // Hide error message
+        document.getElementById('passwordError').classList.add('hidden');
+        
+        // Send AJAX request to reset password
+        fetch(`/dashboard/staff/${staffId}/reset-password/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `new_password=${encodeURIComponent(newPassword)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Show success message
+                alert(data.message);
+                closeResetPasswordModal();
+            } else {
+                // Show error message
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while resetting the password.');
+        });
+    });
+</script>
+{% endblock extra_scripts %}

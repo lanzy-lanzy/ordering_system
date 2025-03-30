@@ -6,8 +6,32 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.utils import timezone
 from django.db import models
-from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation
+from django.db.models import Count, Sum
+from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation, StaffProfile
 from django.contrib.auth.forms import PasswordChangeForm
+
+
+def redirect_based_on_role(user):
+    """Redirect user based on their role"""
+    # First check if user is a superuser - this takes precedence over all other roles
+    if user.is_superuser:
+        return redirect('admin_dashboard')  # Changed from 'dashboard' to 'admin_dashboard'
+
+    # Check if user has a staff profile
+    if hasattr(user, 'staff_profile'):
+        # Check role and redirect accordingly
+        if user.staff_profile.role == 'CASHIER':
+            return redirect('cashier_dashboard')
+        elif user.staff_profile.role == 'MANAGER':
+            return redirect('manager_dashboard')
+        elif user.staff_profile.role == 'ADMIN':
+            return redirect('admin_dashboard')  # Changed from 'dashboard' to 'admin_dashboard'
+
+    # Default redirects based on staff status
+    if user.is_staff:
+        return redirect('admin_dashboard')  # Changed from 'dashboard' to 'admin_dashboard'
+    return redirect('customer_dashboard')
+
 
 def home(request):
     # Get active categories and available menu items
@@ -114,12 +138,8 @@ def get_cart_count(request):
 
 
 def user_login(request):
-    """Handle user login with role-based redirects"""
     if request.user.is_authenticated:
-        # If already logged in, redirect based on role
-        if request.user.is_staff:
-            return redirect('dashboard')
-        return redirect('customer_dashboard')
+        return redirect_based_on_role(request.user)
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -129,14 +149,9 @@ def user_login(request):
 
         if user is not None:
             login(request, user)
-            messages.success(request, f'Welcome back, {user.username}!')
-
-            # Redirect based on user role
-            if user.is_staff:
-                return redirect('dashboard')
-            return redirect('customer_dashboard')
+            return redirect_based_on_role(user)
         else:
-            messages.error(request, 'Invalid username or password. Please try again.')
+            messages.error(request, 'Invalid username or password.')
 
     return render(request, 'accounts/login.html')
 
@@ -151,53 +166,78 @@ def user_logout(request):
 @login_required
 def user_dashboard(request):
     """User dashboard for managing restaurant data"""
-    # Get today's date
-    today = timezone.now().date()
+    # Check if user has a staff profile and redirect accordingly
+    if hasattr(request.user, 'staff_profile'):
+        # Redirect to the appropriate dashboard based on role
+        return redirect_based_on_role(request.user)
 
-    # Get counts and statistics
-    categories = Category.objects.all()
-    menu_items = MenuItem.objects.all()
+    # If user is superuser, redirect to admin dashboard
+    if request.user.is_superuser:
+        return redirect('admin_dashboard')
 
-    # Get recent orders
-    recent_orders = Order.objects.order_by('-created_at')[:5]
+    # If user is staff but doesn't have a staff profile, show the general dashboard
+    if request.user.is_staff:
+        # Get today's date
+        today = timezone.now().date()
 
-    # Get popular menu items
-    popular_items = MenuItem.objects.annotate(order_count=models.Count('orderitem')).order_by('-order_count')[:5]
+        # Get counts and statistics
+        categories = Category.objects.all()
+        menu_items = MenuItem.objects.all()
 
-    # Get recent reviews
-    recent_reviews = Review.objects.select_related('user', 'menu_item').order_by('-created_at')[:5]
+        # Get recent orders
+        recent_orders = Order.objects.order_by('-created_at')[:5]
 
-    # Calculate statistics
-    total_orders = Order.objects.count()
-    today_orders = Order.objects.filter(created_at__date=today).count()
-    total_revenue = Order.objects.aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
-    today_revenue = Order.objects.filter(created_at__date=today).aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
+        # Get popular menu items
+        popular_items = MenuItem.objects.annotate(order_count=models.Count('orderitem')).order_by('-order_count')[:5]
 
-    context = {
-        'categories': categories,
-        'menu_items': menu_items,
-        'recent_orders': recent_orders,
-        'popular_items': popular_items,
-        'recent_reviews': recent_reviews,
-        'total_orders': total_orders,
-        'today_orders': today_orders,
-        'total_revenue': total_revenue,
-        'today_revenue': today_revenue,
-        'active_section': 'dashboard'
-    }
+        # Get recent reviews
+        recent_reviews = Review.objects.select_related('user', 'menu_item').order_by('-created_at')[:5]
 
-    return render(request, 'accounts/dashboard.html', context)
+        # Calculate statistics
+        total_orders = Order.objects.count()
+        today_orders = Order.objects.filter(created_at__date=today).count()
+        total_revenue = Order.objects.aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
+        today_revenue = Order.objects.filter(created_at__date=today).aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
+
+        context = {
+            'categories': categories,
+            'menu_items': menu_items,
+            'recent_orders': recent_orders,
+            'popular_items': popular_items,
+            'recent_reviews': recent_reviews,
+            'total_orders': total_orders,
+            'today_orders': today_orders,
+            'total_revenue': total_revenue,
+            'today_revenue': today_revenue,
+            'active_section': 'dashboard'
+        }
+
+        return render(request, 'accounts/dashboard.html', context)
+
+    # If not staff, redirect to customer dashboard
+    return redirect('customer_dashboard')
 
 
 @login_required
 def menu_items_list(request):
     """Display and manage menu items"""
+    category_id = request.GET.get('category')
     menu_items = MenuItem.objects.all().order_by('category', 'name')
     categories = Category.objects.all()
+
+    # Filter by category if provided
+    selected_category = None
+    if category_id:
+        try:
+            selected_category = Category.objects.get(id=category_id)
+            menu_items = menu_items.filter(category=selected_category)
+        except Category.DoesNotExist:
+            pass
 
     context = {
         'menu_items': menu_items,
         'categories': categories,
+        'selected_category': selected_category,
         'active_section': 'menu_items'
     }
 
@@ -425,26 +465,47 @@ def profile(request):
         last_name = request.POST.get('last_name')
         email = request.POST.get('email')
         phone = request.POST.get('phone')
-        
+        profile_picture = request.FILES.get('profile_picture')
+
         # Update user
         user = request.user
         user.first_name = first_name
         user.last_name = last_name
         user.email = email
-        
+
+        # Update staff profile if it exists
+        if hasattr(user, 'staff_profile'):
+            if phone:
+                user.staff_profile.phone = phone
+
+            # Handle profile picture upload
+            if profile_picture:
+                user.staff_profile.profile_picture = profile_picture
+
+            user.staff_profile.save()
         # If you have a UserProfile model with additional fields
-        if hasattr(user, 'profile'):
+        elif hasattr(user, 'profile'):
             user.profile.phone = phone
             user.profile.save()
-            
+
         user.save()
         messages.success(request, 'Profile updated successfully!')
-        
+
+    # Get staff profile if it exists
+    staff_profile = None
+    if hasattr(request.user, 'staff_profile'):
+        staff_profile = request.user.staff_profile
+
     context = {
-        'active_section': 'profile'
+        'active_section': 'profile',
+        'staff_profile': staff_profile
     }
-    
-    return render(request, 'accounts/profile.html', context)
+
+    # Choose the appropriate template based on user role
+    if request.user.is_staff:
+        return render(request, 'accounts/admin_profile.html', context)
+    else:
+        return render(request, 'accounts/profile.html', context)
 
 
 @login_required
@@ -593,14 +654,14 @@ def customer_dashboard(request):
     # Get user's orders
     user_orders = Order.objects.filter(user=request.user).order_by('-created_at')
     recent_orders = user_orders[:5]
-    
+
     # Get user's reviews
     user_reviews = Review.objects.filter(user=request.user).select_related('menu_item').order_by('-created_at')[:5]
-    
+
     # Calculate statistics
     total_orders = user_orders.count()
     total_spent = user_orders.aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
-    
+
     # Get favorite items (most ordered)
     favorite_items = MenuItem.objects.filter(
         orderitem__order__user=request.user
@@ -616,7 +677,7 @@ def customer_dashboard(request):
         'favorite_items': favorite_items,
         'active_section': 'dashboard'
     }
-    
+
     return render(request, 'accounts/customer_dashboard.html', context)
 
 
@@ -624,12 +685,12 @@ def customer_dashboard(request):
 def my_orders(request):
     """Display customer's order history"""
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
-    
+
     context = {
         'orders': orders,
         'active_section': 'orders'
     }
-    
+
     return render(request, 'accounts/my_orders.html', context)
 
 
@@ -637,12 +698,12 @@ def my_orders(request):
 def my_reviews(request):
     """Display customer's review history"""
     reviews = Review.objects.filter(user=request.user).select_related('menu_item').order_by('-created_at')
-    
+
     context = {
         'reviews': reviews,
         'active_section': 'reviews'
     }
-    
+
     return render(request, 'accounts/my_reviews.html', context)
 
 
@@ -659,8 +720,48 @@ def change_password(request):
             messages.error(request, 'Please correct the error below.')
     else:
         form = PasswordChangeForm(request.user)
-    
-    return render(request, 'accounts/change_password.html', {
+
+    context = {
         'form': form,
         'active_section': 'profile'
-    })
+    }
+
+    # Choose the appropriate template based on user role
+    if request.user.is_staff:
+        return render(request, 'accounts/admin_change_password.html', context)
+    else:
+        return render(request, 'accounts/change_password.html', context)
+
+
+@login_required
+def admin_dashboard(request):
+    """Admin dashboard view"""
+    if not request.user.is_superuser and not (hasattr(request.user, 'staff_profile') and request.user.staff_profile.role == 'ADMIN'):
+        return redirect('home')
+
+    today = timezone.now().date()
+
+    # Calculate statistics
+    total_orders = Order.objects.count()
+    today_orders = Order.objects.filter(created_at__date=today).count()
+    total_revenue = Order.objects.aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
+    today_revenue = Order.objects.filter(created_at__date=today).aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
+    pending_reservations = Reservation.objects.filter(status='PENDING').count()
+    today_reservations = Reservation.objects.filter(date=today).count()
+
+    # Get popular items and recent reviews
+    popular_items = MenuItem.objects.annotate(order_count=Count('orderitem')).order_by('-order_count')[:5]
+    recent_reviews = Review.objects.select_related('user', 'menu_item').order_by('-created_at')[:5]
+
+    context = {
+        'total_orders': total_orders,
+        'today_orders': today_orders,
+        'total_revenue': total_revenue,
+        'today_revenue': today_revenue,
+        'pending_reservations': pending_reservations,
+        'today_reservations': today_reservations,
+        'popular_items': popular_items,
+        'recent_reviews': recent_reviews,
+    }
+
+    return render(request, 'admin/dashboard.html', context)

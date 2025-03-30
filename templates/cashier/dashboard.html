@@ -1,0 +1,276 @@
+{% extends 'cashier/base.html' %}
+{% load math_filters %}
+
+{% block title %}Cashier Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Cashier Dashboard{% endblock page_title %}
+{% block page_subtitle %}Today's orders and sales summary - {{ today_date|date:"F d, Y" }}{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Today's Sales</h3>
+                    <p class="text-2xl font-bold mt-1 text-green-400">${{ today_sales|floatformat:2 }}</p>
+                </div>
+                <div class="bg-green-900 p-3 rounded-full">
+                    <i class="fas fa-dollar-sign text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Completed Orders</h3>
+                    <p class="text-2xl font-bold mt-1">{{ today_order_count }}</p>
+                </div>
+                <div class="bg-blue-900 p-3 rounded-full">
+                    <i class="fas fa-check-circle text-blue-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Average Order</h3>
+                    <p class="text-2xl font-bold mt-1 text-food-gold">${{ avg_order_value|floatformat:2 }}</p>
+                </div>
+                <div class="bg-food-gold bg-opacity-20 p-3 rounded-full">
+                    <i class="fas fa-calculator text-food-gold text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{% url 'new_order' %}" class="bg-food-gold hover:bg-food-gold-light text-white p-4 rounded-lg flex items-center justify-center">
+                <i class="fas fa-plus-circle mr-2 text-xl"></i>
+                <span class="font-medium">New Order</span>
+            </a>
+            
+            <a href="{% url 'cashier_orders_list' %}" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg flex items-center justify-center">
+                <i class="fas fa-clipboard-list mr-2 text-xl"></i>
+                <span class="font-medium">View All Orders</span>
+            </a>
+            
+            <a href="{% url 'menu' %}" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg flex items-center justify-center">
+                <i class="fas fa-utensils mr-2 text-xl"></i>
+                <span class="font-medium">View Menu</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Pending Orders -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Pending Orders</h2>
+        
+        {% if pending_orders %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Order #</th>
+                        <th class="pb-3">Customer</th>
+                        <th class="pb-3">Type</th>
+                        <th class="pb-3">Time</th>
+                        <th class="pb-3">Amount</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in pending_orders %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ order.id }}</td>
+                        <td class="py-3">{{ order.customer_name }}</td>
+                        <td class="py-3">
+                            {% if order.order_type == 'DINE_IN' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Dine In</span>
+                            {% elif order.order_type == 'TAKEOUT' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Takeout</span>
+                            {% elif order.order_type == 'DELIVERY' %}
+                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Delivery</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">{{ order.created_at|date:"H:i" }}</td>
+                        <td class="py-3">${{ order.total_amount }}</td>
+                        <td class="py-3">
+                            {% if order.status == 'PENDING' %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                            {% elif order.status == 'PROCESSING' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Processing</span>
+                            {% elif order.status == 'READY' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'view_order' order.id %}" class="text-food-gold hover:text-food-gold-light" title="View Order">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" onclick="completeOrder({{ order.id }})" class="text-green-400 hover:text-green-300" title="Complete Order">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>
+                                <a href="{% url 'print_receipt' order.id %}" class="text-blue-400 hover:text-blue-300" title="Print Receipt">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No pending orders at the moment.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Today's Top Items -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Today's Top Selling Items</h2>
+        
+        {% if top_items %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Item</th>
+                            <th class="pb-3">Quantity</th>
+                            <th class="pb-3">Sales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in top_items %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">{{ item.menu_item__name }}</td>
+                            <td class="py-3">{{ item.total_quantity }}</td>
+                            <td class="py-3">${{ item.total_sales|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="h-64">
+                    <!-- Placeholder for chart - in a real app, you'd use Chart.js or similar -->
+                    <div class="h-full flex items-center justify-center">
+                        <div class="text-center">
+                            <i class="fas fa-chart-pie text-4xl text-gray-600 mb-2"></i>
+                            <p class="text-gray-400">Sales distribution chart would appear here</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No sales data available for today.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Recent Completed Orders -->
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Recent Completed Orders</h2>
+            <a href="{% url 'cashier_orders_list' %}" class="text-food-gold hover:text-food-gold-light text-sm">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+        
+        {% if completed_orders %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Order #</th>
+                        <th class="pb-3">Customer</th>
+                        <th class="pb-3">Type</th>
+                        <th class="pb-3">Time</th>
+                        <th class="pb-3">Amount</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in completed_orders|slice:":5" %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ order.id }}</td>
+                        <td class="py-3">{{ order.customer_name }}</td>
+                        <td class="py-3">
+                            {% if order.order_type == 'DINE_IN' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Dine In</span>
+                            {% elif order.order_type == 'TAKEOUT' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Takeout</span>
+                            {% elif order.order_type == 'DELIVERY' %}
+                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Delivery</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">{{ order.created_at|date:"H:i" }}</td>
+                        <td class="py-3">${{ order.total_amount }}</td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'view_order' order.id %}" class="text-food-gold hover:text-food-gold-light" title="View Order">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'print_receipt' order.id %}" class="text-blue-400 hover:text-blue-300" title="Print Receipt">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No completed orders for today.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    // Function to complete an order
+    function completeOrder(orderId) {
+        if (confirm('Mark this order as completed?')) {
+            fetch(`/cashier/order/${orderId}/update-status/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: 'status=COMPLETED'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the order status.');
+            });
+        }
+    }
+</script>
+{% endblock extra_scripts %}

@@ -2,8 +2,8 @@
 
 {% block title %}Menu Items - 5th Avenue Grill and Restobar{% endblock title %}
 
-{% block page_title %}Menu Items{% endblock page_title %}
-{% block page_subtitle %}Manage your restaurant's menu items{% endblock page_subtitle %}
+{% block page_title %}Menu Items{% if selected_category %} - {{ selected_category.name }}{% endif %}{% endblock page_title %}
+{% block page_subtitle %}{% if selected_category %}Viewing items in {{ selected_category.name }} category <a href="{% url 'menu_items' %}" class="text-food-gold hover:text-food-red">(clear filter)</a>{% else %}Manage your restaurant's menu items{% endif %}{% endblock page_subtitle %}
 
 {% block content %}
 <div class="mb-6 flex justify-between items-center">
@@ -16,7 +16,7 @@
         <select id="category-filter" class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
             <option value="">All Categories</option>
             {% for category in categories %}
-            <option value="{{ category.id }}">{{ category.name }}</option>
+            <option value="{{ category.id }}" {% if selected_category and selected_category.id == category.id %}selected{% endif %}>{{ category.name }}</option>
             {% endfor %}
         </select>
     </div>
@@ -457,7 +457,14 @@
         }
 
         searchInput.addEventListener('input', filterMenuItems);
-        categoryFilter.addEventListener('change', filterMenuItems);
+        categoryFilter.addEventListener('change', function() {
+            // Redirect to the menu items page with the selected category
+            if (this.value) {
+                window.location.href = `{% url 'menu_items' %}?category=${this.value}`;
+            } else {
+                window.location.href = `{% url 'menu_items' %}`;
+            }
+        });
 
         // Edit Menu Item Modal
         const editItemModal = document.getElementById('edit-item-modal');

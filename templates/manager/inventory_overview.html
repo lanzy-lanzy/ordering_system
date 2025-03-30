@@ -1,0 +1,394 @@
+{% extends 'manager/base.html' %}
+{% load math_filters %}
+
+{% block title %}Inventory Overview - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Inventory Overview{% endblock page_title %}
+{% block page_subtitle %}Monitor stock levels and inventory value{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Inventory Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Total Inventory Value</h3>
+                    <p class="text-2xl font-bold mt-1 text-green-400">${{ total_inventory_value|floatformat:2 }}</p>
+                </div>
+                <div class="bg-green-900 p-3 rounded-full">
+                    <i class="fas fa-dollar-sign text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Low Stock Items</h3>
+                    <p class="text-2xl font-bold mt-1 text-yellow-400">{{ low_stock_items.count }}</p>
+                </div>
+                <div class="bg-yellow-900 p-3 rounded-full">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Out of Stock Items</h3>
+                    <p class="text-2xl font-bold mt-1 text-red-400">{{ out_of_stock_items.count }}</p>
+                </div>
+                <div class="bg-red-900 p-3 rounded-full">
+                    <i class="fas fa-times-circle text-red-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <a href="{% url 'add_inventory' %}" class="bg-food-gold hover:bg-food-gold-light text-white p-4 rounded-lg flex items-center justify-center">
+                <i class="fas fa-plus-circle mr-2 text-xl"></i>
+                <span class="font-medium">Add Inventory</span>
+            </a>
+            
+            <a href="{% url 'inventory_history' %}" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg flex items-center justify-center">
+                <i class="fas fa-history mr-2 text-xl"></i>
+                <span class="font-medium">View Transaction History</span>
+            </a>
+            
+            <button type="button" onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg flex items-center justify-center no-print">
+                <i class="fas fa-print mr-2 text-xl"></i>
+                <span class="font-medium">Print Inventory Report</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Inventory Alerts -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Inventory Alerts</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Low Stock Items -->
+            <div>
+                <h3 class="text-lg font-semibold mb-3 flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+                    Low Stock Items
+                </h3>
+                
+                {% if low_stock_items %}
+                <div class="overflow-y-auto max-h-80">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left text-gray-400 border-b border-gray-800">
+                                <th class="pb-3">Item</th>
+                                <th class="pb-3">Current Stock</th>
+                                <th class="pb-3">Threshold</th>
+                                <th class="pb-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr class="border-b border-gray-800">
+                                <td class="py-3">{{ item.name }}</td>
+                                <td class="py-3 text-yellow-400">{{ item.current_stock }}</td>
+                                <td class="py-3">{{ item.stock_alert_threshold }}</td>
+                                <td class="py-3">
+                                    <a href="{% url 'add_inventory' %}?item={{ item.id }}" class="text-food-gold hover:text-food-gold-light">
+                                        Add Stock
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <p class="text-gray-400">No low stock items</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Out of Stock Items -->
+            <div>
+                <h3 class="text-lg font-semibold mb-3 flex items-center">
+                    <i class="fas fa-times-circle text-red-400 mr-2"></i>
+                    Out of Stock Items
+                </h3>
+                
+                {% if out_of_stock_items %}
+                <div class="overflow-y-auto max-h-80">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="text-left text-gray-400 border-b border-gray-800">
+                                <th class="pb-3">Item</th>
+                                <th class="pb-3">Category</th>
+                                <th class="pb-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in out_of_stock_items %}
+                            <tr class="border-b border-gray-800">
+                                <td class="py-3">{{ item.name }}</td>
+                                <td class="py-3">{{ item.category.name|default:"No Category" }}</td>
+                                <td class="py-3">
+                                    <a href="{% url 'add_inventory' %}?item={{ item.id }}" class="text-food-gold hover:text-food-gold-light">
+                                        Add Stock
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="bg-gray-800 rounded-lg p-6 text-center">
+                    <p class="text-gray-400">No out of stock items</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Value by Category -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4">Inventory Value by Category</h2>
+            <div class="h-80">
+                <canvas id="categoryValueChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Recent Transactions -->
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Recent Transactions</h2>
+                <a href="{% url 'inventory_history' %}" class="text-food-gold hover:text-food-gold-light text-sm">
+                    View All <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+            
+            <div class="overflow-y-auto max-h-80">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Date</th>
+                            <th class="pb-3">Item</th>
+                            <th class="pb-3">Type</th>
+                            <th class="pb-3">Quantity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in recent_transactions %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">{{ transaction.created_at|date:"M d, H:i" }}</td>
+                            <td class="py-3">{{ transaction.menu_item.name }}</td>
+                            <td class="py-3">
+                                {% if transaction.transaction_type == 'PURCHASE' %}
+                                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Purchase</span>
+                                {% elif transaction.transaction_type == 'SALE' %}
+                                <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Sale</span>
+                                {% elif transaction.transaction_type == 'ADJUSTMENT' %}
+                                <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Adjustment</span>
+                                {% elif transaction.transaction_type == 'WASTE' %}
+                                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Waste</span>
+                                {% elif transaction.transaction_type == 'RETURN' %}
+                                <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Return</span>
+                                {% else %}
+                                <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">{{ transaction.transaction_type }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 {% if transaction.quantity < 0 %}text-red-400{% else %}text-green-400{% endif %}">
+                                {{ transaction.quantity }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-4 text-center text-gray-500">No recent transactions</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full Inventory List -->
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Full Inventory List</h2>
+            <div class="flex items-center">
+                <input type="text" id="inventorySearch" placeholder="Search items..." 
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold mr-2">
+                <select id="categoryFilter" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                    <option value="{{ category.name }}">{{ category.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full" id="inventoryTable">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Item</th>
+                        <th class="pb-3">Category</th>
+                        <th class="pb-3">Current Stock</th>
+                        <th class="pb-3">Alert Threshold</th>
+                        <th class="pb-3">Cost Price</th>
+                        <th class="pb-3">Selling Price</th>
+                        <th class="pb-3">Inventory Value</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in menu_items %}
+                    <tr class="border-b border-gray-800" data-category="{{ item.category.name|default:'No Category' }}">
+                        <td class="py-3">{{ item.name }}</td>
+                        <td class="py-3">{{ item.category.name|default:"No Category" }}</td>
+                        <td class="py-3">{{ item.current_stock }}</td>
+                        <td class="py-3">{{ item.stock_alert_threshold }}</td>
+                        <td class="py-3">${{ item.cost_price|floatformat:2 }}</td>
+                        <td class="py-3">${{ item.price|floatformat:2 }}</td>
+                        <td class="py-3">${{ item.current_stock|mul:item.cost_price|floatformat:2 }}</td>
+                        <td class="py-3">
+                            {% if item.current_stock == 0 %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Out of Stock</span>
+                            {% elif item.current_stock < item.stock_alert_threshold %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Low Stock</span>
+                            {% else %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'add_inventory' %}?item={{ item.id }}" class="text-food-gold hover:text-food-gold-light" title="Add Stock">
+                                    <i class="fas fa-plus-circle"></i>
+                                </a>
+                                <a href="{% url 'item_inventory_history' item.id %}" class="text-blue-400 hover:text-blue-300" title="View History">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                                <a href="{% url 'edit_menu_item' item.id %}" class="text-green-400 hover:text-green-300" title="Edit Item">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="py-4 text-center text-gray-500">No menu items found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Category Value Chart
+        const ctx = document.getElementById('categoryValueChart').getContext('2d');
+        
+        const categoryNames = [];
+        const categoryValues = [];
+        const backgroundColors = [
+            'rgba(249, 168, 38, 0.7)',  // Gold
+            'rgba(59, 130, 246, 0.7)',  // Blue
+            'rgba(16, 185, 129, 0.7)',  // Green
+            'rgba(139, 92, 246, 0.7)',  // Purple
+            'rgba(239, 68, 68, 0.7)',   // Red
+            'rgba(245, 158, 11, 0.7)',  // Amber
+            'rgba(14, 165, 233, 0.7)',  // Sky
+            'rgba(236, 72, 153, 0.7)',  // Pink
+            'rgba(168, 85, 247, 0.7)',  // Fuchsia
+            'rgba(75, 85, 99, 0.7)'     // Gray
+        ];
+        
+        {% for category in category_values %}
+            categoryNames.push('{{ category.name }}');
+            categoryValues.push({{ category.value|floatformat:2 }});
+        {% endfor %}
+        
+        const categoryValueChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: categoryNames,
+                datasets: [{
+                    data: categoryValues,
+                    backgroundColor: backgroundColors.slice(0, categoryNames.length),
+                    borderColor: 'rgba(31, 41, 55, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: '#E5E7EB',
+                            padding: 10,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: $${value.toFixed(2)} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Inventory search and filter
+        const searchInput = document.getElementById('inventorySearch');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const table = document.getElementById('inventoryTable');
+        const rows = table.getElementsByTagName('tr');
+        
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const categoryTerm = categoryFilter.value;
+            
+            // Start from 1 to skip header row
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                
+                if (cells.length === 0) continue; // Skip empty rows
+                
+                const itemName = cells[0].textContent.toLowerCase();
+                const category = row.getAttribute('data-category');
+                
+                const matchesSearch = itemName.includes(searchTerm);
+                const matchesCategory = categoryTerm === '' || category === categoryTerm;
+                
+                row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
+            }
+        }
+        
+        searchInput.addEventListener('keyup', filterTable);
+        categoryFilter.addEventListener('change', filterTable);
+    });
+</script>
+{% endblock extra_scripts %}

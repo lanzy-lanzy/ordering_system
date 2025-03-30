@@ -1,0 +1,381 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Sales History: {{ menu_item.name }} - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Sales History: {{ menu_item.name }}{% endblock page_title %}
+{% block page_subtitle %}Detailed sales performance for this menu item{% endblock page_subtitle %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock extra_css %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Item Details -->
+    <div class="card p-6">
+        <div class="flex flex-col md:flex-row md:items-center">
+            <div class="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
+                {% if menu_item.image %}
+                <img src="{{ menu_item.image.url }}" alt="{{ menu_item.name }}" class="w-24 h-24 rounded-lg object-cover">
+                {% else %}
+                <div class="w-24 h-24 rounded-lg bg-gray-700 flex items-center justify-center">
+                    <i class="fas fa-utensils text-gray-500 text-3xl"></i>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="flex-grow">
+                <h2 class="text-xl font-bold">{{ menu_item.name }}</h2>
+                <p class="text-gray-400 mb-2">{{ menu_item.category.name|default:"No Category" }}</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                    <div>
+                        <span class="text-gray-400 text-sm">Current Price:</span>
+                        <p class="font-semibold">${{ menu_item.price }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-sm">Cost Price:</span>
+                        <p class="font-semibold">${{ menu_item.cost_price }}</p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-sm">Profit Margin:</span>
+                        <p class="font-semibold {% if menu_item.profit_margin > 30 %}text-green-400{% elif menu_item.profit_margin > 15 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            {{ menu_item.profit_margin|floatformat:1 }}%
+                        </p>
+                    </div>
+                    <div>
+                        <span class="text-gray-400 text-sm">Current Stock:</span>
+                        <p class="font-semibold">{{ menu_item.current_stock }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 md:mt-0 md:ml-6 flex flex-col space-y-2">
+                <a href="{% url 'item_inventory_history' menu_item.id %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200 text-center">
+                    <i class="fas fa-history mr-2"></i> Inventory History
+                </a>
+                <a href="{% url 'item_price_history' menu_item.id %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200 text-center">
+                    <i class="fas fa-tags mr-2"></i> Price History
+                </a>
+                <a href="{% url 'add_inventory' %}?item={{ menu_item.id }}" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200 text-center">
+                    <i class="fas fa-plus mr-2"></i> Add Stock
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="card p-6">
+        <h3 class="text-lg font-semibold mb-4">Select Date Range</h3>
+        <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                Apply
+            </button>
+
+            <a href="{% url 'item_sales_history' menu_item.id %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                Reset
+            </a>
+        </form>
+    </div>
+
+    <!-- Sales Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Total Quantity Sold</h3>
+                    <p class="text-2xl font-bold mt-1">{{ total_quantity }}</p>
+                </div>
+                <div class="bg-gray-700 p-3 rounded-full">
+                    <i class="fas fa-shopping-cart text-gray-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Total Revenue</h3>
+                    <p class="text-2xl font-bold mt-1 text-green-400">${{ total_revenue|floatformat:2 }}</p>
+                </div>
+                <div class="bg-green-900 p-3 rounded-full">
+                    <i class="fas fa-dollar-sign text-green-400 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card p-6 rounded-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-gray-400 text-sm font-medium">Total Profit</h3>
+                    <p class="text-2xl font-bold mt-1 text-food-gold">${{ total_profit|floatformat:2 }}</p>
+                </div>
+                <div class="bg-food-gold bg-opacity-20 p-3 rounded-full">
+                    <i class="fas fa-chart-line text-food-gold text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Chart -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Daily Sales Performance</h2>
+        <div class="h-80">
+            <canvas id="itemSalesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Daily Sales Data -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Daily Sales Data</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Date</th>
+                        <th class="pb-3">Quantity Sold</th>
+                        <th class="pb-3">Revenue</th>
+                        <th class="pb-3">Cost</th>
+                        <th class="pb-3">Profit</th>
+                        <th class="pb-3">Profit Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in daily_sales %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ day.date|date:"M d, Y" }}</td>
+                        <td class="py-3">{{ day.quantity_sold }}</td>
+                        <td class="py-3">${{ day.revenue|floatformat:2 }}</td>
+                        <td class="py-3">${{ day.cost|floatformat:2 }}</td>
+                        <td class="py-3">${{ day.profit|floatformat:2 }}</td>
+                        <td class="py-3">
+                            {% if day.revenue and day.revenue > 0 %}
+                                {% with margin=day.profit|div:day.revenue|mul:100 %}
+                                <span class="{% if margin > 30 %}text-green-400{% elif margin > 15 %}text-yellow-400{% else %}text-red-400{% endif %}">
+                                    {{ margin|floatformat:1 }}%
+                                </span>
+                                {% endwith %}
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-4 text-center text-gray-500">No sales data available for this period</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Individual Order Items -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Individual Order Items</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Order #</th>
+                        <th class="pb-3">Date</th>
+                        <th class="pb-3">Quantity</th>
+                        <th class="pb-3">Price</th>
+                        <th class="pb-3">Subtotal</th>
+                        <th class="pb-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order_items %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ item.order.id }}</td>
+                        <td class="py-3">{{ item.order.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="py-3">{{ item.quantity }}</td>
+                        <td class="py-3">${{ item.price }}</td>
+                        <td class="py-3">${{ item.subtotal }}</td>
+                        <td class="py-3">
+                            {% if item.order.status == 'COMPLETED' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                            {% elif item.order.status == 'CANCELLED' %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                            {% elif item.order.status == 'PENDING' %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                            {% else %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">{{ item.order.status|title }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-4 text-center text-gray-500">No order items found for this period</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Item Sales Chart
+        const ctx = document.getElementById('itemSalesChart').getContext('2d');
+
+        // Prepare data from Django template
+        const dates = [
+            {% for day in daily_sales %}
+                "{{ day.date|date:'M d' }}",
+            {% endfor %}
+        ];
+
+        const quantities = [
+            {% for day in daily_sales %}
+                {{ day.quantity_sold }},
+            {% endfor %}
+        ];
+
+        const revenues = [
+            {% for day in daily_sales %}
+                {{ day.revenue|floatformat:2 }},
+            {% endfor %}
+        ];
+
+        const profits = [
+            {% for day in daily_sales %}
+                {{ day.profit|floatformat:2 }},
+            {% endfor %}
+        ];
+
+        const itemSalesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'Quantity Sold',
+                        data: quantities,
+                        backgroundColor: 'rgba(107, 114, 128, 0.7)', // Gray
+                        borderColor: 'rgba(107, 114, 128, 1)',
+                        borderWidth: 1,
+                        yAxisID: 'y-quantity'
+                    },
+                    {
+                        label: 'Revenue',
+                        data: revenues,
+                        type: 'line',
+                        borderColor: '#10B981', // Green
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        yAxisID: 'y-amount'
+                    },
+                    {
+                        label: 'Profit',
+                        data: profits,
+                        type: 'line',
+                        borderColor: '#F9A826', // Gold
+                        backgroundColor: 'rgba(249, 168, 38, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: false,
+                        yAxisID: 'y-amount'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#E5E7EB' // Light gray for text
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    if (label.includes('Quantity')) {
+                                        label += context.parsed.y;
+                                    } else {
+                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF' // Gray for axis labels
+                        }
+                    },
+                    'y-quantity': {
+                        type: 'linear',
+                        position: 'left',
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF', // Gray for axis labels
+                            stepSize: 1
+                        },
+                        title: {
+                            display: true,
+                            text: 'Quantity',
+                            color: '#9CA3AF'
+                        }
+                    },
+                    'y-amount': {
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: {
+                            drawOnChartArea: false // Only show grid lines for the primary y-axis
+                        },
+                        ticks: {
+                            color: '#9CA3AF', // Gray for axis labels
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Amount ($)',
+                            color: '#9CA3AF'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}

@@ -1,0 +1,92 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Add Inventory - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Add Inventory{% endblock page_title %}
+{% block page_subtitle %}Update stock levels for your menu items{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-6">Add or Adjust Inventory</h2>
+
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-800 text-green-200{% else %}bg-red-800 text-red-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="menu_item" class="block text-sm font-medium text-gray-400 mb-2">Menu Item *</label>
+                    <select name="menu_item" id="menu_item" required
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <option value="">Select a menu item</option>
+                        {% for item in menu_items %}
+                        <option value="{{ item.id }}" {% if request.GET.item == item.id|stringformat:"i" %}selected{% endif %}>
+                            {{ item.name }} (Current Stock: {{ item.current_stock }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="transaction_type" class="block text-sm font-medium text-gray-400 mb-2">Transaction Type *</label>
+                    <select name="transaction_type" id="transaction_type" required
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        {% for type_code, type_name in transaction_types %}
+                        <option value="{{ type_code }}">{{ type_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-400 mb-2">Quantity *</label>
+                    <input type="number" name="quantity" id="quantity" min="1" required
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <p class="text-xs text-gray-500 mt-1">For deductions (sales, waste), the quantity will be automatically converted to negative.</p>
+                </div>
+
+                <div>
+                    <label for="unit_price" class="block text-sm font-medium text-gray-400 mb-2">Unit Price</label>
+                    <input type="number" name="unit_price" id="unit_price" step="0.01" min="0"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <p class="text-xs text-gray-500 mt-1">Optional. For purchases, this is the cost price per unit.</p>
+                </div>
+
+                <div>
+                    <label for="reference" class="block text-sm font-medium text-gray-400 mb-2">Reference</label>
+                    <input type="text" name="reference" id="reference"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <p class="text-xs text-gray-500 mt-1">Optional. Invoice number, order number, etc.</p>
+                </div>
+
+                <div>
+                    <label for="notes" class="block text-sm font-medium text-gray-400 mb-2">Notes</label>
+                    <textarea name="notes" id="notes" rows="3"
+                              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4">
+                <button type="submit"
+                        class="px-6 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    Update Inventory
+                </button>
+
+                <a href="{% url 'inventory_dashboard' %}" class="text-gray-400 hover:text-white">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

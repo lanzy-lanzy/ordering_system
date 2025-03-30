@@ -1,0 +1,269 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Edit Staff: {{ staff_user.get_full_name }} - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Edit Staff Member{% endblock page_title %}
+{% block page_subtitle %}Update staff information for {{ staff_user.get_full_name }}{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="card p-6">
+        <div class="flex flex-col md:flex-row md:items-center mb-6">
+            <div class="flex-shrink-0 mb-4 md:mb-0 md:mr-6">
+                <div class="w-20 h-20 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 text-2xl">
+                    {{ staff_user.first_name|first|upper }}{{ staff_user.last_name|first|upper }}
+                </div>
+            </div>
+            
+            <div class="flex-grow">
+                <h2 class="text-xl font-bold">{{ staff_user.get_full_name }}</h2>
+                <p class="text-gray-400 mb-2">@{{ staff_user.username }}</p>
+                <div class="flex items-center">
+                    <span class="px-2 py-1 rounded-full text-xs mr-2
+                        {% if staff_profile.role == 'ADMIN' %}bg-purple-900 text-purple-300
+                        {% elif staff_profile.role == 'MANAGER' %}bg-blue-900 text-blue-300
+                        {% elif staff_profile.role == 'CASHIER' %}bg-green-900 text-green-300
+                        {% elif staff_profile.role == 'KITCHEN' %}bg-yellow-900 text-yellow-300
+                        {% elif staff_profile.role == 'WAITER' %}bg-pink-900 text-pink-300
+                        {% elif staff_profile.role == 'DELIVERY' %}bg-indigo-900 text-indigo-300
+                        {% else %}bg-gray-700 text-gray-300{% endif %}">
+                        {{ staff_profile.get_role_display }}
+                    </span>
+                    <span class="text-sm text-gray-400">Employee ID: {{ staff_profile.employee_id|default:"Not assigned" }}</span>
+                </div>
+            </div>
+            
+            <div class="mt-4 md:mt-0 md:ml-6">
+                <button type="button" onclick="openResetPasswordModal({{ staff_user.id }}, '{{ staff_user.get_full_name }}')" 
+                        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-key mr-2"></i> Reset Password
+                </button>
+            </div>
+        </div>
+        
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-800 text-green-200{% else %}bg-red-800 text-red-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Account Information -->
+                <div class="space-y-6 md:col-span-2">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Account Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-400 mb-2">Username</label>
+                            <input type="text" value="{{ staff_user.username }}" disabled
+                                   class="w-full px-3 py-2 bg-gray-600 border border-gray-600 rounded-lg text-gray-400">
+                            <p class="text-xs text-gray-500 mt-1">Username cannot be changed</p>
+                        </div>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-400 mb-2">Email *</label>
+                            <input type="email" name="email" id="email" value="{{ staff_user.email }}" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                        
+                        <div>
+                            <label for="role" class="block text-sm font-medium text-gray-400 mb-2">Role *</label>
+                            <select name="role" id="role" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                                {% for role_code, role_name in roles %}
+                                <option value="{{ role_code }}" {% if staff_profile.role == role_code %}selected{% endif %}>{{ role_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="is_active" class="flex items-center">
+                                <input type="checkbox" name="is_active" id="is_active" class="mr-2" {% if staff_user.is_active %}checked{% endif %}>
+                                <span class="text-sm font-medium text-gray-400">Active Account</span>
+                            </label>
+                            <p class="text-xs text-gray-500 mt-1">Inactive accounts cannot log in</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Personal Information -->
+                <div class="space-y-6 md:col-span-2">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Personal Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-400 mb-2">First Name *</label>
+                            <input type="text" name="first_name" id="first_name" value="{{ staff_user.first_name }}" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                        
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-400 mb-2">Last Name *</label>
+                            <input type="text" name="last_name" id="last_name" value="{{ staff_user.last_name }}" required
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                        
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-400 mb-2">Phone Number</label>
+                            <input type="tel" name="phone" id="phone" value="{{ staff_profile.phone }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                        
+                        <div>
+                            <label for="hire_date" class="block text-sm font-medium text-gray-400 mb-2">Hire Date</label>
+                            <input type="date" name="hire_date" id="hire_date" value="{{ staff_profile.hire_date|date:'Y-m-d' }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Additional Information -->
+                <div class="space-y-6 md:col-span-2">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Additional Information</h3>
+                    
+                    <div>
+                        <label for="address" class="block text-sm font-medium text-gray-400 mb-2">Address</label>
+                        <textarea name="address" id="address" rows="2"
+                                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">{{ staff_profile.address }}</textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="emergency_contact" class="block text-sm font-medium text-gray-400 mb-2">Emergency Contact</label>
+                            <input type="text" name="emergency_contact" id="emergency_contact" value="{{ staff_profile.emergency_contact }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                        
+                        <div>
+                            <label for="emergency_phone" class="block text-sm font-medium text-gray-400 mb-2">Emergency Phone</label>
+                            <input type="tel" name="emergency_phone" id="emergency_phone" value="{{ staff_profile.emergency_phone }}"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-400 mb-2">Notes</label>
+                        <textarea name="notes" id="notes" rows="3"
+                                  class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">{{ staff_profile.notes }}</textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between pt-4">
+                <button type="submit" 
+                        class="px-6 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    Save Changes
+                </button>
+                
+                <a href="{% url 'staff_list' %}" class="text-gray-400 hover:text-white">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-xl font-bold mb-4">Reset Password</h3>
+        <p class="mb-4">Enter a new password for <span id="staffName" class="font-semibold">{{ staff_user.get_full_name }}</span>:</p>
+        
+        <form id="resetPasswordForm" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" id="staffId" name="staff_id" value="{{ staff_user.id }}">
+            
+            <div>
+                <label for="new_password" class="block text-sm font-medium text-gray-400 mb-2">New Password</label>
+                <input type="password" id="new_password" name="new_password" required
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+            
+            <div>
+                <label for="confirm_password" class="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
+                <input type="password" id="confirm_password" name="confirm_password" required
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                <p id="passwordError" class="text-red-500 text-sm mt-1 hidden">Passwords do not match</p>
+            </div>
+            
+            <div class="flex justify-end space-x-3 pt-4">
+                <button type="button" onclick="closeResetPasswordModal()" 
+                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg">
+                    Reset Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    function openResetPasswordModal(userId, userName) {
+        document.getElementById('staffId').value = userId;
+        document.getElementById('staffName').textContent = userName;
+        document.getElementById('resetPasswordModal').classList.remove('hidden');
+        document.getElementById('new_password').value = '';
+        document.getElementById('confirm_password').value = '';
+        document.getElementById('passwordError').classList.add('hidden');
+    }
+    
+    function closeResetPasswordModal() {
+        document.getElementById('resetPasswordModal').classList.add('hidden');
+    }
+    
+    document.getElementById('resetPasswordForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const newPassword = document.getElementById('new_password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const staffId = document.getElementById('staffId').value;
+        
+        // Check if passwords match
+        if (newPassword !== confirmPassword) {
+            document.getElementById('passwordError').classList.remove('hidden');
+            return;
+        }
+        
+        // Hide error message
+        document.getElementById('passwordError').classList.add('hidden');
+        
+        // Send AJAX request to reset password
+        fetch(`/dashboard/staff/${staffId}/reset-password/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `new_password=${encodeURIComponent(newPassword)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Show success message
+                alert(data.message);
+                closeResetPasswordModal();
+            } else {
+                // Show error message
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while resetting the password.');
+        });
+    });
+</script>
+{% endblock extra_scripts %}

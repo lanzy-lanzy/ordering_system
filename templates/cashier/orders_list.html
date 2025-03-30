@@ -1,0 +1,162 @@
+{% extends 'cashier/base.html' %}
+{% load math_filters %}
+
+{% block title %}Orders - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Orders{% endblock page_title %}
+{% block page_subtitle %}View and manage customer orders{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Filters -->
+    <div class="card p-6">
+        <h3 class="text-lg font-semibold mb-4">Filter Orders</h3>
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-400 mb-2">Status</label>
+                <select name="status" id="status"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <option value="">All Statuses</option>
+                    {% for status_code, status_name in status_choices %}
+                    <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>{{ status_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">Date From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+            
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">Date To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+            
+            <div>
+                <label for="q" class="block text-sm font-medium text-gray-400 mb-2">Search</label>
+                <input type="text" name="q" id="q" value="{{ search_query }}" placeholder="Order #, customer name..."
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+            
+            <div class="md:col-span-4 flex gap-2">
+                <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    <i class="fas fa-filter mr-2"></i> Apply Filters
+                </button>
+                <a href="{% url 'cashier_orders_list' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-times mr-2"></i> Clear Filters
+                </a>
+                <a href="{% url 'new_order' %}" class="ml-auto px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-plus mr-2"></i> New Order
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Orders</h2>
+        
+        {% if orders %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Order #</th>
+                        <th class="pb-3">Customer</th>
+                        <th class="pb-3">Type</th>
+                        <th class="pb-3">Date & Time</th>
+                        <th class="pb-3">Amount</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ order.id }}</td>
+                        <td class="py-3">{{ order.customer_name }}</td>
+                        <td class="py-3">
+                            {% if order.order_type == 'DINE_IN' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Dine In</span>
+                            {% elif order.order_type == 'TAKEOUT' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Takeout</span>
+                            {% elif order.order_type == 'DELIVERY' %}
+                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Delivery</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">{{ order.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="py-3">${{ order.total_amount }}</td>
+                        <td class="py-3">
+                            {% if order.status == 'PENDING' %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                            {% elif order.status == 'PROCESSING' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Processing</span>
+                            {% elif order.status == 'READY' %}
+                            <span class="bg-indigo-900 text-indigo-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                            {% elif order.status == 'COMPLETED' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                            {% elif order.status == 'CANCELLED' %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'view_order' order.id %}" class="text-food-gold hover:text-food-gold-light" title="View Order">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
+                                <button type="button" onclick="completeOrder({{ order.id }})" class="text-green-400 hover:text-green-300" title="Complete Order">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>
+                                {% endif %}
+                                <a href="{% url 'print_receipt' order.id %}" class="text-blue-400 hover:text-blue-300" title="Print Receipt">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No orders found matching your criteria.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    function completeOrder(orderId) {
+        if (confirm('Mark this order as completed?')) {
+            fetch(`/cashier/order/${orderId}/update-status/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: 'status=COMPLETED'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the order status.');
+            });
+        }
+    }
+</script>
+{% endblock extra_scripts %}
