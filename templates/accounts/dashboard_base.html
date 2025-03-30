@@ -271,6 +271,14 @@
             </a>
             {% endif %}
 
+            {% if perms.ecommerce.manage_customers %}
+            <!-- Customer Management -->
+            <a href="{% url 'customer_list' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'customers' %}active{% endif %}">
+                <i class="fas fa-user-friends w-6 text-center"></i>
+                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Customer Management</span>
+            </a>
+            {% endif %}
+
             {% if request.user.staff_profile.role == 'CASHIER' %}
             <!-- Cashier Dashboard -->
             <a href="{% url 'cashier_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">

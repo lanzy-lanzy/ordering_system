@@ -25,7 +25,7 @@
                 <span class="text-food-gold font-bold">${{ item.price }}</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">{{ item.description|truncatechars:100 }}</p>
-            
+
             {% if item.spice_level > 0 %}
             <div class="flex items-center mb-4">
                 <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
@@ -40,16 +40,17 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <div class="flex justify-between items-center">
-                <button hx-post="{% url 'add_to_cart' item.id %}" 
-                        hx-target="#cart-count" 
+                <button hx-post="{% url 'add_to_cart' item.id %}"
+                        hx-target="#cart-count"
                         hx-swap="innerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                         class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                 </button>
                 <div class="text-gray-400 text-sm">
-                    <i class="fas fa-star text-food-gold"></i> 
+                    <i class="fas fa-star text-food-gold"></i>
                     {% if item.reviews.count > 0 %}
                         {{ item.reviews.all|dictsort:"rating"|last }}
                     {% else %}
@@ -74,7 +75,7 @@
                 <span class="text-food-gold font-bold">$32.99</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">Prime cut ribeye steak grilled to perfection, served with roasted vegetables and garlic mashed potatoes.</p>
-            
+
             <div class="flex items-center mb-4">
                 <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
@@ -85,7 +86,7 @@
                     <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
                 </div>
             </div>
-            
+
             <div class="flex justify-between items-center">
                 <button class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
@@ -96,7 +97,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl hover-scale transition-all duration-300 border border-gray-800 hover:border-food-gold">
         <div class="h-64 overflow-hidden relative">
             <img src="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b" alt="Pasta" class="w-full h-full object-cover">
@@ -107,7 +108,7 @@
                 <span class="text-food-gold font-bold">$24.99</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">Fresh linguine pasta with shrimp, mussels, and calamari in a rich tomato sauce with a hint of white wine.</p>
-            
+
             <div class="flex items-center mb-4">
                 <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
@@ -118,7 +119,7 @@
                     <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
                 </div>
             </div>
-            
+
             <div class="flex justify-between items-center">
                 <button class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
@@ -129,7 +130,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl hover-scale transition-all duration-300 border border-gray-800 hover:border-food-gold">
         <div class="h-64 overflow-hidden relative">
             <img src="https://images.unsplash.com/photo-1623855244183-52fd8d3ce2f7" alt="Salad" class="w-full h-full object-cover">
@@ -143,7 +144,7 @@
                 <span class="text-food-gold font-bold">$14.99</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">Fresh mixed greens with feta cheese, kalamata olives, cherry tomatoes, cucumber, and red onion with balsamic vinaigrette.</p>
-            
+
             <div class="flex items-center mb-4">
                 <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
@@ -154,7 +155,7 @@
                     <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
                 </div>
             </div>
-            
+
             <div class="flex justify-between items-center">
                 <button class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart

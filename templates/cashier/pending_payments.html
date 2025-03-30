@@ -1,0 +1,136 @@
+{% extends 'cashier/base.html' %}
+{% load static %}
+
+{% block title %}Pending Payments - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}
+Pending Payments
+{% endblock page_title %}
+{% block page_subtitle %}Verify and manage customer payments{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Filters -->
+    <div class="card p-6">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-400 mb-1">Payment Status</label>
+                <select id="status" name="status" class="bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-food-gold focus:border-transparent">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                    <option value="COMPLETED" {% if status_filter == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                    <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-1">From Date</label>
+                <input type="date" id="date_from" name="date_from" value="{{ date_from }}" class="bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-food-gold focus:border-transparent">
+            </div>
+
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-1">To Date</label>
+                <input type="date" id="date_to" name="date_to" value="{{ date_to }}" class="bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-food-gold focus:border-transparent">
+            </div>
+
+            <div class="flex items-end">
+                <button type="submit" class="bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-2 px-4 rounded-md transition-colors duration-200 w-full">
+                    <i class="fas fa-filter mr-2"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payments List -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-6">Payment Transactions</h2>
+
+        {% if payments %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">ID</th>
+                        <th class="pb-3">Order #</th>
+                        <th class="pb-3">Customer</th>
+                        <th class="pb-3">Amount</th>
+                        <th class="pb-3">Reference</th>
+                        <th class="pb-3">Date</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr class="border-b border-gray-800 {% if payment.status == 'PENDING' %}bg-gray-800/50{% endif %}">
+                        <td class="py-3">{{ payment.id }}</td>
+                        <td class="py-3">{{ payment.order.id }}</td>
+                        <td class="py-3">{{ payment.order.user.get_full_name }}</td>
+                        <td class="py-3">${{ payment.amount|floatformat:2 }}</td>
+                        <td class="py-3">{{ payment.reference_number }}</td>
+                        <td class="py-3">{{ payment.payment_date|date:"M d, H:i" }}</td>
+                        <td class="py-3">
+                            {% if payment.status == 'PENDING' %}
+                            <span class="bg-yellow-900/50 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                            {% elif payment.status == 'COMPLETED' %}
+                            <span class="bg-green-900/50 text-green-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                            {% elif payment.status == 'REJECTED' %}
+                            <span class="bg-red-900/50 text-red-300 text-xs px-2 py-1 rounded-full">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'view_payment' payment.id %}" class="text-food-gold hover:text-food-gold-light" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if payment.status == 'PENDING' %}
+                                <a href="{% url 'verify_payment' payment.id %}" class="text-blue-400 hover:text-blue-300" title="Verify Payment">
+                                    <i class="fas fa-check-circle"></i>
+                                </a>
+                                <a href="{% url 'reject_payment' payment.id %}" class="text-red-400 hover:text-red-300" title="Reject Payment">
+                                    <i class="fas fa-times-circle"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'view_order' payment.order.id %}" class="text-gray-400 hover:text-white" title="View Order">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No payment transactions found matching your criteria.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    function logoutUser() {
+        console.log('Logout function called from pending payments');
+        // Create a form to submit a POST request to the logout URL
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "logout" %}';
+
+        // Add CSRF token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        form.appendChild(csrfToken);
+
+        // Append form to body, submit it, and remove it
+        document.body.appendChild(form);
+        console.log('Submitting logout form from pending payments');
+        form.submit();
+        document.body.removeChild(form);
+    }
+</script>
+{% endblock extra_scripts %}

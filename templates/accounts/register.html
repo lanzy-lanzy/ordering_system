@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+    <div class="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-xl shadow-lg">
+        <div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
+                Create your account
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-400">
+                Join 5th Avenue Grill and Restobar to order delicious food and make reservations
+            </p>
+        </div>
+
+        {% if messages %}
+        <div class="rounded-md p-4 mb-4 
+            {% if messages.tags == 'error' %}bg-red-900 text-red-200{% else %}bg-green-900 text-green-200{% endif %}">
+            {% for message in messages %}
+            <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form class="mt-8 space-y-6" method="POST">
+            {% csrf_token %}
+            
+            <div class="rounded-md shadow-sm -space-y-px">
+                <!-- Username -->
+                <div class="mb-4">
+                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.username.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- First Name and Last Name -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">First Name</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Last Name</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Email -->
+                <div class="mb-4">
+                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Phone -->
+                <div class="mb-4">
+                    <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Phone (optional)</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.phone.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Address -->
+                <div class="mb-4">
+                    <label for="{{ form.address.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Address (optional)</label>
+                    {{ form.address }}
+                    {% if form.address.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.address.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- City, State, Zip -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">City</label>
+                        {{ form.city }}
+                        {% if form.city.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.city.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.state.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">State</label>
+                        {{ form.state }}
+                        {% if form.state.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.state.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.zip_code.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">ZIP Code</label>
+                        {{ form.zip_code }}
+                        {% if form.zip_code.errors %}
+                        <p class="text-red-500 text-xs mt-1">{{ form.zip_code.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Password -->
+                <div class="mb-4">
+                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.password1.errors.0 }}</p>
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-1">{{ form.password1.help_text }}</p>
+                </div>
+                
+                <!-- Confirm Password -->
+                <div class="mb-4">
+                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">Confirm Password</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.password2.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-food-gold hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-user-plus"></i>
+                    </span>
+                    Create Account
+                </button>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p class="text-sm text-gray-400">
+                    Already have an account? 
+                    <a href="{% url 'login' %}" class="font-medium text-food-gold hover:text-yellow-600 transition-colors duration-200">
+                        Sign in
+                    </a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    // Add styling to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formFields = document.querySelectorAll('input, textarea, select');
+        formFields.forEach(field => {
+            field.classList.add('appearance-none', 'relative', 'block', 'w-full', 'px-3', 'py-2', 'border', 'border-gray-700', 'bg-gray-800/80', 'text-white', 'rounded-md', 'focus:outline-none', 'focus:ring-1', 'focus:ring-yellow-500', 'focus:border-yellow-500', 'transition-all', 'duration-200', 'sm:text-sm');
+        });
+    });
+</script>
+{% endblock extra_scripts %}

@@ -32,12 +32,37 @@
         <div class="py-2 text-white">
             <div class="flex items-center mb-2">
                 <i class="fas fa-user-circle mr-3 text-food-gold"></i>
-                <span>{{ user.username }}</span>
+                <span>
+                    {% if user.first_name %}
+                        {{ user.first_name }}
+                    {% else %}
+                        {{ user.username }}
+                    {% endif %}
+                </span>
             </div>
-            <a href="#" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
-                <i class="fas fa-user mr-2"></i> My Account
+            {% if user.is_staff %}
+                {% if user.is_superuser or user.staff_profile.role == 'ADMIN' %}
+                <a href="{% url 'admin_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
+                </a>
+                {% elif user.staff_profile.role == 'MANAGER' %}
+                <a href="{% url 'manager_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Manager Dashboard
+                </a>
+                {% elif user.staff_profile.role == 'CASHIER' %}
+                <a href="{% url 'cashier_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                    <i class="fas fa-cash-register mr-2"></i> Cashier Dashboard
+                </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'customer_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                    <i class="fas fa-tachometer-alt mr-2"></i> My Dashboard
+                </a>
+            {% endif %}
+            <a href="{% url 'profile' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                <i class="fas fa-user mr-2"></i> My Profile
             </a>
-            <a href="#" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+            <a href="{% url 'my_orders' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
                 <i class="fas fa-history mr-2"></i> Order History
             </a>
             <a href="{% url 'logout' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
@@ -48,10 +73,13 @@
         <a href="{% url 'login' %}" class="flex items-center py-2 text-white hover:text-food-gold transition duration-300">
             <i class="fas fa-sign-in-alt mr-3 text-food-gold"></i> Login
         </a>
+        <a href="{% url 'register' %}" class="flex items-center py-2 text-white hover:text-food-gold transition duration-300">
+            <i class="fas fa-user-plus mr-3 text-food-gold"></i> Register
+        </a>
         {% endif %}
 
         <div class="border-t border-gray-700 my-2"></div>
-        <a href="#" class="flex items-center justify-center py-2 mt-2 bg-gradient-to-r from-food-gold to-food-orange text-white font-bold rounded-md hover:from-food-red hover:to-food-gold transition duration-300 relative">
+        <a href="{% url 'view_cart' %}" class="flex items-center justify-center py-2 mt-2 bg-gradient-to-r from-food-gold to-food-orange text-white font-bold rounded-md hover:from-food-red hover:to-food-gold transition duration-300 relative">
             <i class="fas fa-shopping-cart mr-2"></i> Cart
             <span id="mobile-cart-count" class="absolute -top-2 -right-2 bg-food-gold text-food-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{{ cart_count }}</span>
         </a>

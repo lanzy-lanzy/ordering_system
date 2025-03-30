@@ -1,68 +1,158 @@
 {% extends 'accounts/customer_base.html' %}
+{% load math_filters %}
+
+{% block title %}My Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(249, 168, 38, 0.1), 0 4px 6px -2px rgba(249, 168, 38, 0.05);
+    }
+    .card-gradient-gold {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        border-left: 4px solid #F9A826;
+    }
+    .card-gradient-blue {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        border-left: 4px solid #3B82F6;
+    }
+    .card-gradient-green {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        border-left: 4px solid #10B981;
+    }
+    .card-gradient-purple {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        border-left: 4px solid #8B5CF6;
+    }
+</style>
+{% endblock extra_css %}
 
 {% block content %}
 <div class="space-y-8">
     <!-- Welcome Section -->
-    <div class="bg-gray-800 rounded-lg p-6">
-        <h1 class="text-2xl font-bold mb-2">Welcome back, {{ request.user.username }}!</h1>
-        <p class="text-gray-400">Manage your orders and reviews</p>
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg p-6 shadow-lg border border-gray-700">
+        <div class="flex items-center">
+            <div class="mr-4">
+                {% if request.user.customer_profile.profile_picture %}
+                <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile" class="w-16 h-16 rounded-full object-cover border-2 border-food-gold">
+                {% else %}
+                <div class="w-16 h-16 rounded-full bg-food-gold/20 flex items-center justify-center text-food-gold text-2xl border-2 border-food-gold">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold mb-1">Welcome back, {{ request.user.first_name|default:request.user.username }}!</h1>
+                <p class="text-gray-400">Manage your orders, reviews, and profile</p>
+            </div>
+        </div>
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-gray-800 rounded-lg p-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="stat-card card-gradient-gold rounded-lg p-6 shadow-lg">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold">Total Orders</h2>
-                <i class="fas fa-shopping-bag text-food-gold"></i>
+                <h2 class="text-lg font-bold">Total Orders</h2>
+                <div class="w-10 h-10 rounded-full bg-food-gold/20 flex items-center justify-center text-food-gold">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
             </div>
             <div class="text-3xl font-bold">{{ total_orders }}</div>
+            <div class="text-gray-400 text-sm mt-2">Lifetime orders</div>
         </div>
 
-        <div class="bg-gray-800 rounded-lg p-6">
+        <div class="stat-card card-gradient-blue rounded-lg p-6 shadow-lg">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold">Total Spent</h2>
-                <i class="fas fa-dollar-sign text-food-gold"></i>
+                <h2 class="text-lg font-bold">Total Spent</h2>
+                <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
             </div>
             <div class="text-3xl font-bold">${{ total_spent|floatformat:2 }}</div>
+            <div class="text-gray-400 text-sm mt-2">Lifetime spending</div>
+        </div>
+
+        <div class="stat-card card-gradient-green rounded-lg p-6 shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Avg. Order</h2>
+                <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold">
+                {% if total_orders > 0 %}
+                ${{ total_spent|div:total_orders|floatformat:2 }}
+                {% else %}
+                $0.00
+                {% endif %}
+            </div>
+            <div class="text-gray-400 text-sm mt-2">Average order value</div>
+        </div>
+
+        <div class="stat-card card-gradient-purple rounded-lg p-6 shadow-lg">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Reviews</h2>
+                <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500">
+                    <i class="fas fa-star"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold">{{ user_reviews|length }}</div>
+            <div class="text-gray-400 text-sm mt-2">Total reviews submitted</div>
         </div>
     </div>
 
     <!-- Recent Orders -->
-    <div class="bg-gray-800 rounded-lg p-6">
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg p-6 shadow-lg border border-gray-700">
         <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold">Recent Orders</h2>
-            <a href="{% url 'my_orders' %}" class="text-food-gold hover:text-food-gold-light">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-food-gold/20 flex items-center justify-center text-food-gold mr-3">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+                <h2 class="text-xl font-bold">Recent Orders</h2>
+            </div>
+            <a href="{% url 'my_orders' %}" class="text-food-gold hover:text-food-gold-light transition-colors duration-200 flex items-center">
                 View All <i class="fas fa-arrow-right ml-2"></i>
             </a>
         </div>
 
         <div class="space-y-4">
             {% for order in recent_orders %}
-            <div class="bg-gray-700 rounded-lg p-4">
+            <div class="bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200 rounded-lg p-4 border border-gray-700 shadow-md">
                 <div class="flex justify-between items-start">
                     <div>
-                        <div class="font-medium">Order #{{ order.id }}</div>
-                        <div class="text-sm text-gray-400">{{ order.created_at|date:"M d, Y" }}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="font-bold">${{ order.total_amount|floatformat:2 }}</div>
-                        <div class="text-sm mt-1">
-                            <span class="px-2 py-1 rounded-full text-xs 
-                                {% if order.status == 'PENDING' %}bg-yellow-900 text-yellow-300
-                                {% elif order.status == 'PREPARING' %}bg-blue-900 text-blue-300
-                                {% elif order.status == 'READY' %}bg-green-900 text-green-300
-                                {% elif order.status == 'COMPLETED' %}bg-gray-700 text-gray-300
-                                {% elif order.status == 'CANCELLED' %}bg-red-900 text-red-300{% endif %}">
+                        <div class="font-medium text-lg">Order #{{ order.id }}</div>
+                        <div class="text-sm text-gray-400 mt-1">{{ order.created_at|date:"M d, Y" }} at {{ order.created_at|time:"g:i A" }}</div>
+                        <div class="mt-2">
+                            <span class="px-2 py-1 rounded-full text-xs
+                                {% if order.status == 'PENDING' %}bg-yellow-900/70 text-yellow-300
+                                {% elif order.status == 'PREPARING' %}bg-blue-900/70 text-blue-300
+                                {% elif order.status == 'READY' %}bg-green-900/70 text-green-300
+                                {% elif order.status == 'COMPLETED' %}bg-gray-700/70 text-gray-300
+                                {% elif order.status == 'CANCELLED' %}bg-red-900/70 text-red-300{% endif %}">
                                 {{ order.get_status_display }}
                             </span>
                         </div>
                     </div>
+                    <div class="text-right">
+                        <div class="font-bold text-xl">${{ order.total_amount|floatformat:2 }}</div>
+                        <div class="text-sm text-gray-400 mt-1">{{ order.order_items.count }} item(s)</div>
+                        <a href="#" class="text-food-gold hover:text-food-gold-light text-sm mt-2 inline-block transition-colors duration-200">
+                            View Details
+                        </a>
+                    </div>
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-4 text-gray-400">
-                <p>No orders yet</p>
-                <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light mt-2 inline-block">
+            <div class="text-center py-8 text-gray-400 bg-gray-800/30 rounded-lg border border-gray-700">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-700/50 flex items-center justify-center">
+                    <i class="fas fa-shopping-cart text-gray-500 text-2xl"></i>
+                </div>
+                <p class="mb-2">You haven't placed any orders yet</p>
+                <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light mt-2 inline-block px-4 py-2 border border-food-gold rounded-md transition-all duration-200 hover:bg-food-gold hover:text-gray-900">
                     Browse Menu <i class="fas fa-arrow-right ml-2"></i>
                 </a>
             </div>
@@ -71,59 +161,144 @@
     </div>
 
     <!-- Favorite Items -->
-    <div class="bg-gray-800 rounded-lg p-6">
-        <h2 class="text-xl font-bold mb-6">Your Favorite Items</h2>
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg p-6 shadow-lg border border-gray-700">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 mr-3">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h2 class="text-xl font-bold">Your Favorite Items</h2>
+            </div>
+            <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light transition-colors duration-200 flex items-center">
+                View Menu <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for item in favorite_items %}
-            <div class="bg-gray-700 rounded-lg p-4 flex items-center">
+            <div class="bg-gray-800/50 hover:bg-gray-700/50 transition-all duration-200 rounded-lg p-4 border border-gray-700 shadow-md flex items-center hover:scale-105">
                 {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-16 h-16 rounded-lg object-cover mr-4">
+                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-16 h-16 rounded-lg object-cover mr-4 border border-gray-600">
                 {% else %}
-                <div class="w-16 h-16 rounded-lg bg-gray-600 flex items-center justify-center mr-4">
+                <div class="w-16 h-16 rounded-lg bg-gray-700 flex items-center justify-center mr-4 border border-gray-600">
                     <i class="fas fa-utensils text-gray-400"></i>
                 </div>
                 {% endif %}
                 <div>
                     <div class="font-medium">{{ item.name }}</div>
-                    <div class="text-sm text-gray-400">Ordered {{ item.order_count }} times</div>
+                    <div class="text-sm text-gray-400 mt-1">Ordered {{ item.order_count }} times</div>
+                    <div class="mt-2">
+                        <span class="text-food-gold font-bold">${{ item.price|floatformat:2 }}</span>
+                    </div>
                 </div>
             </div>
             {% empty %}
-            <div class="col-span-3 text-center py-4 text-gray-400">
-                <p>No favorite items yet</p>
+            <div class="col-span-3 text-center py-8 text-gray-400 bg-gray-800/30 rounded-lg border border-gray-700">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-700/50 flex items-center justify-center">
+                    <i class="fas fa-heart text-gray-500 text-2xl"></i>
+                </div>
+                <p class="mb-2">You don't have any favorite items yet</p>
+                <p class="text-sm text-gray-500 mb-4">Order food to build your favorites list</p>
+                <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light mt-2 inline-block px-4 py-2 border border-food-gold rounded-md transition-all duration-200 hover:bg-food-gold hover:text-gray-900">
+                    Explore Menu <i class="fas fa-arrow-right ml-2"></i>
+                </a>
             </div>
             {% endfor %}
         </div>
     </div>
 
     <!-- Recent Reviews -->
-    <div class="bg-gray-800 rounded-lg p-6">
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg p-6 shadow-lg border border-gray-700">
         <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold">Your Recent Reviews</h2>
-            <a href="{% url 'my_reviews' %}" class="text-food-gold hover:text-food-gold-light">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-500 mr-3">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h2 class="text-xl font-bold">Your Recent Reviews</h2>
+            </div>
+            <a href="{% url 'my_reviews' %}" class="text-food-gold hover:text-food-gold-light transition-colors duration-200 flex items-center">
                 View All <i class="fas fa-arrow-right ml-2"></i>
             </a>
         </div>
 
         <div class="space-y-4">
             {% for review in user_reviews %}
-            <div class="bg-gray-700 rounded-lg p-4">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="font-medium">{{ review.menu_item.name }}</div>
-                    <div class="text-food-gold">
+            <div class="bg-gray-800/50 hover:bg-gray-700/50 transition-colors duration-200 rounded-lg p-4 border border-gray-700 shadow-md">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center">
+                        {% if review.menu_item.image %}
+                        <img src="{{ review.menu_item.image.url }}" alt="{{ review.menu_item.name }}" class="w-12 h-12 rounded-lg object-cover mr-3 border border-gray-600">
+                        {% else %}
+                        <div class="w-12 h-12 rounded-lg bg-gray-700 flex items-center justify-center mr-3 border border-gray-600">
+                            <i class="fas fa-utensils text-gray-400"></i>
+                        </div>
+                        {% endif %}
+                        <div class="font-medium">{{ review.menu_item.name }}</div>
+                    </div>
+                    <div class="text-food-gold flex">
                         {% for i in "12345"|make_list %}
-                        <i class="fas fa-star {% if forloop.counter <= review.rating %}text-food-gold{% else %}text-gray-600{% endif %}"></i>
+                        <i class="fas fa-star {% if forloop.counter <= review.rating %}text-food-gold{% else %}text-gray-600{% endif %} mx-0.5"></i>
                         {% endfor %}
                     </div>
                 </div>
-                <p class="text-gray-400 text-sm mb-2">{{ review.comment }}</p>
-                <div class="text-sm text-gray-500">{{ review.created_at|date:"M d, Y" }}</div>
+                <div class="bg-gray-900/30 p-3 rounded-lg border border-gray-700 mb-2">
+                    <p class="text-gray-300 text-sm italic">"{{ review.comment }}"</p>
+                </div>
+                <div class="flex justify-between items-center">
+                    <div class="text-sm text-gray-500">{{ review.created_at|date:"M d, Y" }}</div>
+                    <a href="#" class="text-food-gold hover:text-food-gold-light text-sm transition-colors duration-200">
+                        Edit Review
+                    </a>
+                </div>
             </div>
             {% empty %}
-            <div class="text-center py-4 text-gray-400">
-                <p>No reviews yet</p>
+            <div class="text-center py-8 text-gray-400 bg-gray-800/30 rounded-lg border border-gray-700">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-700/50 flex items-center justify-center">
+                    <i class="fas fa-comment-alt text-gray-500 text-2xl"></i>
+                </div>
+                <p class="mb-2">You haven't written any reviews yet</p>
+                <p class="text-sm text-gray-500 mb-4">Share your thoughts about the food you've tried</p>
+                <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light mt-2 inline-block px-4 py-2 border border-food-gold rounded-md transition-all duration-200 hover:bg-food-gold hover:text-gray-900">
+                    Write a Review <i class="fas fa-pen ml-2"></i>
+                </a>
             </div>
             {% endfor %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 rounded-lg p-6 shadow-lg border border-gray-700">
+        <div class="flex items-center mb-6">
+            <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-500 mr-3">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <h2 class="text-xl font-bold">Quick Actions</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <a href="{% url 'menu' %}" class="bg-gray-800/50 hover:bg-food-gold/90 text-white hover:text-gray-900 transition-all duration-200 rounded-lg p-4 border border-gray-700 shadow-md text-center group">
+                <div class="w-12 h-12 mx-auto rounded-full bg-food-gold/20 group-hover:bg-gray-900/20 flex items-center justify-center text-food-gold group-hover:text-gray-900 mb-3 transition-all duration-200">
+                    <i class="fas fa-utensils text-xl"></i>
+                </div>
+                <h3 class="font-bold mb-1">Order Food</h3>
+                <p class="text-sm text-gray-400 group-hover:text-gray-800">Browse our delicious menu</p>
+            </a>
+
+            <a href="#" class="bg-gray-800/50 hover:bg-blue-500/90 text-white hover:text-gray-900 transition-all duration-200 rounded-lg p-4 border border-gray-700 shadow-md text-center group">
+                <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/20 group-hover:bg-gray-900/20 flex items-center justify-center text-blue-500 group-hover:text-gray-900 mb-3 transition-all duration-200">
+                    <i class="fas fa-calendar-alt text-xl"></i>
+                </div>
+                <h3 class="font-bold mb-1">Make Reservation</h3>
+                <p class="text-sm text-gray-400 group-hover:text-gray-800">Book a table at our restaurant</p>
+            </a>
+
+            <a href="{% url 'profile' %}" class="bg-gray-800/50 hover:bg-green-500/90 text-white hover:text-gray-900 transition-all duration-200 rounded-lg p-4 border border-gray-700 shadow-md text-center group">
+                <div class="w-12 h-12 mx-auto rounded-full bg-green-500/20 group-hover:bg-gray-900/20 flex items-center justify-center text-green-500 group-hover:text-gray-900 mb-3 transition-all duration-200">
+                    <i class="fas fa-user-edit text-xl"></i>
+                </div>
+                <h3 class="font-bold mb-1">Update Profile</h3>
+                <p class="text-sm text-gray-400 group-hover:text-gray-800">Edit your account information</p>
+            </a>
         </div>
     </div>
 </div>

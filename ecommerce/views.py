@@ -7,29 +7,53 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.utils import timezone
 from django.db import models
 from django.db.models import Count, Sum
-from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation, StaffProfile
+from decimal import Decimal
+from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation, StaffProfile, CustomerProfile, Payment
 from django.contrib.auth.forms import PasswordChangeForm
+from .forms import RegistrationForm, CheckoutForm, GCashPaymentForm
 
 
 def redirect_based_on_role(user):
     """Redirect user based on their role"""
+    print(f"Redirecting user {user.username} based on role")
+
     # First check if user is a superuser - this takes precedence over all other roles
     if user.is_superuser:
-        return redirect('admin_dashboard')  # Changed from 'dashboard' to 'admin_dashboard'
+        print(f"User {user.username} is superuser, redirecting to admin dashboard")
+        return redirect('admin_dashboard')
 
-    # Check if user has a staff profile
+    # Check if user has a staff profile with a specific role
     if hasattr(user, 'staff_profile'):
+        role = user.staff_profile.role
+        print(f"User {user.username} has staff profile with role: {role}")
+
         # Check role and redirect accordingly
-        if user.staff_profile.role == 'CASHIER':
+        if role == 'CASHIER':
+            print(f"User {user.username} is a cashier, redirecting to cashier dashboard")
             return redirect('cashier_dashboard')
-        elif user.staff_profile.role == 'MANAGER':
+        elif role == 'MANAGER':
+            print(f"User {user.username} is a manager, redirecting to manager dashboard")
             return redirect('manager_dashboard')
-        elif user.staff_profile.role == 'ADMIN':
-            return redirect('admin_dashboard')  # Changed from 'dashboard' to 'admin_dashboard'
+        elif role == 'ADMIN':
+            print(f"User {user.username} is an admin, redirecting to admin dashboard")
+            return redirect('admin_dashboard')
+        elif role == 'CUSTOMER':
+            # This is a regular customer
+            print(f"User {user.username} has CUSTOMER role, redirecting to customer dashboard")
+            return redirect('customer_dashboard')
+
+    # Check if user is a regular customer (has customer_profile but is not staff)
+    if hasattr(user, 'customer_profile') and not user.is_staff:
+        print(f"User {user.username} is a regular customer, redirecting to customer dashboard")
+        return redirect('customer_dashboard')
 
     # Default redirects based on staff status
     if user.is_staff:
-        return redirect('admin_dashboard')  # Changed from 'dashboard' to 'admin_dashboard'
+        print(f"User {user.username} is staff, redirecting to admin dashboard")
+        return redirect('admin_dashboard')
+
+    # Final fallback - send to customer dashboard
+    print(f"User {user.username} has no specific role, redirecting to customer dashboard")
     return redirect('customer_dashboard')
 
 
@@ -137,30 +161,347 @@ def get_cart_count(request):
         return sum(cart.values())
 
 
-def user_login(request):
+def view_cart(request):
+    """View the cart contents"""
+    cart_items = []
+    total = 0
+
     if request.user.is_authenticated:
+        try:
+            cart = Cart.objects.get(user=request.user)
+            # Use cart_items.all() directly - it already includes the cart item ID
+            cart_items = cart.cart_items.all()
+            total = cart.total
+        except Cart.DoesNotExist:
+            pass
+    else:
+        # Get cart from session
+        session_cart = request.session.get('cart', {})
+
+        # Convert session cart to cart items
+        if session_cart:
+            for item_id, quantity in session_cart.items():
+                try:
+                    menu_item = MenuItem.objects.get(id=item_id)
+                    cart_items.append({
+                        'menu_item': menu_item,
+                        'quantity': quantity,
+                        'subtotal': menu_item.price * quantity,
+                        'id': item_id  # Add the item_id for use in templates
+                    })
+                    total += menu_item.price * quantity
+                except MenuItem.DoesNotExist:
+                    pass
+
+    # Calculate tax (10%)
+    tax = total * Decimal('0.1')
+    grand_total = total + tax
+
+    return render(request, 'cart/view_cart.html', {
+        'cart_items': cart_items,
+        'total': total,
+        'tax': tax,
+        'grand_total': grand_total
+    })
+
+
+@login_required
+def checkout(request):
+    """Checkout process"""
+    # Get cart items and total
+    try:
+        cart = Cart.objects.get(user=request.user)
+        cart_items = cart.cart_items.all()
+
+        if not cart_items.exists():
+            messages.error(request, 'Your cart is empty. Please add items before checkout.')
+            return redirect('view_cart')
+
+        subtotal = cart.total
+        tax = subtotal * Decimal('0.1')  # 10% tax
+        total = subtotal + tax
+    except Cart.DoesNotExist:
+        messages.error(request, 'Your cart is empty. Please add items before checkout.')
+        return redirect('view_cart')
+
+    if request.method == 'POST':
+        # Create the order directly without form validation for testing
+        order = Order.objects.create(
+            user=request.user,
+            status='PENDING',
+            order_type='PICKUP',  # Default to pickup
+            payment_method='GCASH',
+            payment_status='PENDING',
+            total_amount=subtotal,
+            tax_amount=tax,
+            delivery_fee=0,  # You can add delivery fee logic here
+            discount_amount=0,  # You can add discount logic here
+            delivery_address='Pickup at restaurant',
+            contact_number=request.user.customer_profile.phone if hasattr(request.user, 'customer_profile') and request.user.customer_profile.phone else '',
+            special_instructions=request.POST.get('special_instructions', '')
+        )
+
+        # Add order items
+        for cart_item in cart_items:
+            OrderItem.objects.create(
+                order=order,
+                menu_item=cart_item.menu_item,
+                quantity=cart_item.quantity,
+                price=cart_item.menu_item.price,
+                special_instructions=cart_item.special_instructions
+            )
+
+        # Clear the cart
+        cart.cart_items.all().delete()
+
+        # Always redirect to GCash payment page
+        return redirect('gcash_payment', order_id=order.id)
+    else:
+        form = CheckoutForm(user=request.user)
+
+    return render(request, 'checkout/checkout.html', {
+        'form': form,
+        'cart_items': cart_items,
+        'subtotal': subtotal,
+        'tax': tax,
+        'total': total
+    })
+
+
+@login_required
+def gcash_payment(request, order_id):
+    """GCash payment page with QR code"""
+    print(f"GCash payment view called with order_id: {order_id}")
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+        print(f"Order found: {order}")
+
+        # Check if order is already paid
+        if order.payment_status == 'PAID':
+            messages.info(request, 'This order has already been paid.')
+            return redirect('order_confirmation', order_id=order.id)
+
+        # Check if payment exists
+        payment = Payment.objects.filter(order=order).first()
+        if not payment:
+            # Create a new payment record
+            payment = Payment.objects.create(
+                order=order,
+                amount=order.total_amount + order.tax_amount + order.delivery_fee - order.discount_amount,
+                payment_method='GCASH',
+                status='PENDING'
+            )
+    except Order.DoesNotExist:
+        messages.error(request, 'Order not found.')
+        return redirect('view_cart')
+
+    if request.method == 'POST':
+        form = GCashPaymentForm(request.POST, request.FILES, instance=payment)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.status = 'COMPLETED'  # Auto-approve for now, in production this would be verified by staff
+            payment.verification_date = timezone.now()
+            payment.save()
+
+            # Update order status
+            order.payment_status = 'PAID'
+            order.status = 'PREPARING'  # Move to preparing status
+            order.save()
+
+            messages.success(request, 'Payment verified successfully! Your order is now being prepared.')
+            return redirect('order_confirmation', order_id=order.id)
+    else:
+        form = GCashPaymentForm(instance=payment)
+
+    return render(request, 'checkout/gcash_payment.html', {
+        'order': order,
+        'payment': payment,
+        'form': form
+    })
+
+
+@login_required
+def order_confirmation(request, order_id):
+    """Order confirmation page"""
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+        order_items = order.order_items.all()
+        payment = Payment.objects.filter(order=order).first()
+    except Order.DoesNotExist:
+        messages.error(request, 'Order not found.')
+        return redirect('view_cart')
+
+    return render(request, 'checkout/order_confirmation.html', {
+        'order': order,
+        'order_items': order_items,
+        'payment': payment
+    })
+
+
+@require_POST
+def update_cart_item(request, item_id):
+    """Update the quantity of an item in the cart"""
+    action = request.POST.get('action')
+    cart_item_id = request.POST.get('cart_item_id')  # Get the cart item ID if provided
+
+    if action not in ['increase', 'decrease', 'remove']:
+        return JsonResponse({'error': 'Invalid action'}, status=400)
+
+    if request.user.is_authenticated:
+        try:
+            cart = Cart.objects.get(user=request.user)
+
+            # If cart_item_id is provided, use it to find the cart item
+            if cart_item_id:
+                try:
+                    cart_item = CartItem.objects.get(id=cart_item_id, cart=cart)
+                    menu_item_id = cart_item.menu_item.id  # Store for potential new item creation
+
+                    if action == 'increase':
+                        cart_item.quantity += 1
+                        cart_item.save()
+                    elif action == 'decrease':
+                        if cart_item.quantity > 1:
+                            cart_item.quantity -= 1
+                            cart_item.save()
+                        else:
+                            cart_item.delete()
+                    elif action == 'remove':
+                        cart_item.delete()
+
+                except CartItem.DoesNotExist:
+                    # If cart item not found by ID, fall back to menu_item_id
+                    pass
+
+            # If no cart_item_id or cart item not found, use menu_item_id
+            if not cart_item_id or 'pass' in locals():
+                try:
+                    cart_item = CartItem.objects.get(cart=cart, menu_item_id=item_id)
+
+                    if action == 'increase':
+                        cart_item.quantity += 1
+                        cart_item.save()
+                    elif action == 'decrease':
+                        if cart_item.quantity > 1:
+                            cart_item.quantity -= 1
+                            cart_item.save()
+                        else:
+                            cart_item.delete()
+                    elif action == 'remove':
+                        cart_item.delete()
+
+                except CartItem.DoesNotExist:
+                    if action == 'increase':
+                        # If the item doesn't exist and we're trying to increase, create it
+                        menu_item = get_object_or_404(MenuItem, id=item_id)
+                        CartItem.objects.create(cart=cart, menu_item=menu_item, quantity=1)
+
+        except Cart.DoesNotExist:
+            return JsonResponse({'error': 'Cart not found'}, status=404)
+    else:
+        # Handle session cart
+        cart = request.session.get('cart', {})
+        item_id_str = str(item_id)
+
+        if action == 'increase':
+            if item_id_str in cart:
+                cart[item_id_str] += 1
+            else:
+                cart[item_id_str] = 1
+        elif action == 'decrease':
+            if item_id_str in cart and cart[item_id_str] > 1:
+                cart[item_id_str] -= 1
+            elif item_id_str in cart:
+                del cart[item_id_str]
+        elif action == 'remove':
+            if item_id_str in cart:
+                del cart[item_id_str]
+
+        request.session['cart'] = cart
+        request.session.modified = True
+
+    # Redirect back to the cart page
+    return redirect('view_cart')
+
+
+def user_login(request):
+    print("User login view called")
+    if request.user.is_authenticated:
+        print(f"User {request.user.username} is already authenticated")
         return redirect_based_on_role(request.user)
 
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
+        print(f"Login attempt for username: {username}")
 
         user = authenticate(request, username=username, password=password)
 
         if user is not None:
+            print(f"Authentication successful for user: {username}")
+
+            # Check if user is blacklisted
+            if hasattr(user, 'customer_profile') and user.customer_profile.is_blacklisted:
+                print(f"User {username} is blacklisted, login denied")
+                messages.error(request, 'Your account has been blacklisted. Please contact customer support for assistance.')
+                return render(request, 'accounts/login.html')
+
             login(request, user)
+
+            # Check if user has a staff profile with CASHIER role
+            if hasattr(user, 'staff_profile') and user.staff_profile.role == 'CASHIER':
+                print(f"User {username} is a cashier, redirecting directly to cashier dashboard")
+                return redirect('cashier_dashboard')
+
+            # For other roles, use the standard redirection logic
             return redirect_based_on_role(user)
         else:
+            print(f"Authentication failed for username: {username}")
             messages.error(request, 'Invalid username or password.')
 
     return render(request, 'accounts/login.html')
 
 
+def user_register(request):
+    """Handle user registration"""
+    if request.user.is_authenticated:
+        return redirect_based_on_role(request.user)
+
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Log the user in after registration
+            login(request, user)
+            messages.success(request, 'Registration successful! Welcome to 5th Avenue Grill and Restobar.')
+            # Ensure the user has a customer profile before redirecting
+            if hasattr(user, 'customer_profile'):
+                return redirect('customer_dashboard')
+            else:
+                # This should not happen with our updated form, but just in case
+                from .models import CustomerProfile
+                CustomerProfile.objects.create(user=user)
+                return redirect('customer_dashboard')
+    else:
+        form = RegistrationForm()
+
+    return render(request, 'accounts/register.html', {'form': form})
+
+
 def user_logout(request):
     """Handle user logout"""
+    print(f"Logout request received for user: {request.user.username}")
+    print(f"Request method: {request.method}")
+
+    # Log the user out
     logout(request)
+
+    # Add success message
     messages.success(request, 'You have been successfully logged out.')
-    return redirect('home')
+
+    # Redirect to login page instead of home
+    print("Redirecting to login page after logout")
+    return redirect('login')
 
 
 @login_required

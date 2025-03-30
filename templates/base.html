@@ -22,7 +22,19 @@
     </main>
 
     {% include 'components/footer/footer.html' %}
-    
+
+    <!-- HTMX CSRF Configuration -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add CSRF token to all HTMX requests
+            document.body.addEventListener('htmx:configRequest', function(evt) {
+                if (evt.detail.verb === 'post' || evt.detail.verb === 'put' || evt.detail.verb === 'delete') {
+                    evt.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+                }
+            });
+        });
+    </script>
+
     {% block extra_scripts %}{% endblock extra_scripts %}
 </body>
 </html>

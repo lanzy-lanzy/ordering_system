@@ -151,9 +151,15 @@
                                 <i class="fas fa-key mr-2"></i> Change Password
                             </a>
                             <div class="border-t border-gray-700 my-1"></div>
-                            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
-                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            <a href="javascript:void(0)" onclick="logoutUser()" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout (JS)
                             </a>
+                            <form action="{% url 'logout' %}" method="post" class="m-0 p-0 border-t border-gray-700 mt-1 pt-1">
+                                {% csrf_token %}
+                                <button type="submit" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
+                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout (Direct)
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -185,6 +191,12 @@
                         <span class="ml-3" :class="{'hidden': !sidebarOpen}">Orders</span>
                     </a>
 
+                    <!-- Payments -->
+                    <a href="{% url 'pending_payments' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'payments' %}active{% endif %}">
+                        <i class="fas fa-money-bill-wave w-6 text-center"></i>
+                        <span class="ml-3" :class="{'hidden': !sidebarOpen}">Payments</span>
+                    </a>
+
                     <!-- Menu Items -->
                     <a href="{% url 'menu' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'menu' %}active{% endif %}">
                         <i class="fas fa-utensils w-6 text-center"></i>
@@ -199,11 +211,7 @@
                         <span class="ml-3" :class="{'hidden': !sidebarOpen}">My Profile</span>
                     </a>
 
-                    <!-- Logout -->
-                    <a href="{% url 'logout' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
-                        <i class="fas fa-sign-out-alt w-6 text-center"></i>
-                        <span class="ml-3" :class="{'hidden': !sidebarOpen}">Logout</span>
-                    </a>
+
                 </div>
             </nav>
         </aside>
@@ -229,5 +237,28 @@
     </footer>
 
     {% block extra_scripts %}{% endblock extra_scripts %}
+
+    <script>
+        function logoutUser() {
+            console.log('Logout function called');
+            // Create a form to submit a POST request to the logout URL
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url "logout" %}';
+
+            // Add CSRF token
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = 'csrfmiddlewaretoken';
+            csrfToken.value = '{{ csrf_token }}';
+            form.appendChild(csrfToken);
+
+            // Append form to body, submit it, and remove it
+            document.body.appendChild(form);
+            console.log('Submitting logout form');
+            form.submit();
+            document.body.removeChild(form);
+        }
+    </script>
 </body>
 </html>

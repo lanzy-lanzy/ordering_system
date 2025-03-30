@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block content %}
+<section class="py-12 bg-gray-900">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold mb-8 text-center text-white">Checkout</h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Order Summary -->
+            <div class="lg:col-span-1 order-2 lg:order-1">
+                <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden sticky top-24">
+                    <div class="p-6 border-b border-gray-700">
+                        <h2 class="text-xl font-bold mb-4 flex items-center text-white">
+                            <i class="fas fa-receipt text-food-gold mr-2"></i> Order Summary
+                        </h2>
+
+                        <div class="space-y-4 max-h-64 overflow-y-auto mb-4">
+                            {% for item in cart_items %}
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    {% if item.menu_item.image %}
+                                    <img src="{{ item.menu_item.image.url }}" alt="{{ item.menu_item.name }}" class="w-12 h-12 rounded-md object-cover mr-3">
+                                    {% else %}
+                                    <div class="w-12 h-12 rounded-md bg-gray-700 flex items-center justify-center mr-3">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="font-medium">{{ item.menu_item.name }}</div>
+                                        <div class="text-sm text-gray-400">{{ item.quantity }} x ${{ item.menu_item.price|floatformat:2 }}</div>
+                                    </div>
+                                </div>
+                                <div class="font-bold">${{ item.subtotal|floatformat:2 }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="border-t border-gray-700 pt-4">
+                            <div class="flex justify-between mb-2">
+                                <span class="text-gray-400">Subtotal:</span>
+                                <span>${{ subtotal|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between mb-2">
+                                <span class="text-gray-400">Tax (10%):</span>
+                                <span>${{ tax|floatformat:2 }}</span>
+                            </div>
+                            <div class="flex justify-between font-bold text-lg mt-4">
+                                <span>Total:</span>
+                                <span class="text-food-gold">${{ total|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-gray-900">
+                        <a href="{% url 'view_cart' %}" class="text-food-gold hover:text-food-gold-light transition-colors duration-200 flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Return to Cart
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkout Form -->
+            <div class="lg:col-span-2 order-1 lg:order-2">
+                <div class="bg-gray-800 rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-bold mb-6 flex items-center text-white">
+                        <i class="fas fa-credit-card text-food-gold mr-2"></i> Complete Your Order
+                    </h2>
+
+                    <form method="POST" action="{% url 'checkout' %}" id="checkout-form">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="bg-red-900/50 text-red-300 p-4 rounded-lg mb-6">
+                            {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="grid grid-cols-1 gap-6 mb-6">
+                            <!-- Hidden Personal Information -->
+                            {{ form.first_name }}
+                            {{ form.last_name }}
+                            {{ form.email }}
+                            {{ form.phone }}
+
+                            <!-- Order Information -->
+                            <div class="bg-blue-900/30 p-4 rounded-lg border border-blue-800 mb-4">
+                                <h3 class="text-lg font-semibold mb-2 flex items-center text-blue-400">
+                                    <i class="fas fa-info-circle mr-2"></i> Order Information
+                                </h3>
+                                <p class="text-gray-300 mb-2">
+                                    Your order will be prepared for pickup at our restaurant. After placing your order, you'll be directed to our GCash payment page.
+                                </p>
+                                <div class="flex items-center mt-3 text-gray-400">
+                                    <i class="fas fa-store text-food-gold mr-2"></i> <span>Pickup at: 5th Avenue Grill and Restobar</span>
+                                </div>
+                            </div>
+
+                            <!-- Payment Method Info -->
+                            <div class="md:col-span-2 mt-4">
+                                <div class="bg-blue-900/30 p-4 rounded-lg border border-blue-800">
+                                    <h3 class="text-lg font-semibold mb-2 flex items-center text-blue-400">
+                                        <i class="fas fa-info-circle mr-2"></i> Payment Information
+                                    </h3>
+                                    <p class="text-gray-300">
+                                        You will be redirected to our GCash payment page after placing your order. There, you can scan the QR code with your GCash app and upload your payment screenshot.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Special Instructions -->
+                            <div class="form-group mt-4">
+                                <label for="{{ form.special_instructions.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">
+                                    <i class="fas fa-utensils mr-1 text-food-gold"></i> Special Instructions (Optional)
+                                </label>
+                                {{ form.special_instructions }}
+                                {% if form.special_instructions.errors %}
+                                <p class="text-red-400 text-xs mt-1">{{ form.special_instructions.errors.0 }}</p>
+                                {% endif %}
+                                <p class="text-gray-500 text-xs mt-1">Add any special instructions for your order here.</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-8">
+                            <button type="submit" id="checkout-submit" class="w-full bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-3 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                                <i class="fas fa-credit-card mr-2"></i> Proceed to GCash Payment
+                            </button>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <a href="/checkout/" class="text-food-gold hover:text-food-gold-light transition-colors duration-200">
+                                <i class="fas fa-sync-alt mr-1"></i> Refresh Checkout Page
+                            </a>
+                        </div>
+                        <div class="mt-2 text-center">
+                            <a href="javascript:void(0)" onclick="createTestOrder()" class="text-blue-400 hover:text-blue-300 transition-colors duration-200">
+                                <i class="fas fa-vial mr-1"></i> Create Test Order
+                            </a>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <a href="javascript:void(0)" onclick="document.getElementById('checkout-form').submit();" class="text-food-gold hover:text-food-gold-light transition-colors duration-200">
+                                Having trouble? Click here to submit
+                            </a>
+                            <div class="mt-2 text-xs text-gray-500">
+                                <p>If you continue to have issues, please try refreshing the page or contact support.</p>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+    .form-group input, .form-group select, .form-group textarea {
+        @apply bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-food-gold focus:border-transparent;
+    }
+    .form-group select option {
+        @apply bg-gray-700 text-white;
+    }
+    textarea {
+        @apply resize-none;
+    }
+</style>
+{% endblock extra_css %}
+
+{% block extra_scripts %}
+<script>
+    function createTestOrder() {
+        // Disable all buttons
+        document.querySelectorAll('button, a').forEach(el => {
+            el.style.pointerEvents = 'none';
+            el.style.opacity = '0.5';
+        });
+
+        // Create a form data object
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('special_instructions', 'Test order created for debugging');
+
+        // Send the form data using fetch
+        fetch('{% url 'checkout' %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.text();
+            }
+        })
+        .then(html => {
+            if (html) {
+                // If we got HTML back, there was an error
+                document.open();
+                document.write(html);
+                document.close();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error creating the test order. Please try again.');
+            // Re-enable all buttons
+            document.querySelectorAll('button, a').forEach(el => {
+                el.style.pointerEvents = '';
+                el.style.opacity = '';
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Checkout page loaded');
+        const checkoutForm = document.querySelector('form[action="{% url 'checkout' %}"]');
+        console.log('Checkout form found:', checkoutForm);
+
+        if (checkoutForm) {
+            checkoutForm.addEventListener('submit', function(e) {
+                console.log('Form submitted');
+                // Prevent default form submission
+                e.preventDefault();
+
+                // Disable the submit button
+                const submitButton = this.querySelector('button[type="submit"]');
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+                }
+
+                // Create a FormData object
+                const formData = new FormData(this);
+
+                // Send the form data using fetch
+                fetch('{% url 'checkout' %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.text();
+                    }
+                })
+                .then(html => {
+                    if (html) {
+                        // If we got HTML back, there was an error
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('There was an error processing your order. Please try again.');
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i> Proceed to GCash Payment';
+                    }
+                });
+            });
+
+            // Add a direct click handler to the submit button as well
+            const submitButton = checkoutForm.querySelector('button[type="submit"]');
+            if (submitButton) {
+                console.log('Submit button found:', submitButton);
+                submitButton.addEventListener('click', function(e) {
+                    console.log('Submit button clicked');
+                    // Submit the form
+                    checkoutForm.dispatchEvent(new Event('submit'));
+                });
+            }
+        }
+    });
+</script>
+{% endblock extra_scripts %}

@@ -6,14 +6,71 @@
     <title>{% block title %}Customer Dashboard - 5th Avenue Grill and Restobar{% endblock title %}</title>
     <!-- Tailwind and Alpine.js -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'food-gold': '#F9A826',
+                        'food-gold-light': '#FFBB4D',
+                        'food-red': '#E53E3E',
+                        'food-red-light': '#F56565',
+                    }
+                }
+            }
+        }
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            background-color: rgba(249, 168, 38, 0.1);
+            color: #F9A826;
+        }
+        .nav-link.active {
+            background-color: rgba(249, 168, 38, 0.2);
+            color: #F9A826;
+            border-left: 3px solid #F9A826;
+        }
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+    </style>
     {% block extra_css %}{% endblock extra_css %}
 </head>
-<body class="bg-gray-900 text-white" x-data="{ sidebarOpen: true }">
+<body class="bg-gray-900 text-white" x-data="{ sidebarOpen: window.innerWidth >= 768 }">
+    <!-- Mobile Header -->
+    <div class="md:hidden bg-gray-800 p-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
+        <div class="flex items-center">
+            <button @click="sidebarOpen = !sidebarOpen" class="text-gray-400 hover:text-white mr-3">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="flex items-center">
+                <i class="fas fa-utensils text-food-gold mr-2"></i>
+                <span class="font-bold">5th Avenue</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="{% url 'home' %}" class="text-gray-400 hover:text-white">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="{% url 'logout' %}" class="text-red-400 hover:text-red-300">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden transition-opacity duration-200"></div>
+
     <!-- Sidebar -->
-    <aside class="fixed h-full w-64 bg-gray-800 p-4 transform transition-transform duration-150 ease-in-out"
+    <aside class="fixed h-full w-64 bg-gray-800 p-4 transform transition-transform duration-200 ease-in-out z-50 shadow-xl"
            :class="{'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen}">
         <div class="flex items-center justify-between mb-8">
             <div class="flex items-center">
@@ -25,33 +82,84 @@
             </button>
         </div>
 
-        <nav class="space-y-2">
-            <a href="{% url 'customer_dashboard' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'dashboard' %}bg-gray-700{% endif %}">
-                <i class="fas fa-home mr-2"></i> Dashboard
+        <!-- User Profile Summary -->
+        <div class="mb-6 pb-6 border-b border-gray-700">
+            <div class="flex items-center">
+                {% if request.user.customer_profile.profile_picture %}
+                <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile" class="w-10 h-10 rounded-full object-cover mr-3 border border-gray-600">
+                {% else %}
+                <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center mr-3 text-food-gold">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <div class="font-medium">{{ request.user.first_name|default:request.user.username }}</div>
+                    <div class="text-xs text-gray-400">{{ request.user.email }}</div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="space-y-1">
+            <a href="{% url 'customer_dashboard' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-tachometer-alt mr-2"></i> Dashboard
             </a>
-            <a href="{% url 'my_orders' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'orders' %}bg-gray-700{% endif %}">
+            <a href="{% url 'my_orders' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'orders' %}active{% endif %}">
                 <i class="fas fa-shopping-bag mr-2"></i> My Orders
             </a>
-            <a href="{% url 'my_reviews' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'reviews' %}bg-gray-700{% endif %}">
+            <a href="{% url 'my_reviews' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'reviews' %}active{% endif %}">
                 <i class="fas fa-star mr-2"></i> My Reviews
             </a>
-            <a href="{% url 'profile' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'profile' %}bg-gray-700{% endif %}">
-                <i class="fas fa-user mr-2"></i> Profile
+            <a href="{% url 'profile' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'profile' %}active{% endif %}">
+                <i class="fas fa-user-circle mr-2"></i> Profile
+            </a>
+            <a href="#" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'reservations' %}active{% endif %}">
+                <i class="fas fa-calendar-alt mr-2"></i> My Reservations
+            </a>
+            <a href="#" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'favorites' %}active{% endif %}">
+                <i class="fas fa-heart mr-2"></i> Favorites
             </a>
             <div class="border-t border-gray-700 my-4"></div>
             <a href="{% url 'home' %}" class="nav-link block py-2 px-4 rounded-lg">
                 <i class="fas fa-arrow-left mr-2"></i> Back to Restaurant
             </a>
-            <a href="{% url 'logout' %}" class="nav-link block py-2 px-4 rounded-lg text-red-400">
+            <a href="{% url 'logout' %}" class="nav-link block py-2 px-4 rounded-lg text-red-400 hover:text-red-300">
                 <i class="fas fa-sign-out-alt mr-2"></i> Logout
             </a>
         </nav>
     </aside>
 
     <!-- Main Content -->
-    <main class="ml-64 p-8">
-        <div class="max-w-7xl mx-auto">
-            {% block content %}{% endblock content %}
+    <main class="transition-all duration-200 ease-in-out main-content" :class="{'md:ml-64': sidebarOpen, 'ml-0': !sidebarOpen}">
+        <!-- Top Bar -->
+        <div class="hidden md:flex items-center justify-between bg-gray-800/50 backdrop-blur-sm p-4 sticky top-0 z-30 border-b border-gray-700">
+            <button @click="sidebarOpen = !sidebarOpen" class="text-gray-400 hover:text-white p-2 rounded-lg">
+                <i class="fas" :class="sidebarOpen ? 'fa-times' : 'fa-bars'"></i>
+            </button>
+
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'menu' %}" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-utensils mr-1"></i> Menu
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-bell mr-1"></i> Notifications
+                </a>
+                <a href="{% url 'profile' %}" class="flex items-center text-gray-400 hover:text-white">
+                    {% if request.user.customer_profile.profile_picture %}
+                    <img src="{{ request.user.customer_profile.profile_picture.url }}" alt="Profile" class="w-8 h-8 rounded-full object-cover mr-2">
+                    {% else %}
+                    <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-2 text-food-gold">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    {% endif %}
+                    <span>{{ request.user.first_name|default:request.user.username }}</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="p-4 md:p-8">
+            <div class="max-w-7xl mx-auto">
+                {% block content %}{% endblock content %}
+            </div>
         </div>
     </main>
 

@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load math_filters %}
+
+{% block title %}Your Cart - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block content %}
+<section class="py-12 bg-gray-900">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold mb-8 text-center">Your Cart</h1>
+
+        {% if cart_items %}
+        <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <!-- Cart Items -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Item</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Price</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Quantity</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Subtotal</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-700">
+                        {% for item in cart_items %}
+                        <tr class="hover:bg-gray-700 transition-colors duration-200">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    {% if item.menu_item.image %}
+                                    <img src="{{ item.menu_item.image.url }}" alt="{{ item.menu_item.name }}" class="w-12 h-12 rounded-md object-cover mr-4">
+                                    {% else %}
+                                    <div class="w-12 h-12 rounded-md bg-gray-700 flex items-center justify-center mr-4">
+                                        <i class="fas fa-utensils text-gray-500"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="font-medium text-white">{{ item.menu_item.name }}</div>
+                                        <div class="text-sm text-gray-400">{{ item.menu_item.category.name }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-white">${{ item.menu_item.price|floatformat:2 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <form method="POST" action="{% url 'update_cart_item' item.id|default:item.menu_item.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="decrease">
+                                        {% if item.id %}
+                                        <input type="hidden" name="cart_item_id" value="{{ item.id }}">
+                                        {% endif %}
+                                        <button type="submit" class="bg-gray-700 text-white w-8 h-8 rounded-l-md flex items-center justify-center hover:bg-gray-600 transition-colors duration-200">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                    </form>
+                                    <span class="bg-gray-800 text-white px-4 py-1 w-12 text-center">{{ item.quantity }}</span>
+                                    <form method="POST" action="{% url 'update_cart_item' item.id|default:item.menu_item.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="increase">
+                                        {% if item.id %}
+                                        <input type="hidden" name="cart_item_id" value="{{ item.id }}">
+                                        {% endif %}
+                                        <button type="submit" class="bg-gray-700 text-white w-8 h-8 rounded-r-md flex items-center justify-center hover:bg-gray-600 transition-colors duration-200">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-white font-medium">${{ item.subtotal|floatformat:2 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <form method="POST" action="{% url 'update_cart_item' item.id|default:item.menu_item.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="remove">
+                                    {% if item.id %}
+                                    <input type="hidden" name="cart_item_id" value="{{ item.id }}">
+                                    {% endif %}
+                                    <button type="submit" class="text-red-400 hover:text-red-300 transition-colors duration-200">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Cart Summary -->
+            <div class="bg-gray-900 p-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div class="mb-4 md:mb-0">
+                        <a href="{% url 'menu' %}" class="text-food-gold hover:text-food-gold-light transition-colors duration-200 flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Continue Shopping
+                        </a>
+                    </div>
+                    <div class="bg-gray-800 p-4 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-300">Subtotal:</span>
+                            <span class="text-white font-medium">${{ total|floatformat:2 }}</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-gray-300">Tax (10%):</span>
+                            <span class="text-white font-medium">${{ total|mul:0.1|floatformat:2 }}</span>
+                        </div>
+                        <div class="border-t border-gray-700 pt-2 mb-4">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300 font-bold">Total:</span>
+                                <span class="text-food-gold font-bold text-xl">${{ grand_total|floatformat:2 }}</span>
+                            </div>
+                        </div>
+                        <a href="{% url 'checkout' %}" class="w-full bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-4 px-6 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-lg transform hover:scale-105">
+                            <i class="fas fa-credit-card mr-2"></i> Pay with GCash
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg shadow-lg p-8 text-center">
+            <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-700 flex items-center justify-center">
+                <i class="fas fa-shopping-cart text-gray-500 text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold mb-4">Your cart is empty</h2>
+            <p class="text-gray-400 mb-6">Looks like you haven't added any items to your cart yet.</p>
+            <a href="{% url 'menu' %}" class="inline-block bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-3 px-6 rounded-md transition-colors duration-200">
+                <i class="fas fa-utensils mr-2"></i> Browse Our Menu
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Cart page loaded');
+    });
+</script>
+{% endblock extra_scripts %}

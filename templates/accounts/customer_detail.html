@@ -1,0 +1,232 @@
+{% extends 'accounts/dashboard_base.html' %}
+{% load math_filters %}
+
+{% block title %}Customer Details - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Customer Details{% endblock page_title %}
+{% block page_subtitle %}View and manage customer information{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Customer Info Card -->
+    <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="p-6 border-b border-gray-700">
+            <div class="flex items-start justify-between">
+                <div class="flex items-center">
+                    <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center text-gray-300 mr-4 text-2xl">
+                        {{ customer.first_name|first|upper }}{{ customer.last_name|first|upper }}
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">{{ customer.get_full_name }}</h2>
+                        <div class="text-gray-400">@{{ customer.username }}</div>
+                        <div class="mt-2 flex items-center">
+                            <span class="text-gray-400 mr-4"><i class="fas fa-envelope mr-1"></i> {{ customer.email }}</span>
+                            {% if customer_profile.phone %}
+                            <span class="text-gray-400"><i class="fas fa-phone mr-1"></i> {{ customer_profile.phone }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    {% if customer_profile.is_blacklisted %}
+                    <span class="bg-red-900 text-red-300 text-sm px-3 py-1 rounded-full">Blacklisted</span>
+                    {% else %}
+                    <span class="bg-green-900 text-green-300 text-sm px-3 py-1 rounded-full">Active</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-300 mb-3">Customer Information</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Member Since:</span>
+                            <span class="text-white">{{ customer.date_joined|date:"F j, Y" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Orders:</span>
+                            <span class="text-white">{{ total_orders }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Total Spent:</span>
+                            <span class="text-white">${{ total_spent|floatformat:2 }}</span>
+                        </div>
+                        {% if customer_profile.birth_date %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Birth Date:</span>
+                            <span class="text-white">{{ customer_profile.birth_date|date:"F j, Y" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if customer_profile.full_address %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Address:</span>
+                            <span class="text-white">{{ customer_profile.full_address }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-300 mb-3">Additional Information</h3>
+                    <div class="space-y-2">
+                        {% if customer_profile.favorite_food %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Favorite Food:</span>
+                            <span class="text-white">{{ customer_profile.favorite_food }}</span>
+                        </div>
+                        {% endif %}
+                        {% if customer_profile.dietary_preferences %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Dietary Preferences:</span>
+                            <span class="text-white">{{ customer_profile.dietary_preferences }}</span>
+                        </div>
+                        {% endif %}
+                        {% if customer_profile.allergies %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Allergies:</span>
+                            <span class="text-white">{{ customer_profile.allergies }}</span>
+                        </div>
+                        {% endif %}
+                        {% if customer_profile.is_blacklisted %}
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Blacklisted On:</span>
+                            <span class="text-white">{{ customer_profile.blacklisted_at|date:"F j, Y" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Blacklisted By:</span>
+                            <span class="text-white">{{ customer_profile.blacklisted_by.get_full_name }}</span>
+                        </div>
+                        <div class="mt-2">
+                            <span class="text-gray-400">Reason:</span>
+                            <div class="mt-1 p-2 bg-gray-700 rounded text-white">
+                                {{ customer_profile.blacklist_reason|default:"No reason provided" }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Blacklist Actions -->
+            <div class="mt-6 flex justify-end">
+                {% if customer_profile.is_blacklisted %}
+                <form method="post" action="{% url 'unblacklist_customer' customer.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                        <i class="fas fa-user-check mr-1"></i> Remove from Blacklist
+                    </button>
+                </form>
+                {% else %}
+                <button type="button" onclick="openBlacklistModal()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    <i class="fas fa-user-slash mr-1"></i> Add to Blacklist
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders -->
+    <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="p-4 border-b border-gray-700">
+            <h2 class="text-xl font-bold text-white">Recent Orders</h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3 pl-4">Order #</th>
+                        <th class="pb-3">Date</th>
+                        <th class="pb-3">Total</th>
+                        <th class="pb-3">Status</th>
+                        <th class="pb-3">Payment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3 pl-4">{{ order.id }}</td>
+                        <td class="py-3">{{ order.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="py-3">${{ order.total_amount|floatformat:2 }}</td>
+                        <td class="py-3">
+                            {% if order.status == 'PENDING' %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                            {% elif order.status == 'PREPARING' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Preparing</span>
+                            {% elif order.status == 'READY' %}
+                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                            {% elif order.status == 'COMPLETED' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                            {% elif order.status == 'CANCELLED' %}
+                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if order.payment_status == 'PAID' %}
+                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Paid</span>
+                            {% else %}
+                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">{{ order.payment_status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="py-4 text-center text-gray-500">No orders found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if total_orders > 10 %}
+        <div class="p-4 border-t border-gray-700 text-center">
+            <span class="text-gray-400">Showing 10 of {{ total_orders }} orders</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Blacklist Modal -->
+<div id="blacklistModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-white">Add Customer to Blacklist</h3>
+            <button type="button" onclick="closeBlacklistModal()" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form method="post" action="{% url 'blacklist_customer' customer.id %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="reason" class="block text-gray-400 mb-2">Reason for blacklisting</label>
+                <textarea id="reason" name="reason" rows="4" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:border-food-gold" required></textarea>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeBlacklistModal()" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                    <i class="fas fa-user-slash mr-1"></i> Blacklist Customer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function openBlacklistModal() {
+        document.getElementById('blacklistModal').classList.remove('hidden');
+    }
+    
+    function closeBlacklistModal() {
+        document.getElementById('blacklistModal').classList.add('hidden');
+    }
+</script>
+{% endblock extra_js %}
+{% endblock content %}

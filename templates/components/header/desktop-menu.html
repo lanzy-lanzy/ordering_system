@@ -18,13 +18,38 @@
     {% if user.is_authenticated %}
     <div class="relative group">
         <button class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-            <i class="fas fa-user-circle mr-1 text-food-gold"></i> {{ user.username }} <i class="fas fa-chevron-down ml-1 text-xs"></i>
+            <i class="fas fa-user-circle mr-1 text-food-gold"></i>
+            {% if user.first_name %}
+                {{ user.first_name }}
+            {% else %}
+                {{ user.username }}
+            {% endif %}
+            <i class="fas fa-chevron-down ml-1 text-xs"></i>
         </button>
         <div class="absolute right-0 mt-2 w-48 bg-food-black rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
-            <a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
-                <i class="fas fa-user mr-2"></i> My Account
+            {% if user.is_staff %}
+                {% if user.is_superuser or user.staff_profile.role == 'ADMIN' %}
+                <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
+                </a>
+                {% elif user.staff_profile.role == 'MANAGER' %}
+                <a href="{% url 'manager_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                    <i class="fas fa-tachometer-alt mr-2"></i> Manager Dashboard
+                </a>
+                {% elif user.staff_profile.role == 'CASHIER' %}
+                <a href="{% url 'cashier_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                    <i class="fas fa-cash-register mr-2"></i> Cashier Dashboard
+                </a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'customer_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                    <i class="fas fa-tachometer-alt mr-2"></i> My Dashboard
+                </a>
+            {% endif %}
+            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                <i class="fas fa-user mr-2"></i> My Profile
             </a>
-            <a href="#" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+            <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
                 <i class="fas fa-history mr-2"></i> Order History
             </a>
             <div class="border-t border-gray-700 my-1"></div>
@@ -34,12 +59,17 @@
         </div>
     </div>
     {% else %}
-    <a href="{% url 'login' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-        <i class="fas fa-sign-in-alt mr-1 text-food-gold"></i> Login
-    </a>
+    <div class="flex space-x-4">
+        <a href="{% url 'login' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+            <i class="fas fa-sign-in-alt mr-1 text-food-gold"></i> Login
+        </a>
+        <a href="{% url 'register' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
+            <i class="fas fa-user-plus mr-1 text-food-gold"></i> Register
+        </a>
+    </div>
     {% endif %}
 
-    <a href="#" class="bg-white text-food-red hover:bg-food-black hover:text-white px-5 py-2 rounded-full font-bold transition duration-300 flex items-center shadow-lg hover-scale relative">
+    <a href="{% url 'view_cart' %}" class="bg-white text-food-red hover:bg-food-black hover:text-white px-5 py-2 rounded-full font-bold transition duration-300 flex items-center shadow-lg hover-scale relative">
         <i class="fas fa-shopping-cart mr-2"></i>
         Cart
         <span id="cart-count" class="absolute -top-2 -right-2 bg-food-gold text-food-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{{ cart_count }}</span>

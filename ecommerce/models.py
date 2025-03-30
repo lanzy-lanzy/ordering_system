@@ -141,10 +141,38 @@ class Order(models.Model):
         ('CANCELLED', 'Cancelled')
     ]
 
+    ORDER_TYPE_CHOICES = [
+        ('DELIVERY', 'Delivery'),
+        ('PICKUP', 'Pickup'),
+        ('DINE_IN', 'Dine In'),
+    ]
+
+    PAYMENT_METHOD_CHOICES = [
+        ('CASH', 'Cash on Delivery'),
+        ('CARD', 'Credit/Debit Card'),
+        ('GCASH', 'GCash'),
+        ('ONLINE', 'Other Online Payment'),
+    ]
+
+    PAYMENT_STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PAID', 'Paid'),
+        ('FAILED', 'Failed'),
+        ('REFUNDED', 'Refunded'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
     items = models.ManyToManyField(MenuItem, through='OrderItem')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='DELIVERY')
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='CASH')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='PENDING')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    delivery_address = models.TextField(blank=True, null=True)
+    contact_number = models.CharField(max_length=20, blank=True, null=True)
     special_instructions = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -157,6 +185,45 @@ class Order(models.Model):
 
     def calculate_total(self):
         return sum(item.subtotal for item in self.order_items.all())
+
+    @property
+    def grand_total(self):
+        """Calculate the grand total including tax, delivery fee, and discounts"""
+        return self.total_amount + self.tax_amount + self.delivery_fee - self.discount_amount
+
+class Payment(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+        ('REFUNDED', 'Refunded'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=20, choices=Order.PAYMENT_METHOD_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reference_number = models.CharField(max_length=100, blank=True, null=True)
+    payment_proof = models.ImageField(upload_to='payment_proofs/', blank=True, null=True)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_payments')
+    verification_date = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-payment_date']
+
+    def __str__(self):
+        return f"Payment of ${self.amount} for Order #{self.order.id} via {self.get_payment_method_display()}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        # Update order payment status if this payment is completed
+        if self.status == 'COMPLETED' and self.order.payment_status != 'PAID':
+            self.order.payment_status = 'PAID'
+            self.order.save(update_fields=['payment_status'])
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
@@ -376,6 +443,7 @@ class StaffProfile(models.Model):
         ('KITCHEN', 'Kitchen Staff'),
         ('WAITER', 'Waiter/Waitress'),
         ('DELIVERY', 'Delivery Person'),
+        ('CUSTOMER', 'Customer'),  # Added for regular customers
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='staff_profile')
@@ -402,6 +470,7 @@ class StaffProfile(models.Model):
             ('manage_inventory', 'Can manage inventory'),
             ('process_orders', 'Can process orders'),
             ('manage_menu', 'Can manage menu items'),
+            ('manage_customers', 'Can manage customers'),
         ]
 
     def __str__(self):
@@ -460,11 +529,34 @@ class StaffProfile(models.Model):
                 group.permissions.add(Permission.objects.get(codename='view_sales_reports'))
                 group.permissions.add(Permission.objects.get(codename='manage_inventory'))
                 group.permissions.add(Permission.objects.get(codename='manage_menu'))
+                group.permissions.add(Permission.objects.get(codename='manage_customers'))
             elif self.role == 'CASHIER':
                 # Cashiers can process orders and view products
-                group.permissions.add(Permission.objects.get(codename='process_orders'))
-                group.permissions.add(Permission.objects.get(codename='view_menuitem'))
-                group.permissions.add(Permission.objects.get(codename='view_order'))
+                try:
+                    # Add process_orders permission
+                    process_orders_perm = Permission.objects.get(codename='process_orders')
+                    group.permissions.add(process_orders_perm)
+                    # Add it directly to the user as well for redundancy
+                    self.user.user_permissions.add(process_orders_perm)
+                except Permission.DoesNotExist:
+                    print(f"Warning: process_orders permission not found for user {self.user.username}")
+
+                # Add view permissions
+                try:
+                    group.permissions.add(Permission.objects.get(codename='view_menuitem'))
+                except Permission.DoesNotExist:
+                    print(f"Warning: view_menuitem permission not found")
+
+                try:
+                    group.permissions.add(Permission.objects.get(codename='view_order'))
+                except Permission.DoesNotExist:
+                    print(f"Warning: view_order permission not found")
+
+                # Add change_order permission
+                try:
+                    group.permissions.add(Permission.objects.get(codename='change_order'))
+                except Permission.DoesNotExist:
+                    print(f"Warning: change_order permission not found")
             elif self.role == 'KITCHEN':
                 # Kitchen staff can view orders and update order status
                 group.permissions.add(Permission.objects.get(codename='view_order'))
@@ -503,6 +595,8 @@ class StaffActivity(models.Model):
         ('UPDATE_ITEM', 'Updated Menu Item'),
         ('DELETE_ITEM', 'Deleted Menu Item'),
         ('ADD_INVENTORY', 'Added Inventory'),
+        ('BLACKLIST_CUSTOMER', 'Blacklisted Customer'),
+        ('UNBLACKLIST_CUSTOMER', 'Removed Customer from Blacklist'),
         ('OTHER', 'Other Activity'),
     ]
 
@@ -521,17 +615,83 @@ class StaffActivity(models.Model):
         return f"{self.staff.get_full_name()} - {self.get_action_display()} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
 
-# Signal to create staff profile when a user is created
+# Customer Profile Model
+class CustomerProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='customer_profile')
+    profile_picture = models.ImageField(upload_to='customer_profiles/', blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True)
+    birth_date = models.DateField(null=True, blank=True)
+    favorite_food = models.CharField(max_length=100, blank=True)
+    dietary_preferences = models.TextField(blank=True, help_text="Vegetarian, Vegan, Gluten-Free, etc.")
+    allergies = models.TextField(blank=True)
+    is_blacklisted = models.BooleanField(default=False, help_text="Whether this customer is blacklisted")
+    blacklist_reason = models.TextField(blank=True, help_text="Reason for blacklisting this customer")
+    blacklisted_at = models.DateTimeField(null=True, blank=True, help_text="When this customer was blacklisted")
+    blacklisted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='blacklisted_customers', help_text="Staff member who blacklisted this customer")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Customer Profile'
+        verbose_name_plural = 'Customer Profiles'
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"
+
+    @property
+    def full_address(self):
+        """Return the full address as a formatted string"""
+        parts = [self.address]
+        if self.city:
+            parts.append(self.city)
+        if self.state:
+            parts.append(self.state)
+        if self.zip_code:
+            parts.append(self.zip_code)
+        return ", ".join(filter(None, parts))
+
+    @property
+    def total_orders(self):
+        """Return the total number of orders placed by this customer"""
+        return Order.objects.filter(user=self.user).count()
+
+    @property
+    def total_spent(self):
+        """Return the total amount spent by this customer"""
+        return Order.objects.filter(user=self.user).aggregate(models.Sum('total_amount'))['total_amount__sum'] or 0
+
+
+# Signal to create profiles when a user is created
 @receiver(post_save, sender=User)
-def create_staff_profile(sender, instance, created, **kwargs):
-    """Create a staff profile when a new user is created"""
+def create_user_profiles(sender, instance, created, **kwargs):
+    """Create profiles when a new user is created"""
     if created:
-        StaffProfile.objects.create(user=instance)
+        # Create the appropriate profile based on user type
+        if instance.is_staff or instance.is_superuser:
+            # Create staff profile for staff users
+            StaffProfile.objects.create(user=instance)
+        else:
+            # Create customer profile for regular users
+            CustomerProfile.objects.create(user=instance)
+            # Also create a minimal staff profile for internal use
+            # This is needed because some code may expect it to exist
+            StaffProfile.objects.create(
+                user=instance,
+                role='CUSTOMER',  # Using CASHIER as it's the default, but this user isn't actually staff
+                is_active_staff=False
+            )
 
 
-# Signal to save staff profile when a user is saved
+# Signal to save profiles when a user is saved
 @receiver(post_save, sender=User)
-def save_staff_profile(sender, instance, **kwargs):
-    """Save the staff profile when a user is saved"""
+def save_user_profiles(sender, instance, **kwargs):
+    """Save the profiles when a user is saved"""
     if hasattr(instance, 'staff_profile'):
         instance.staff_profile.save()
+
+    if hasattr(instance, 'customer_profile'):
+        instance.customer_profile.save()

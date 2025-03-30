@@ -1,0 +1,98 @@
+{% extends 'cashier/base.html' %}
+{% load static %}
+
+{% block title %}Reject Payment - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Reject Payment{% endblock page_title %}
+{% block page_subtitle %}Reject payment for order #{{ payment.order.id }}{% endblock page_subtitle %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="card p-6 mb-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <div>
+                <h2 class="text-xl font-bold mb-1">Payment #{{ payment.id }}</h2>
+                <p class="text-gray-400 text-sm">For Order #{{ payment.order.id }}</p>
+                <p class="text-gray-400 text-sm">Submitted on {{ payment.payment_date|date:"F d, Y" }} at {{ payment.payment_date|time:"g:i A" }}</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-900/50 text-yellow-300">
+                    <i class="fas fa-clock text-xs mr-1"></i> Pending Verification
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <h3 class="text-lg font-semibold mb-3">Payment Details</h3>
+                <div class="bg-gray-800 p-4 rounded-lg">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <p class="text-sm text-gray-400">Amount</p>
+                            <p class="font-medium text-xl">${{ payment.amount|floatformat:2 }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-400">Reference Number</p>
+                            <p class="font-medium">{{ payment.reference_number }}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400">Customer</p>
+                        <p class="font-medium">{{ payment.order.user.get_full_name }}</p>
+                        <p class="text-sm text-gray-500">{{ payment.order.user.email }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-lg font-semibold mb-3">Payment Screenshot</h3>
+                <div class="bg-gray-800 rounded-lg overflow-hidden h-48">
+                    {% if payment.payment_proof %}
+                    <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="w-full h-full object-contain">
+                    {% else %}
+                    <div class="p-8 text-center h-full flex items-center justify-center">
+                        <div>
+                            <i class="fas fa-image text-4xl text-gray-600 mb-2"></i>
+                            <p class="text-gray-400">No payment screenshot provided</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if payment.payment_proof %}
+                <div class="mt-2 text-center">
+                    <a href="{{ payment.payment_proof.url }}" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors duration-200 text-sm">
+                        <i class="fas fa-external-link-alt mr-1"></i> View Full Size
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+
+            <div>
+                <label for="reason" class="block text-sm font-medium text-gray-400 mb-1">Rejection Reason <span class="text-red-500">*</span></label>
+                <textarea id="reason" name="reason" rows="3" class="bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-food-gold focus:border-transparent" required></textarea>
+                <p class="text-xs text-gray-500 mt-1">Please provide a reason for rejecting this payment.</p>
+            </div>
+
+            <div class="bg-red-900/30 p-4 rounded-lg border border-red-800">
+                <p class="text-gray-300 flex items-start">
+                    <i class="fas fa-exclamation-triangle text-red-500 mr-2 mt-1"></i>
+                    <span>By rejecting this payment, the customer will need to submit a new payment. This action cannot be undone.</span>
+                </p>
+            </div>
+
+            <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                <a href="{% url 'view_payment' payment.id %}" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 text-center">
+                    <i class="fas fa-arrow-left mr-2"></i> Cancel
+                </a>
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 text-center">
+                    <i class="fas fa-times-circle mr-2"></i> Reject Payment
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}
