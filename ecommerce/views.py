@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
@@ -10,7 +10,7 @@ from django.db.models import Count, Sum
 from decimal import Decimal
 from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation, StaffProfile, CustomerProfile, Payment
 from django.contrib.auth.forms import PasswordChangeForm
-from .forms import RegistrationForm, CheckoutForm, GCashPaymentForm
+from .forms import RegistrationForm, CheckoutForm, GCashPaymentForm, ReservationForm
 
 
 def redirect_based_on_role(user):
@@ -448,10 +448,20 @@ def user_login(request):
 
             login(request, user)
 
-            # Check if user has a staff profile with CASHIER role
-            if hasattr(user, 'staff_profile') and user.staff_profile.role == 'CASHIER':
-                print(f"User {username} is a cashier, redirecting directly to cashier dashboard")
-                return redirect('cashier_dashboard')
+            # Direct role-based redirection
+            if hasattr(user, 'staff_profile'):
+                role = user.staff_profile.role
+                print(f"User {username} has role: {role}")
+
+                if role == 'CASHIER':
+                    print(f"User {username} is a cashier, redirecting to cashier dashboard")
+                    return redirect('cashier_dashboard')
+                elif role == 'MANAGER':
+                    print(f"User {username} is a manager, redirecting to manager dashboard")
+                    return redirect('manager_dashboard')
+                elif role == 'ADMIN':
+                    print(f"User {username} is an admin, redirecting to admin dashboard")
+                    return redirect('admin_dashboard')
 
             # For other roles, use the standard redirection logic
             return redirect_based_on_role(user)
@@ -746,9 +756,102 @@ def orders_list(request):
     return render(request, 'accounts/orders.html', context)
 
 
+def make_reservation(request):
+    """Allow customers to make a reservation"""
+    if request.method == 'POST':
+        form = ReservationForm(request.POST, user=request.user if request.user.is_authenticated else None)
+        if form.is_valid():
+            reservation = form.save(commit=False)
+            if request.user.is_authenticated:
+                reservation.user = request.user
+            reservation.save()
+
+            # Check if this is an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Your reservation has been submitted successfully! We will confirm it shortly.'
+                })
+
+            messages.success(request, 'Your reservation has been submitted successfully! We will confirm it shortly.')
+            if request.user.is_authenticated:
+                return redirect('my_reservations')
+            else:
+                return redirect('home')
+        else:
+            # If AJAX request and form is invalid
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                errors = {}
+                for field, error_list in form.errors.items():
+                    errors[field] = [str(error) for error in error_list]
+
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Please correct the errors below.',
+                    'errors': errors
+                })
+    else:
+        form = ReservationForm(user=request.user if request.user.is_authenticated else None)
+
+    context = {
+        'form': form,
+        'active_section': 'make_reservation'
+    }
+
+    return render(request, 'reservations/make_reservation.html', context)
+
+
 @login_required
+def my_reservations(request):
+    """Display a customer's reservations"""
+    reservations = Reservation.objects.filter(user=request.user).order_by('-date', '-time')
+
+    # Filter by status if provided
+    status_filter = request.GET.get('status')
+    if status_filter and status_filter != 'all':
+        reservations = reservations.filter(status=status_filter)
+
+    # Filter by date range if provided
+    today = timezone.now().date()
+    date_filter = request.GET.get('date', 'upcoming')
+
+    if date_filter == 'today':
+        reservations = reservations.filter(date=today)
+    elif date_filter == 'upcoming':
+        reservations = reservations.filter(date__gte=today)
+    elif date_filter == 'past':
+        reservations = reservations.filter(date__lt=today)
+
+    context = {
+        'reservations': reservations,
+        'status_filter': status_filter or 'all',
+        'date_filter': date_filter,
+        'status_choices': Reservation.STATUS_CHOICES,
+        'active_section': 'my_reservations'
+    }
+
+    return render(request, 'reservations/my_reservations.html', context)
+
+
+@login_required
+def cancel_reservation(request, reservation_id):
+    """Allow customers to cancel their reservations"""
+    reservation = get_object_or_404(Reservation, id=reservation_id, user=request.user)
+
+    if reservation.status == 'CONFIRMED':
+        messages.warning(request, 'This reservation has already been confirmed. Please contact us to cancel it.')
+    else:
+        reservation.status = 'CANCELLED'
+        reservation.save()
+        messages.success(request, 'Your reservation has been cancelled successfully.')
+
+    return redirect('my_reservations')
+
+
+@login_required
+@permission_required('ecommerce.change_reservation', raise_exception=True)
 def reservations_list(request):
-    """Display and manage reservations"""
+    """Display and manage reservations for staff"""
     reservations = Reservation.objects.all().order_by('-date', '-time')
 
     # Filter by status if provided
@@ -776,6 +879,24 @@ def reservations_list(request):
     }
 
     return render(request, 'accounts/reservations.html', context)
+
+
+@login_required
+@permission_required('ecommerce.change_reservation', raise_exception=True)
+def update_reservation_status(request, reservation_id):
+    """Update the status of a reservation"""
+    reservation = get_object_or_404(Reservation, id=reservation_id)
+
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        if new_status in dict(Reservation.STATUS_CHOICES):
+            reservation.status = new_status
+            reservation.save()
+            messages.success(request, f'Reservation status updated to {dict(Reservation.STATUS_CHOICES)[new_status]}')
+        else:
+            messages.error(request, 'Invalid status provided')
+
+    return redirect('reservations')
 
 
 @login_required

@@ -47,7 +47,7 @@
             </div>
             <div>
                 <h1 class="text-2xl font-bold mb-1">Welcome back, {{ request.user.first_name|default:request.user.username }}!</h1>
-                <p class="text-gray-400">Manage your orders, reviews, and profile</p>
+                <p class="text-gray-400">Manage your orders, reservations, reviews, and profile</p>
             </div>
         </div>
     </div>
@@ -284,7 +284,7 @@
                 <p class="text-sm text-gray-400 group-hover:text-gray-800">Browse our delicious menu</p>
             </a>
 
-            <a href="#" class="bg-gray-800/50 hover:bg-blue-500/90 text-white hover:text-gray-900 transition-all duration-200 rounded-lg p-4 border border-gray-700 shadow-md text-center group">
+            <a href="javascript:void(0);" id="open-reservation-modal" class="bg-gray-800/50 hover:bg-blue-500/90 text-white hover:text-gray-900 transition-all duration-200 rounded-lg p-4 border border-gray-700 shadow-md text-center group">
                 <div class="w-12 h-12 mx-auto rounded-full bg-blue-500/20 group-hover:bg-gray-900/20 flex items-center justify-center text-blue-500 group-hover:text-gray-900 mb-3 transition-all duration-200">
                     <i class="fas fa-calendar-alt text-xl"></i>
                 </div>
@@ -302,4 +302,217 @@
         </div>
     </div>
 </div>
+
+<!-- Reservation Modal -->
+<div id="reservation-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-gray-800 rounded-lg shadow-lg max-w-3xl w-full mx-4 border border-gray-700 overflow-y-auto max-h-[90vh]">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">Make a Reservation</h3>
+                <button id="close-reservation-modal" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="reservation-form-container">
+                <form id="reservation-form" method="post" action="{% url 'make_reservation' %}" class="space-y-6">
+                    {% csrf_token %}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="id_name" class="block text-white font-medium mb-2">Name</label>
+                            <input type="text" name="name" id="id_name" value="{{ request.user.get_full_name }}" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                        </div>
+
+                        <div>
+                            <label for="id_email" class="block text-white font-medium mb-2">Email</label>
+                            <input type="email" name="email" id="id_email" value="{{ request.user.email }}" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="id_phone" class="block text-white font-medium mb-2">Phone Number</label>
+                        <input type="text" name="phone" id="id_phone" value="{{ request.user.customer_profile.phone }}" required
+                               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="id_date" class="block text-white font-medium mb-2">Date</label>
+                            <input type="date" name="date" id="id_date" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                            <p class="text-gray-500 text-xs mt-1">Select the date for your reservation</p>
+                        </div>
+
+                        <div>
+                            <label for="id_time" class="block text-white font-medium mb-2">Time</label>
+                            <input type="time" name="time" id="id_time" required
+                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                            <p class="text-gray-500 text-xs mt-1">Select the time for your reservation</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="id_party_size" class="block text-white font-medium mb-2">Number of Guests</label>
+                        <input type="number" name="party_size" id="id_party_size" min="1" max="20" value="2" required
+                               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                        <p class="text-gray-500 text-xs mt-1">Number of guests (maximum 20)</p>
+                    </div>
+
+                    <div>
+                        <label for="id_special_requests" class="block text-white font-medium mb-2">Special Requests</label>
+                        <textarea name="special_requests" id="id_special_requests" rows="3"
+                                  class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
+                        <p class="text-gray-500 text-xs mt-1">Any special requests or notes for your reservation</p>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-food-gold hover:bg-food-gold-light text-black font-bold py-3 px-6 rounded-lg transition duration-300">
+                            Submit Reservation
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="reservation-success" class="hidden text-center py-8">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-green-900/50 flex items-center justify-center text-green-500 text-2xl">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Reservation Submitted!</h3>
+                <p class="text-gray-400 mb-6">Your reservation has been submitted successfully. We will confirm it shortly.</p>
+                <div class="flex justify-center space-x-4">
+                    <a href="{% url 'my_reservations' %}" class="bg-food-gold hover:bg-food-gold-light text-black font-bold py-2 px-4 rounded-lg transition duration-300">
+                        View My Reservations
+                    </a>
+                    <button id="make-another-reservation" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300">
+                        Make Another Reservation
+                    </button>
+                </div>
+            </div>
+
+            <div id="reservation-error" class="hidden text-center py-8">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-900/50 flex items-center justify-center text-red-500 text-2xl">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Oops! Something went wrong</h3>
+                <p id="error-message" class="text-gray-400 mb-6">There was an error submitting your reservation. Please try again.</p>
+                <button id="try-again" class="bg-food-gold hover:bg-food-gold-light text-black font-bold py-2 px-4 rounded-lg transition duration-300">
+                    Try Again
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Reservation Modal
+        const reservationModal = document.getElementById('reservation-modal');
+        const openReservationModalBtn = document.getElementById('open-reservation-modal');
+        const closeReservationModalBtn = document.getElementById('close-reservation-modal');
+        const reservationForm = document.getElementById('reservation-form');
+        const reservationFormContainer = document.getElementById('reservation-form-container');
+        const reservationSuccess = document.getElementById('reservation-success');
+        const reservationError = document.getElementById('reservation-error');
+        const makeAnotherReservationBtn = document.getElementById('make-another-reservation');
+        const tryAgainBtn = document.getElementById('try-again');
+        const errorMessage = document.getElementById('error-message');
+
+        // Set minimum date to today
+        const dateInput = document.getElementById('id_date');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.min = today;
+        dateInput.value = today;
+
+        // Open reservation modal
+        openReservationModalBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            reservationModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        });
+
+        // Close reservation modal
+        closeReservationModalBtn.addEventListener('click', function() {
+            reservationModal.classList.add('hidden');
+            document.body.style.overflow = ''; // Enable scrolling
+        });
+
+        // Close modal when clicking outside
+        reservationModal.addEventListener('click', function(e) {
+            if (e.target === reservationModal) {
+                reservationModal.classList.add('hidden');
+                document.body.style.overflow = ''; // Enable scrolling
+            }
+        });
+
+        // Make another reservation
+        makeAnotherReservationBtn.addEventListener('click', function() {
+            reservationSuccess.classList.add('hidden');
+            reservationFormContainer.classList.remove('hidden');
+            reservationForm.reset();
+            dateInput.value = today;
+        });
+
+        // Try again after error
+        tryAgainBtn.addEventListener('click', function() {
+            reservationError.classList.add('hidden');
+            reservationFormContainer.classList.remove('hidden');
+        });
+
+        // Handle form submission
+        reservationForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Show loading state
+            const submitBtn = reservationForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Submitting...';
+
+            // Get form data
+            const formData = new FormData(reservationForm);
+
+            // Send AJAX request
+            fetch(reservationForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+
+                if (data.success) {
+                    // Show success message
+                    reservationFormContainer.classList.add('hidden');
+                    reservationSuccess.classList.remove('hidden');
+                } else {
+                    // Show error message with details
+                    errorMessage.textContent = data.message || 'There was an error submitting your reservation. Please try again.';
+                    reservationFormContainer.classList.add('hidden');
+                    reservationError.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                // Reset button state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+
+                // Show error message
+                errorMessage.textContent = 'There was an error submitting your reservation. Please try again.';
+                reservationFormContainer.classList.add('hidden');
+                reservationError.classList.remove('hidden');
+                console.error('Error:', error);
+            });
+        });
+    });
+</script>
+{% endblock extra_scripts %}

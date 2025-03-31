@@ -1,5 +1,5 @@
 {% extends 'manager/base.html' %}
-{% load math_filters %}
+{% load math_filters custom_filters %}
 
 {% block title %}Manager Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -79,7 +79,7 @@
         <div class="card p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold">Inventory Alerts</h2>
-                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">{{ low_stock_items + out_of_stock_items }}</span>
+                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">{{ low_stock_items|add:out_of_stock_items }}</span>
             </div>
             <div class="flex justify-between items-center">
                 <div class="text-gray-400">
@@ -124,7 +124,7 @@
                     View All <i class="fas fa-arrow-right ml-1"></i>
                 </a>
             </div>
-            
+
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
@@ -159,7 +159,7 @@
                     View All <i class="fas fa-arrow-right ml-1"></i>
                 </a>
             </div>
-            
+
             <div class="overflow-y-auto max-h-80">
                 <div class="space-y-4">
                     {% for activity in recent_activities %}
@@ -176,7 +176,7 @@
                                 <span class="text-sm text-gray-400">{{ activity.timestamp|date:"M d, H:i" }}</span>
                             </div>
                             <div class="mt-1">
-                                <span class="px-2 py-1 rounded-full text-xs 
+                                <span class="px-2 py-1 rounded-full text-xs
                                     {% if activity.action == 'LOGIN' %}bg-green-900 text-green-300
                                     {% elif activity.action == 'LOGOUT' %}bg-blue-900 text-blue-300
                                     {% elif activity.action == 'CREATE_ORDER' %}bg-purple-900 text-purple-300
@@ -206,25 +206,30 @@
     <!-- Quick Links -->
     <div class="card p-6">
         <h2 class="text-xl font-bold mb-4">Quick Actions</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
             <a href="{% url 'sales_report' %}" class="bg-blue-900 hover:bg-blue-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
                 <i class="fas fa-chart-bar text-2xl mb-2"></i>
                 <span>Sales Reports</span>
             </a>
-            
+
             <a href="{% url 'inventory_overview' %}" class="bg-green-900 hover:bg-green-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
                 <i class="fas fa-boxes text-2xl mb-2"></i>
                 <span>Inventory Management</span>
             </a>
-            
+
             <a href="{% url 'staff_overview' %}" class="bg-purple-900 hover:bg-purple-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
                 <i class="fas fa-users text-2xl mb-2"></i>
                 <span>Staff Performance</span>
             </a>
-            
+
             <a href="{% url 'performance_metrics' %}" class="bg-food-gold hover:bg-food-gold-light text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
                 <i class="fas fa-chart-line text-2xl mb-2"></i>
                 <span>Performance Metrics</span>
+            </a>
+
+            <a href="{% url 'reservations_dashboard' %}" class="bg-yellow-900 hover:bg-yellow-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
+                <i class="fas fa-calendar-alt text-2xl mb-2"></i>
+                <span>Reservations</span>
             </a>
         </div>
     </div>
@@ -236,7 +241,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Weekly Sales Chart
         const ctx = document.getElementById('weeklySalesChart').getContext('2d');
-        
+
         const weeklySalesChart = new Chart(ctx, {
             type: 'bar',
             data: {

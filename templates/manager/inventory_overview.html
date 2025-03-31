@@ -1,5 +1,5 @@
 {% extends 'manager/base.html' %}
-{% load math_filters %}
+{% load math_filters custom_filters %}
 
 {% block title %}Inventory Overview - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -55,12 +55,12 @@
                 <i class="fas fa-plus-circle mr-2 text-xl"></i>
                 <span class="font-medium">Add Inventory</span>
             </a>
-            
+
             <a href="{% url 'inventory_history' %}" class="bg-gray-700 hover:bg-gray-600 text-white p-4 rounded-lg flex items-center justify-center">
                 <i class="fas fa-history mr-2 text-xl"></i>
                 <span class="font-medium">View Transaction History</span>
             </a>
-            
+
             <button type="button" onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg flex items-center justify-center no-print">
                 <i class="fas fa-print mr-2 text-xl"></i>
                 <span class="font-medium">Print Inventory Report</span>
@@ -71,7 +71,7 @@
     <!-- Inventory Alerts -->
     <div class="card p-6">
         <h2 class="text-xl font-bold mb-4">Inventory Alerts</h2>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Low Stock Items -->
             <div>
@@ -79,7 +79,7 @@
                     <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
                     Low Stock Items
                 </h3>
-                
+
                 {% if low_stock_items %}
                 <div class="overflow-y-auto max-h-80">
                     <table class="w-full">
@@ -113,14 +113,14 @@
                 </div>
                 {% endif %}
             </div>
-            
+
             <!-- Out of Stock Items -->
             <div>
                 <h3 class="text-lg font-semibold mb-3 flex items-center">
                     <i class="fas fa-times-circle text-red-400 mr-2"></i>
                     Out of Stock Items
                 </h3>
-                
+
                 {% if out_of_stock_items %}
                 <div class="overflow-y-auto max-h-80">
                     <table class="w-full">
@@ -163,7 +163,7 @@
                 <canvas id="categoryValueChart"></canvas>
             </div>
         </div>
-        
+
         <!-- Recent Transactions -->
         <div class="card p-6">
             <div class="flex justify-between items-center mb-4">
@@ -172,7 +172,7 @@
                     View All <i class="fas fa-arrow-right ml-1"></i>
                 </a>
             </div>
-            
+
             <div class="overflow-y-auto max-h-80">
                 <table class="w-full">
                     <thead>
@@ -223,7 +223,7 @@
         <div class="flex justify-between items-center mb-4">
             <h2 class="text-xl font-bold">Full Inventory List</h2>
             <div class="flex items-center">
-                <input type="text" id="inventorySearch" placeholder="Search items..." 
+                <input type="text" id="inventorySearch" placeholder="Search items..."
                        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold mr-2">
                 <select id="categoryFilter" class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
                     <option value="">All Categories</option>
@@ -233,7 +233,7 @@
                 </select>
             </div>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="w-full" id="inventoryTable">
                 <thead>
@@ -299,7 +299,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Category Value Chart
         const ctx = document.getElementById('categoryValueChart').getContext('2d');
-        
+
         const categoryNames = [];
         const categoryValues = [];
         const backgroundColors = [
@@ -314,12 +314,12 @@
             'rgba(168, 85, 247, 0.7)',  // Fuchsia
             'rgba(75, 85, 99, 0.7)'     // Gray
         ];
-        
+
         {% for category in category_values %}
             categoryNames.push('{{ category.name }}');
             categoryValues.push({{ category.value|floatformat:2 }});
         {% endfor %}
-        
+
         const categoryValueChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -359,34 +359,34 @@
                 }
             }
         });
-        
+
         // Inventory search and filter
         const searchInput = document.getElementById('inventorySearch');
         const categoryFilter = document.getElementById('categoryFilter');
         const table = document.getElementById('inventoryTable');
         const rows = table.getElementsByTagName('tr');
-        
+
         function filterTable() {
             const searchTerm = searchInput.value.toLowerCase();
             const categoryTerm = categoryFilter.value;
-            
+
             // Start from 1 to skip header row
             for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
                 const cells = row.getElementsByTagName('td');
-                
+
                 if (cells.length === 0) continue; // Skip empty rows
-                
+
                 const itemName = cells[0].textContent.toLowerCase();
                 const category = row.getAttribute('data-category');
-                
+
                 const matchesSearch = itemName.includes(searchTerm);
                 const matchesCategory = categoryTerm === '' || category === categoryTerm;
-                
+
                 row.style.display = (matchesSearch && matchesCategory) ? '' : 'none';
             }
         }
-        
+
         searchInput.addEventListener('keyup', filterTable);
         categoryFilter.addEventListener('change', filterTable);
     });

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Manager Dashboard - 5th Avenue Grill and Restobar{% endblock title %}</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -21,96 +21,96 @@
             }
         }
     </script>
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
+
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.2"></script>
-    
+
     <style>
         /* Custom styles */
         body {
             background-color: #121212;
             color: #E5E7EB;
         }
-        
+
         .card {
             background-color: #1F2937;
             border-radius: 0.5rem;
         }
-        
+
         .stat-card {
             background-color: #1F2937;
             border-radius: 0.5rem;
             transition: all 0.3s ease;
         }
-        
+
         .stat-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        
+
         .btn-primary {
             background-color: #F9A826;
             color: white;
             transition: all 0.3s ease;
         }
-        
+
         .btn-primary:hover {
             background-color: #FFBB4D;
         }
-        
+
         .nav-link.active {
             background-color: #F9A826;
             color: white;
         }
-        
+
         /* Sidebar styles */
         .sidebar {
             transition: width 0.3s ease;
         }
-        
+
         @media (min-width: 768px) {
             .sidebar {
                 width: 16rem;
             }
-            
+
             .sidebar.collapsed {
                 width: 5rem;
             }
-            
+
             .main-content {
                 margin-left: 16rem;
                 transition: margin-left 0.3s ease;
             }
-            
+
             .main-content.sidebar-collapsed {
                 margin-left: 5rem;
             }
         }
-        
+
         /* Print styles */
         @media print {
             .no-print {
                 display: none !important;
             }
-            
+
             .print-only {
                 display: block !important;
             }
-            
+
             body {
                 background-color: white;
                 color: black;
             }
-            
+
             .card, .stat-card {
                 background-color: white;
                 box-shadow: none;
@@ -118,7 +118,7 @@
             }
         }
     </style>
-    
+
     {% block extra_css %}{% endblock extra_css %}
 </head>
 <body class="min-h-screen flex flex-col" x-data="{ sidebarOpen: true }">
@@ -136,7 +136,7 @@
                     <span class="text-food-gold">5th Avenue</span> Manager
                 </h1>
             </div>
-            
+
             <div class="flex items-center space-x-4">
                 <div class="relative" x-data="{ open: false }">
                     <button @click="open = !open" class="flex items-center space-x-2 text-gray-300 hover:text-white">
@@ -144,7 +144,7 @@
                         <i class="fas fa-user-circle text-xl"></i>
                         <i class="fas fa-chevron-down text-xs"></i>
                     </button>
-                    
+
                     <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg z-10">
                         <div class="py-1">
                             <a href="{% url 'staff_profile' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700">
@@ -163,7 +163,7 @@
             </div>
         </div>
     </header>
-    
+
     <div class="flex flex-1">
         <!-- Sidebar -->
         <aside class="sidebar bg-gray-900 text-white w-64 fixed h-full overflow-y-auto transition-all duration-300 ease-in-out z-10 no-print"
@@ -175,51 +175,57 @@
                         <i class="fas fa-tachometer-alt w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Dashboard</span>
                     </a>
-                    
+
                     <!-- Sales Report -->
                     <a href="{% url 'sales_report' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'sales_report' %}active{% endif %}">
                         <i class="fas fa-chart-bar w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Sales Report</span>
                     </a>
-                    
+
                     <!-- Inventory Overview -->
                     <a href="{% url 'inventory_overview' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'inventory_overview' %}active{% endif %}">
                         <i class="fas fa-boxes w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Inventory</span>
                     </a>
-                    
+
                     <!-- Staff Overview -->
                     <a href="{% url 'staff_overview' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'staff_overview' %}active{% endif %}">
                         <i class="fas fa-users w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Staff</span>
                     </a>
-                    
+
                     <!-- Performance Metrics -->
                     <a href="{% url 'performance_metrics' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'performance_metrics' %}active{% endif %}">
                         <i class="fas fa-chart-line w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Performance</span>
                     </a>
-                    
+
+                    <!-- Reservations Dashboard -->
+                    <a href="{% url 'reservations_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'reservations_dashboard' %}active{% endif %}">
+                        <i class="fas fa-calendar-alt w-6 text-center"></i>
+                        <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Reservations</span>
+                    </a>
+
                     <div class="border-t border-gray-800 my-4"></div>
-                    
+
                     <!-- Admin Dashboard -->
                     <a href="{% url 'admin_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
                         <i class="fas fa-cog w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Admin Panel</span>
                     </a>
-                    
+
                     <!-- Staff Management -->
                     <a href="{% url 'staff_list' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
                         <i class="fas fa-user-cog w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">Manage Staff</span>
                     </a>
-                    
+
                     <!-- My Profile -->
                     <a href="{% url 'staff_profile' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'profile' %}active{% endif %}">
                         <i class="fas fa-user w-6 text-center"></i>
                         <span class="ml-3" :class="{ 'hidden': !sidebarOpen }">My Profile</span>
                     </a>
-                    
+
                     <!-- Logout -->
                     <a href="{% url 'logout' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
                         <i class="fas fa-sign-out-alt w-6 text-center"></i>
@@ -228,7 +234,7 @@
                 </div>
             </nav>
         </aside>
-        
+
         <!-- Main Content -->
         <main class="flex-1 p-6 md:ml-64 transition-all duration-300 ease-in-out" :class="{'md:ml-16': !sidebarOpen, 'md:ml-64': sidebarOpen}">
             <!-- Page Header -->
@@ -236,19 +242,19 @@
                 <h1 class="text-2xl font-bold">{% block page_title %}Manager Dashboard{% endblock page_title %}</h1>
                 <p class="text-gray-400">{% block page_subtitle %}Manage restaurant operations and performance{% endblock page_subtitle %}</p>
             </div>
-            
+
             <!-- Page Content -->
             {% block content %}{% endblock content %}
         </main>
     </div>
-    
+
     <!-- Footer -->
     <footer class="bg-gray-900 text-gray-400 py-4 text-center text-sm no-print">
         <div class="container mx-auto px-4">
             <p>&copy; {% now "Y" %} 5th Avenue Grill and Restobar. All rights reserved.</p>
         </div>
     </footer>
-    
+
     {% block extra_scripts %}{% endblock extra_scripts %}
 </body>
 </html>

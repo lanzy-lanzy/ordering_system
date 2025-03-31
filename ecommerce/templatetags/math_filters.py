@@ -54,3 +54,14 @@ def percentage(value, arg):
             return (Decimal(value) / Decimal(arg)) * 100
         except:
             return 0
+
+@register.filter
+def add(value, arg):
+    """Add the arg to the value."""
+    try:
+        return value + arg
+    except (ValueError, TypeError):
+        try:
+            return Decimal(value) + Decimal(arg)
+        except:
+            return 0

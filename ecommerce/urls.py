@@ -5,7 +5,8 @@ from .views import (
     user_login, user_logout, user_register, user_dashboard, add_menu_item, menu_items_list, categories_list,
     orders_list, reservations_list, reviews_list, user_settings,
     edit_menu_item, delete_menu_item, edit_category, delete_category,
-    customer_dashboard, my_orders, my_reviews, profile, change_password
+    customer_dashboard, my_orders, my_reviews, profile, change_password,
+    make_reservation, my_reservations, cancel_reservation, update_reservation_status
 )
 from .admin import admin_dashboard
 from .inventory import (
@@ -23,7 +24,7 @@ from .cashier import (
 )
 from .manager import (
     manager_dashboard, sales_report, inventory_overview,
-    staff_overview, performance_metrics
+    staff_overview, performance_metrics, reservations_dashboard
 )
 from .customer_management import (
     customer_list, customer_detail, blacklist_customer, unblacklist_customer
@@ -70,6 +71,12 @@ urlpatterns = [
 
     # Reservations Management
     path('dashboard/reservations/', reservations_list, name='reservations'),
+    path('dashboard/reservations/<int:reservation_id>/update-status/', update_reservation_status, name='update_reservation_status'),
+
+    # Customer Reservations
+    path('reservations/', make_reservation, name='make_reservation'),
+    path('customer/reservations/', my_reservations, name='my_reservations'),
+    path('customer/reservations/<int:reservation_id>/cancel/', cancel_reservation, name='cancel_reservation'),
 
     # Reviews Management
     path('dashboard/reviews/', reviews_list, name='reviews'),
@@ -124,4 +131,5 @@ urlpatterns = [
     path('manager/inventory-overview/', inventory_overview, name='inventory_overview'),
     path('manager/staff-overview/', staff_overview, name='staff_overview'),
     path('manager/performance-metrics/', performance_metrics, name='performance_metrics'),
+    path('manager/reservations/', reservations_dashboard, name='reservations_dashboard'),
 ]

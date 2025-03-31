@@ -1,5 +1,5 @@
 {% extends 'manager/base.html' %}
-{% load math_filters %}
+{% load math_filters custom_filters %}
 
 {% block title %}Staff Overview - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -17,17 +17,17 @@
                 <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
                        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
             </div>
-            
+
             <div>
                 <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">To</label>
                 <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
                        class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
             </div>
-            
+
             <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
                 Apply
             </button>
-            
+
             <a href="{% url 'staff_overview' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
                 Reset
             </a>
@@ -42,7 +42,7 @@
                 Manage Staff <i class="fas fa-arrow-right ml-1"></i>
             </a>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -71,7 +71,7 @@
                             </div>
                         </td>
                         <td class="py-3">
-                            <span class="px-2 py-1 rounded-full text-xs 
+                            <span class="px-2 py-1 rounded-full text-xs
                                 {% if staff.profile.role == 'ADMIN' %}bg-purple-900 text-purple-300
                                 {% elif staff.profile.role == 'MANAGER' %}bg-blue-900 text-blue-300
                                 {% elif staff.profile.role == 'CASHIER' %}bg-green-900 text-green-300
@@ -115,7 +115,7 @@
                 <canvas id="staffSalesChart"></canvas>
             </div>
         </div>
-        
+
         <div class="card p-6">
             <h2 class="text-xl font-bold mb-4">Orders by Staff</h2>
             <div class="h-80">
@@ -132,7 +132,7 @@
                 View All Activities <i class="fas fa-arrow-right ml-1"></i>
             </a>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div class="stat-card p-6 rounded-lg">
                 <div class="flex items-center justify-between">
@@ -210,13 +210,13 @@
             'rgba(14, 165, 233, 0.7)',  // Sky
             'rgba(236, 72, 153, 0.7)',  // Pink
         ];
-        
+
         {% for staff in staff_data %}
             staffNames.push('{{ staff.user.get_full_name }}');
             staffSales.push({{ staff.total_sales|floatformat:2 }});
             staffOrders.push({{ staff.order_count }});
         {% endfor %}
-        
+
         // Sales by Staff Chart
         const salesCtx = document.getElementById('staffSalesChart').getContext('2d');
         const staffSalesChart = new Chart(salesCtx, {
@@ -270,7 +270,7 @@
                 }
             }
         });
-        
+
         // Orders by Staff Chart
         const ordersCtx = document.getElementById('staffOrdersChart').getContext('2d');
         const staffOrdersChart = new Chart(ordersCtx, {

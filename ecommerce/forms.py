@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import CustomerProfile, Order, Payment
+from .models import CustomerProfile, Order, Payment, Reservation
+from django.utils import timezone
 
 class RegistrationForm(UserCreationForm):
     """Form for user registration"""
@@ -82,3 +83,55 @@ class GCashPaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
         fields = ('reference_number', 'payment_proof')
+
+
+class ReservationForm(forms.ModelForm):
+    """Form for making reservations"""
+    date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        help_text="Select the date for your reservation"
+    )
+    time = forms.TimeField(
+        widget=forms.TimeInput(attrs={'type': 'time'}),
+        help_text="Select the time for your reservation"
+    )
+    party_size = forms.IntegerField(
+        min_value=1,
+        max_value=20,
+        help_text="Number of guests (maximum 20)"
+    )
+    special_requests = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3}),
+        required=False,
+        help_text="Any special requests or notes for your reservation"
+    )
+
+    class Meta:
+        model = Reservation
+        fields = ('name', 'email', 'phone', 'date', 'time', 'party_size', 'special_requests')
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        # Pre-fill form with user data if available
+        if user and user.is_authenticated and hasattr(user, 'customer_profile'):
+            profile = user.customer_profile
+            self.fields['name'].initial = f"{user.first_name} {user.last_name}".strip()
+            self.fields['email'].initial = user.email
+            self.fields['phone'].initial = profile.phone
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        time = cleaned_data.get('time')
+
+        # Check if date is in the past
+        if date and date < timezone.now().date():
+            self.add_error('date', "Reservation date cannot be in the past")
+
+        # Check if time is in the past for today's reservations
+        if date and time and date == timezone.now().date() and time < timezone.now().time():
+            self.add_error('time', "Reservation time cannot be in the past")
+
+        return cleaned_data

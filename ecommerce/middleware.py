@@ -61,9 +61,20 @@ class RoleMiddleware:
 
             # Manager role restrictions
             elif user_role == 'MANAGER':
+                # Allow access to manager paths
+                if current_path.startswith('manager/') or current_path == 'manager':
+                    print(f"Manager accessing manager path: {current_path}")
+                    return None
+
+                # Restrict access to admin paths
                 if (current_path.startswith('admin/') or
                     current_path in admin_paths):
                     messages.error(request, "You don't have permission to access that page.")
+                    return redirect('manager_dashboard')
+
+                # If not a manager path and not a common path, redirect to manager dashboard
+                if current_path not in common_paths and not current_path.startswith('manager/'):
+                    print(f"Manager redirected from {current_path} to manager dashboard")
                     return redirect('manager_dashboard')
 
             # Customer role restrictions

@@ -112,7 +112,7 @@
             <a href="{% url 'profile' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'profile' %}active{% endif %}">
                 <i class="fas fa-user-circle mr-2"></i> Profile
             </a>
-            <a href="#" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'reservations' %}active{% endif %}">
+            <a href="{% url 'my_reservations' %}" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'my_reservations' %}active{% endif %}">
                 <i class="fas fa-calendar-alt mr-2"></i> My Reservations
             </a>
             <a href="#" class="nav-link block py-2 px-4 rounded-lg {% if active_section == 'favorites' %}active{% endif %}">

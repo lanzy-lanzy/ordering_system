@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Make a Reservation - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-12">
+    <div class="max-w-3xl mx-auto">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-white mb-2">Make a Reservation</h1>
+            <p class="text-gray-400">Reserve your table at 5th Avenue Grill and Restobar</p>
+        </div>
+
+        {% if messages %}
+        <div class="mb-8">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-900 text-green-200{% elif message.tags == 'error' %}bg-red-900 text-red-200{% else %}bg-yellow-900 text-yellow-200{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="bg-gray-800 rounded-lg shadow-lg p-8 border border-gray-700">
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-white font-medium mb-2">Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-white font-medium mb-2">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.email.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="{{ form.phone.id_for_label }}" class="block text-white font-medium mb-2">Phone Number</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                    <p class="text-red-500 text-sm mt-1">{{ form.phone.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.date.id_for_label }}" class="block text-white font-medium mb-2">Date</label>
+                        {{ form.date }}
+                        {% if form.date.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.date.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.date.help_text %}
+                        <p class="text-gray-500 text-xs mt-1">{{ form.date.help_text }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.time.id_for_label }}" class="block text-white font-medium mb-2">Time</label>
+                        {{ form.time }}
+                        {% if form.time.errors %}
+                        <p class="text-red-500 text-sm mt-1">{{ form.time.errors.0 }}</p>
+                        {% endif %}
+                        {% if form.time.help_text %}
+                        <p class="text-gray-500 text-xs mt-1">{{ form.time.help_text }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="{{ form.party_size.id_for_label }}" class="block text-white font-medium mb-2">Number of Guests</label>
+                    {{ form.party_size }}
+                    {% if form.party_size.errors %}
+                    <p class="text-red-500 text-sm mt-1">{{ form.party_size.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.party_size.help_text %}
+                    <p class="text-gray-500 text-xs mt-1">{{ form.party_size.help_text }}</p>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label for="{{ form.special_requests.id_for_label }}" class="block text-white font-medium mb-2">Special Requests</label>
+                    {{ form.special_requests }}
+                    {% if form.special_requests.errors %}
+                    <p class="text-red-500 text-sm mt-1">{{ form.special_requests.errors.0 }}</p>
+                    {% endif %}
+                    {% if form.special_requests.help_text %}
+                    <p class="text-gray-500 text-xs mt-1">{{ form.special_requests.help_text }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-food-gold hover:bg-food-gold-light text-black font-bold py-3 px-6 rounded-lg transition duration-300">
+                        Submit Reservation
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="mt-8 text-center">
+            <p class="text-gray-400">
+                Need help? Call us at <a href="tel:+1234567890" class="text-food-gold hover:underline">+1 (234) 567-890</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    // Add custom styling to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formInputs = document.querySelectorAll('input, textarea, select');
+        formInputs.forEach(input => {
+            if (!input.classList.contains('btn-primary')) {
+                input.classList.add('w-full', 'bg-gray-700', 'border', 'border-gray-600', 'rounded-lg', 'py-3', 'px-4', 'text-white', 'focus:outline-none', 'focus:ring-2', 'focus:ring-food-gold');
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}
