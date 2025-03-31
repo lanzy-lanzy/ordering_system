@@ -1,5 +1,6 @@
 {% extends 'accounts/customer_base.html' %}
 {% load math_filters %}
+{% load custom_filters %}
 
 {% block title %}My Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -69,10 +70,10 @@
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold">Total Spent</h2>
                 <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
-                    <i class="fas fa-dollar-sign"></i>
+                    <i class="fas fa-peso-sign"></i>
                 </div>
             </div>
-            <div class="text-3xl font-bold">${{ total_spent|floatformat:2 }}</div>
+            <div class="text-3xl font-bold">{{ total_spent|currency }}</div>
             <div class="text-gray-400 text-sm mt-2">Lifetime spending</div>
         </div>
 
@@ -85,9 +86,9 @@
             </div>
             <div class="text-3xl font-bold">
                 {% if total_orders > 0 %}
-                ${{ total_spent|div:total_orders|floatformat:2 }}
+                {{ total_spent|div:total_orders|currency }}
                 {% else %}
-                $0.00
+                ₱0.00
                 {% endif %}
             </div>
             <div class="text-gray-400 text-sm mt-2">Average order value</div>

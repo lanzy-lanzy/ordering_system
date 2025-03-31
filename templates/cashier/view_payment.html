@@ -1,5 +1,6 @@
 {% extends 'cashier/base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Payment Details - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -50,7 +51,7 @@
                     </div>
                     <div>
                         <p class="text-sm text-gray-400">Amount</p>
-                        <p class="font-medium text-xl">${{ payment.amount|floatformat:2 }}</p>
+                        <p class="font-medium text-xl">{{ payment.amount|currency }}</p>
                     </div>
                 </div>
 
@@ -129,23 +130,23 @@
                     <tr class="border-b border-gray-800">
                         <td class="py-3">{{ item.menu_item.name }}</td>
                         <td class="py-3">{{ item.quantity }}</td>
-                        <td class="py-3">${{ item.price|floatformat:2 }}</td>
-                        <td class="py-3">${{ item.total|floatformat:2 }}</td>
+                        <td class="py-3">{{ item.price|currency }}</td>
+                        <td class="py-3">{{ item.total|currency }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="border-b border-gray-800">
                         <td colspan="3" class="py-3 text-right font-bold">Subtotal:</td>
-                        <td class="py-3">${{ payment.order.total_amount|floatformat:2 }}</td>
+                        <td class="py-3">{{ payment.order.total_amount|currency }}</td>
                     </tr>
                     <tr class="border-b border-gray-800">
                         <td colspan="3" class="py-3 text-right font-bold">Tax:</td>
-                        <td class="py-3">${{ payment.order.tax_amount|floatformat:2 }}</td>
+                        <td class="py-3">{{ payment.order.tax_amount|currency }}</td>
                     </tr>
                     <tr>
                         <td colspan="3" class="py-3 text-right font-bold">Total:</td>
-                        <td class="py-3 font-bold">${{ payment.order.grand_total|floatformat:2 }}</td>
+                        <td class="py-3 font-bold">{{ payment.order.grand_total|currency }}</td>
                     </tr>
                 </tfoot>
             </table>

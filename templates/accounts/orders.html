@@ -1,4 +1,5 @@
 {% extends 'accounts/dashboard_base.html' %}
+{% load custom_filters %}
 
 {% block title %}Orders - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -18,7 +19,7 @@
         {% endfor %}
     </div>
     <div class="relative">
-        <input type="text" id="search-orders" placeholder="Search orders..." 
+        <input type="text" id="search-orders" placeholder="Search orders..."
             class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold pl-10">
         <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
     </div>
@@ -43,7 +44,7 @@
                     <td class="py-4 text-white font-medium">#{{ order.id }}</td>
                     <td class="py-4 text-gray-400">{{ order.user.username }}</td>
                     <td class="py-4 text-gray-400">{{ order.created_at|date:"M d, Y" }} at {{ order.created_at|time:"H:i" }}</td>
-                    <td class="py-4 text-white font-medium">${{ order.total_amount }}</td>
+                    <td class="py-4 text-white font-medium">{{ order.total_amount|currency }}</td>
                     <td class="py-4">
                         {% if order.status == 'PENDING' %}
                         <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
@@ -151,7 +152,7 @@
             <i class="fas fa-chevron-left"></i>
         </span>
         {% endif %}
-        
+
         {% for i in orders.paginator.page_range %}
             {% if orders.number == i %}
             <span class="px-3 py-2 bg-food-gold text-food-black rounded-md">{{ i }}</span>
@@ -159,7 +160,7 @@
             <a href="?page={{ i }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">{{ i }}</a>
             {% endif %}
         {% endfor %}
-        
+
         {% if orders.has_next %}
         <a href="?page={{ orders.next_page_number }}{% if status_filter != 'all' %}&status={{ status_filter }}{% endif %}" class="px-3 py-2 bg-gray-800 text-gray-300 rounded-md hover:bg-gray-700">
             <i class="fas fa-chevron-right"></i>
@@ -181,15 +182,15 @@
         const searchInput = document.getElementById('search-orders');
         const ordersTable = document.getElementById('orders-table');
         const orderRows = ordersTable.querySelectorAll('tr');
-        
+
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase();
-            
+
             orderRows.forEach(row => {
                 if (row.querySelector('td')) {
                     const orderId = row.querySelector('td:first-child').textContent.toLowerCase();
                     const customer = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-                    
+
                     if (orderId.includes(searchTerm) || customer.includes(searchTerm)) {
                         row.style.display = '';
                     } else {
@@ -198,16 +199,16 @@
                 }
             });
         });
-        
+
         // Order details modal
         const orderDetailsModal = document.getElementById('order-details-modal');
         const closeDetailsModalBtn = document.getElementById('close-details-modal');
         const orderDetailsContent = document.getElementById('order-details-content');
         const viewOrderBtns = document.querySelectorAll('.view-order-btn');
-        
+
         function openOrderDetailsModal(orderId) {
             orderDetailsModal.classList.remove('hidden');
-            
+
             // Simulate loading order details (in a real app, you'd fetch this from the server)
             setTimeout(() => {
                 orderDetailsContent.innerHTML = `
@@ -220,14 +221,14 @@
                             <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full h-fit">Pending</span>
                         </div>
                     </div>
-                    
+
                     <div class="mb-4">
                         <h4 class="text-white font-bold mb-2">Customer Information</h4>
                         <p class="text-gray-400">John Doe</p>
                         <p class="text-gray-400">john.doe@example.com</p>
                         <p class="text-gray-400">+1 (555) 123-4567</p>
                     </div>
-                    
+
                     <div class="mb-4">
                         <h4 class="text-white font-bold mb-2">Order Items</h4>
                         <div class="space-y-3">
@@ -241,7 +242,7 @@
                                         <p class="text-gray-400 text-xs">Quantity: 2</p>
                                     </div>
                                 </div>
-                                <p class="text-white font-medium">$45.90</p>
+                                <p class="text-white font-medium">₱45.90</p>
                             </div>
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center">
@@ -253,26 +254,26 @@
                                         <p class="text-gray-400 text-xs">Quantity: 1</p>
                                     </div>
                                 </div>
-                                <p class="text-white font-medium">$12.50</p>
+                                <p class="text-white font-medium">₱12.50</p>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="mb-4 pt-4 border-t border-gray-800">
                         <div class="flex justify-between mb-2">
                             <p class="text-gray-400">Subtotal</p>
-                            <p class="text-white">$58.40</p>
+                            <p class="text-white">₱58.40</p>
                         </div>
                         <div class="flex justify-between mb-2">
                             <p class="text-gray-400">Tax</p>
-                            <p class="text-white">$5.84</p>
+                            <p class="text-white">₱5.84</p>
                         </div>
                         <div class="flex justify-between font-bold">
                             <p class="text-white">Total</p>
-                            <p class="text-food-gold">$64.24</p>
+                            <p class="text-food-gold">₱64.24</p>
                         </div>
                     </div>
-                    
+
                     <div>
                         <h4 class="text-white font-bold mb-2">Special Instructions</h4>
                         <p class="text-gray-400">Please make sure the salmon is well-done and add extra dressing to the salad.</p>
@@ -280,43 +281,43 @@
                 `;
             }, 500);
         }
-        
+
         function closeOrderDetailsModal() {
             orderDetailsModal.classList.add('hidden');
         }
-        
+
         viewOrderBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 const orderId = this.dataset.orderId;
                 openOrderDetailsModal(orderId);
             });
         });
-        
+
         closeDetailsModalBtn.addEventListener('click', closeOrderDetailsModal);
-        
+
         // Update status modal
         const updateStatusModal = document.getElementById('update-status-modal');
         const closeStatusModalBtn = document.getElementById('close-status-modal');
         const cancelStatusBtn = document.getElementById('cancel-status-btn');
         const updateStatusBtns = document.querySelectorAll('.update-status-btn');
         const orderIdInput = document.getElementById('order-id-input');
-        
+
         function openUpdateStatusModal(orderId) {
             updateStatusModal.classList.remove('hidden');
             orderIdInput.value = orderId;
         }
-        
+
         function closeUpdateStatusModal() {
             updateStatusModal.classList.add('hidden');
         }
-        
+
         updateStatusBtns.forEach(btn => {
             btn.addEventListener('click', function() {
                 const orderId = this.dataset.orderId;
                 openUpdateStatusModal(orderId);
             });
         });
-        
+
         closeStatusModalBtn.addEventListener('click', closeUpdateStatusModal);
         cancelStatusBtn.addEventListener('click', closeUpdateStatusModal);
     });

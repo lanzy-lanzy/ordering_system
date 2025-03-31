@@ -1,4 +1,5 @@
 {% extends 'accounts/dashboard_base.html' %}
+{% load custom_filters %}
 {% load math_filters %}
 
 {% block title %}
@@ -47,11 +48,11 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
                     <div>
                         <span class="text-gray-400 text-sm">Current Price:</span>
-                        <p class="font-semibold">${{ menu_item.price }}</p>
+                        <p class="font-semibold">{{ menu_item.price|currency }}</p>
                     </div>
                     <div>
                         <span class="text-gray-400 text-sm">Cost Price:</span>
-                        <p class="font-semibold">${{ menu_item.cost_price }}</p>
+                        <p class="font-semibold">{{ menu_item.cost_price|currency }}</p>
                     </div>
                     <div>
                         <span class="text-gray-400 text-sm">Profit Margin:</span>

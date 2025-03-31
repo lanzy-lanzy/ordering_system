@@ -320,7 +320,7 @@
                                     if (label.includes('Quantity')) {
                                         label += context.parsed.y;
                                     } else {
-                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                        label += new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(context.parsed.y);
                                     }
                                 }
                                 return label;
@@ -364,12 +364,12 @@
                         ticks: {
                             color: '#9CA3AF', // Gray for axis labels
                             callback: function(value) {
-                                return '$' + value;
+                                return '₱' + value;
                             }
                         },
                         title: {
                             display: true,
-                            text: 'Amount ($)',
+                            text: 'Amount (₱)',
                             color: '#9CA3AF'
                         }
                     }

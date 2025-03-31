@@ -1,5 +1,6 @@
 {% extends 'accounts/dashboard_base.html' %}
 {% load math_filters %}
+{% load custom_filters %}
 
 {% block title %}Sales Report - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -307,9 +308,9 @@
                         <td class="py-3">{{ item.menu_item__name }}</td>
                         <td class="py-3">{{ item.menu_item__category__name|default:"No Category" }}</td>
                         <td class="py-3">{{ item.quantity }}</td>
-                        <td class="py-3">${{ item.revenue|floatformat:2 }}</td>
-                        <td class="py-3">${{ item.cost|floatformat:2 }}</td>
-                        <td class="py-3">${{ item.profit|floatformat:2 }}</td>
+                        <td class="py-3">{{ item.revenue|currency }}</td>
+                        <td class="py-3">{{ item.cost|currency }}</td>
+                        <td class="py-3">{{ item.profit|currency }}</td>
                         <td class="py-3">{{ item.profit_margin|floatformat:1 }}%</td>
                         <td class="py-3">{{ item.orders }}</td>
                         <td class="py-3">{{ item.revenue|percentage:total_revenue|floatformat:1 }}%</td>
@@ -440,7 +441,7 @@
                         ticks: {
                             color: '#E5E7EB',
                             callback: function(value) {
-                                return '$' + value.toFixed(2);
+                                return '₱' + value.toFixed(2);
                             }
                         }
                     },
@@ -499,7 +500,7 @@
                         ticks: {
                             color: '#E5E7EB',
                             callback: function(value) {
-                                return '$' + value.toFixed(2);
+                                return '₱' + value.toFixed(2);
                             }
                         }
                     },
@@ -587,7 +588,7 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return '$' + context.raw.toFixed(2);
+                                return '₱' + context.raw.toFixed(2);
                             }
                         }
                     }
@@ -601,7 +602,7 @@
                         ticks: {
                             color: '#E5E7EB',
                             callback: function(value) {
-                                return '$' + value.toFixed(2);
+                                return '₱' + value.toFixed(2);
                             }
                         }
                     },

@@ -247,7 +247,7 @@
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.x);
+                                return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(context.parsed.x);
                             }
                         }
                     }
@@ -261,7 +261,7 @@
                         ticks: {
                             color: '#9CA3AF',
                             callback: function(value) {
-                                return '$' + value;
+                                return '₱' + value;
                             }
                         }
                     },

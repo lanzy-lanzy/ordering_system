@@ -54,6 +54,20 @@ RESTAURANT_CATEGORIES = [
                 'price': '16.99',
                 'is_vegetarian': False,
                 'spice_level': 1
+            },
+            {
+                'name': 'Loaded Nachos',
+                'description': 'Crispy tortilla chips topped with melted cheese, jalapeños, guacamole, sour cream, and pico de gallo.',
+                'price': '13.99',
+                'is_vegetarian': True,
+                'spice_level': 2
+            },
+            {
+                'name': 'Stuffed Mushrooms',
+                'description': 'Mushroom caps filled with a savory blend of herbs, garlic, and parmesan cheese.',
+                'price': '10.99',
+                'is_vegetarian': True,
+                'spice_level': 0
             }
         ]
     },
@@ -80,6 +94,68 @@ RESTAURANT_CATEGORIES = [
                 'description': 'Mixed greens topped with grilled chicken, bacon, avocado, blue cheese, tomatoes, and hard-boiled egg.',
                 'price': '15.99',
                 'is_vegetarian': False,
+                'spice_level': 0
+            },
+            {
+                'name': 'Caprese Salad',
+                'description': 'Fresh mozzarella, tomatoes, and basil drizzled with balsamic glaze and olive oil.',
+                'price': '13.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Spinach & Strawberry Salad',
+                'description': 'Baby spinach with fresh strawberries, candied walnuts, goat cheese, and raspberry vinaigrette.',
+                'price': '14.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Asian Chicken Salad',
+                'description': 'Mixed greens with grilled chicken, mandarin oranges, almonds, crispy wontons, and sesame ginger dressing.',
+                'price': '16.99',
+                'is_vegetarian': False,
+                'spice_level': 1
+            }
+        ]
+    },
+    {
+        'name': 'Soups',
+        'description': 'Hearty and flavorful soups made fresh daily.',
+        'items': [
+            {
+                'name': 'French Onion Soup',
+                'description': 'Caramelized onions in rich beef broth, topped with croutons and melted Gruyère cheese.',
+                'price': '8.99',
+                'is_vegetarian': False,
+                'spice_level': 0
+            },
+            {
+                'name': 'Tomato Basil Soup',
+                'description': 'Creamy tomato soup with fresh basil and a touch of cream.',
+                'price': '7.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Clam Chowder',
+                'description': 'New England style creamy soup with clams, potatoes, and bacon.',
+                'price': '9.99',
+                'is_vegetarian': False,
+                'spice_level': 0
+            },
+            {
+                'name': 'Chicken Noodle Soup',
+                'description': 'Classic comfort soup with chicken, vegetables, and egg noodles in savory broth.',
+                'price': '8.99',
+                'is_vegetarian': False,
+                'spice_level': 0
+            },
+            {
+                'name': 'Vegetable Minestrone',
+                'description': 'Hearty Italian soup with seasonal vegetables, beans, and pasta in tomato broth.',
+                'price': '7.99',
+                'is_vegetarian': True,
                 'spice_level': 0
             }
         ]
@@ -233,8 +309,8 @@ RESTAURANT_CATEGORIES = [
         ]
     },
     {
-        'name': 'Beverages',
-        'description': 'Refreshing drinks and cocktails.',
+        'name': 'Cocktails',
+        'description': 'Handcrafted cocktails made with premium spirits.',
         'items': [
             {
                 'name': 'Classic Mojito',
@@ -251,22 +327,200 @@ RESTAURANT_CATEGORIES = [
                 'spice_level': 0
             },
             {
-                'name': 'Red Wine Sangria',
-                'description': 'Red wine mixed with fresh fruits and a splash of brandy.',
+                'name': 'Old Fashioned',
+                'description': 'Bourbon whiskey muddled with sugar, bitters, and a twist of orange.',
+                'price': '14.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Cosmopolitan',
+                'description': 'Vodka, triple sec, cranberry juice, and fresh lime juice.',
+                'price': '13.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Piña Colada',
+                'description': 'Rum blended with coconut cream and pineapple juice.',
+                'price': '12.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Espresso Martini',
+                'description': 'Vodka, coffee liqueur, and freshly brewed espresso.',
+                'price': '14.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            }
+        ]
+    },
+    {
+        'name': 'Wine',
+        'description': 'Curated selection of fine wines from around the world.',
+        'items': [
+            {
+                'name': 'Cabernet Sauvignon',
+                'description': 'Full-bodied red wine with notes of black currant, cedar, and vanilla.',
+                'price': '12.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Chardonnay',
+                'description': 'Medium to full-bodied white wine with notes of apple, pear, and oak.',
                 'price': '11.99',
                 'is_vegetarian': True,
                 'spice_level': 0
             },
             {
-                'name': 'Craft Beer',
-                'description': 'Selection of local craft beers.',
+                'name': 'Pinot Noir',
+                'description': 'Light to medium-bodied red wine with notes of cherry, raspberry, and earthy undertones.',
+                'price': '13.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Sauvignon Blanc',
+                'description': 'Crisp white wine with notes of citrus, green apple, and tropical fruits.',
+                'price': '10.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Merlot',
+                'description': 'Smooth red wine with notes of plum, black cherry, and chocolate.',
+                'price': '11.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Prosecco',
+                'description': 'Sparkling white wine with notes of apple, pear, and white flowers.',
+                'price': '14.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            }
+        ]
+    },
+    {
+        'name': 'Beer',
+        'description': 'Selection of craft and imported beers.',
+        'items': [
+            {
+                'name': 'IPA',
+                'description': 'India Pale Ale with hoppy, bitter flavor and citrus notes.',
                 'price': '7.99',
                 'is_vegetarian': True,
                 'spice_level': 0
             },
             {
+                'name': 'Stout',
+                'description': 'Dark, rich beer with notes of coffee, chocolate, and roasted malt.',
+                'price': '8.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Pilsner',
+                'description': 'Light, crisp lager with a clean, refreshing taste.',
+                'price': '6.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Wheat Beer',
+                'description': 'Smooth, light beer with notes of citrus and coriander.',
+                'price': '7.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Amber Ale',
+                'description': 'Medium-bodied beer with caramel malt flavor and moderate hop bitterness.',
+                'price': '7.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            }
+        ]
+    },
+    {
+        'name': 'Non-Alcoholic Beverages',
+        'description': 'Refreshing non-alcoholic drinks and mocktails.',
+        'items': [
+            {
                 'name': 'Fresh Lemonade',
                 'description': 'Homemade lemonade with fresh lemons and a hint of mint.',
+                'price': '4.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Iced Tea',
+                'description': 'Freshly brewed tea served over ice with lemon.',
+                'price': '3.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Fruit Smoothie',
+                'description': 'Blend of seasonal fruits with yogurt and honey.',
+                'price': '6.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Virgin Mojito',
+                'description': 'Mint, lime, sugar, and soda water - all the flavor without the alcohol.',
+                'price': '5.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Sparkling Water',
+                'description': 'Carbonated water with a choice of fruit flavors.',
+                'price': '3.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            }
+        ]
+    },
+    {
+        'name': 'Coffee & Tea',
+        'description': 'Premium hot beverages to enjoy with dessert or any time.',
+        'items': [
+            {
+                'name': 'Espresso',
+                'description': 'Strong, concentrated coffee served in a small cup.',
+                'price': '3.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Cappuccino',
+                'description': 'Espresso with steamed milk and foam.',
+                'price': '4.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Latte',
+                'description': 'Espresso with steamed milk and a light layer of foam.',
+                'price': '4.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Herbal Tea',
+                'description': 'Selection of caffeine-free herbal teas.',
+                'price': '3.99',
+                'is_vegetarian': True,
+                'spice_level': 0
+            },
+            {
+                'name': 'Hot Chocolate',
+                'description': 'Rich chocolate with steamed milk, topped with whipped cream.',
                 'price': '4.99',
                 'is_vegetarian': True,
                 'spice_level': 0

@@ -1,3 +1,4 @@
+{% load custom_filters %}
 <!-- Menu Items Grid -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {% for item in menu_items %}
@@ -22,7 +23,7 @@
         <div class="p-6">
             <div class="flex justify-between items-start mb-2">
                 <h3 class="text-xl font-bold text-white">{{ item.name }}</h3>
-                <span class="text-food-gold font-bold">${{ item.price }}</span>
+                <span class="text-food-gold font-bold">{{ item.price|currency }}</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">{{ item.description|truncatechars:100 }}</p>
 
@@ -72,7 +73,7 @@
         <div class="p-6">
             <div class="flex justify-between items-start mb-2">
                 <h3 class="text-xl font-bold text-white">Ribeye Steak</h3>
-                <span class="text-food-gold font-bold">$32.99</span>
+                <span class="text-food-gold font-bold">₱32.99</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">Prime cut ribeye steak grilled to perfection, served with roasted vegetables and garlic mashed potatoes.</p>
 
@@ -105,7 +106,7 @@
         <div class="p-6">
             <div class="flex justify-between items-start mb-2">
                 <h3 class="text-xl font-bold text-white">Seafood Pasta</h3>
-                <span class="text-food-gold font-bold">$24.99</span>
+                <span class="text-food-gold font-bold">₱24.99</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">Fresh linguine pasta with shrimp, mussels, and calamari in a rich tomato sauce with a hint of white wine.</p>
 
@@ -141,7 +142,7 @@
         <div class="p-6">
             <div class="flex justify-between items-start mb-2">
                 <h3 class="text-xl font-bold text-white">Mediterranean Salad</h3>
-                <span class="text-food-gold font-bold">$14.99</span>
+                <span class="text-food-gold font-bold">₱14.99</span>
             </div>
             <p class="text-gray-400 mb-4 text-sm">Fresh mixed greens with feta cheese, kalamata olives, cherry tomatoes, cucumber, and red onion with balsamic vinaigrette.</p>
 

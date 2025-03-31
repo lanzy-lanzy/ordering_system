@@ -517,14 +517,14 @@ def user_logout(request):
 @login_required
 def user_dashboard(request):
     """User dashboard for managing restaurant data"""
+    # First check if user is a superuser - this takes precedence over all other roles
+    if request.user.is_superuser:
+        return redirect('admin_dashboard')
+
     # Check if user has a staff profile and redirect accordingly
     if hasattr(request.user, 'staff_profile'):
         # Redirect to the appropriate dashboard based on role
         return redirect_based_on_role(request.user)
-
-    # If user is superuser, redirect to admin dashboard
-    if request.user.is_superuser:
-        return redirect('admin_dashboard')
 
     # If user is staff but doesn't have a staff profile, show the general dashboard
     if request.user.is_staff:

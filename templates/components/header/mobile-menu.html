@@ -40,20 +40,30 @@
                     {% endif %}
                 </span>
             </div>
-            {% if user.is_staff %}
-                {% if user.is_superuser or user.staff_profile.role == 'ADMIN' %}
+            {% if user.is_superuser %}
                 <a href="{% url 'admin_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
                     <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
                 </a>
-                {% elif user.staff_profile.role == 'MANAGER' %}
-                <a href="{% url 'manager_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
-                    <i class="fas fa-tachometer-alt mr-2"></i> Manager Dashboard
-                </a>
-                {% elif user.staff_profile.role == 'CASHIER' %}
-                <a href="{% url 'cashier_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
-                    <i class="fas fa-cash-register mr-2"></i> Cashier Dashboard
-                </a>
-                {% endif %}
+            {% elif user.is_staff %}
+                {% with role=user.staff_profile.role|default:'' %}
+                    {% if role == 'ADMIN' %}
+                        <a href="{% url 'admin_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
+                        </a>
+                    {% elif role == 'MANAGER' %}
+                        <a href="{% url 'manager_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Manager Dashboard
+                        </a>
+                    {% elif role == 'CASHIER' %}
+                        <a href="{% url 'cashier_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                            <i class="fas fa-cash-register mr-2"></i> Cashier Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{% url 'admin_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
+                            <i class="fas fa-tachometer-alt mr-2"></i> Staff Dashboard
+                        </a>
+                    {% endif %}
+                {% endwith %}
             {% else %}
                 <a href="{% url 'customer_dashboard' %}" class="flex items-center py-1 pl-6 text-sm text-gray-300 hover:text-food-gold transition duration-300">
                     <i class="fas fa-tachometer-alt mr-2"></i> My Dashboard

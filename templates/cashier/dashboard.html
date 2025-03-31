@@ -1,5 +1,6 @@
 {% extends 'cashier/base.html' %}
 {% load math_filters %}
+{% load custom_filters %}
 
 {% block title %}Cashier Dashboard - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -14,10 +15,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-gray-400 text-sm font-medium">Today's Sales</h3>
-                    <p class="text-2xl font-bold mt-1 text-green-400">${{ today_sales|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold mt-1 text-green-400">{{ today_sales|currency }}</p>
                 </div>
                 <div class="bg-green-900 p-3 rounded-full">
-                    <i class="fas fa-dollar-sign text-green-400 text-xl"></i>
+                    <i class="fas fa-peso-sign text-green-400 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -38,7 +39,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-gray-400 text-sm font-medium">Average Order</h3>
-                    <p class="text-2xl font-bold mt-1 text-food-gold">${{ avg_order_value|floatformat:2 }}</p>
+                    <p class="text-2xl font-bold mt-1 text-food-gold">{{ avg_order_value|currency }}</p>
                 </div>
                 <div class="bg-food-gold bg-opacity-20 p-3 rounded-full">
                     <i class="fas fa-calculator text-food-gold text-xl"></i>
@@ -213,7 +214,7 @@
                         <tr class="border-b border-gray-800">
                             <td class="py-3">{{ item.menu_item__name }}</td>
                             <td class="py-3">{{ item.total_quantity }}</td>
-                            <td class="py-3">${{ item.total_sales|floatformat:2 }}</td>
+                            <td class="py-3">{{ item.total_sales|currency }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

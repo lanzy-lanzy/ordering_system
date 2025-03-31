@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load math_filters %}
+{% load custom_filters %}
 
 {% block title %}Your Cart - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -41,7 +42,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-white">${{ item.menu_item.price|floatformat:2 }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-white">{{ item.menu_item.price|currency }}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
                                     <form method="POST" action="{% url 'update_cart_item' item.id|default:item.menu_item.id %}">
@@ -97,16 +98,16 @@
                     <div class="bg-gray-800 p-4 rounded-lg">
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-gray-300">Subtotal:</span>
-                            <span class="text-white font-medium">${{ total|floatformat:2 }}</span>
+                            <span class="text-white font-medium">{{ total|currency }}</span>
                         </div>
                         <div class="flex justify-between items-center mb-4">
                             <span class="text-gray-300">Tax (10%):</span>
-                            <span class="text-white font-medium">${{ total|mul:0.1|floatformat:2 }}</span>
+                            <span class="text-white font-medium">{{ total|mul:0.1|currency }}</span>
                         </div>
                         <div class="border-t border-gray-700 pt-2 mb-4">
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-300 font-bold">Total:</span>
-                                <span class="text-food-gold font-bold text-xl">${{ grand_total|floatformat:2 }}</span>
+                                <span class="text-food-gold font-bold text-xl">{{ grand_total|currency }}</span>
                             </div>
                         </div>
                         <a href="{% url 'checkout' %}" class="w-full bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-4 px-6 rounded-md transition-colors duration-200 flex items-center justify-center text-lg shadow-lg transform hover:scale-105">

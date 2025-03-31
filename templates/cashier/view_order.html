@@ -1,4 +1,5 @@
 {% extends 'cashier/base.html' %}
+{% load custom_filters %}
 {% load math_filters %}
 
 {% block title %}Order #{{ order.id }} - 5th Avenue Grill and Restobar{% endblock title %}
@@ -17,38 +18,38 @@
         {% endfor %}
     </div>
     {% endif %}
-    
+
     <!-- Order Actions -->
     <div class="flex flex-wrap gap-4">
         <a href="{% url 'cashier_orders_list' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center">
             <i class="fas fa-arrow-left mr-2"></i> Back to Orders
         </a>
-        
+
         <a href="{% url 'print_receipt' order.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center">
             <i class="fas fa-print mr-2"></i> Print Receipt
         </a>
-        
+
         {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
         <button type="button" onclick="updateOrderStatus('COMPLETED')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center">
             <i class="fas fa-check-circle mr-2"></i> Complete Order
         </button>
-        
+
         <button type="button" onclick="updateOrderStatus('CANCELLED')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center">
             <i class="fas fa-times-circle mr-2"></i> Cancel Order
         </button>
         {% endif %}
     </div>
-    
+
     <!-- Order Details -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Order Information -->
         <div class="lg:col-span-1">
             <div class="card p-6 space-y-4">
                 <h2 class="text-xl font-bold">Order Information</h2>
-                
+
                 <div class="flex justify-between">
                     <span class="text-gray-400">Status:</span>
-                    <span class="px-2 py-1 rounded-full text-xs 
+                    <span class="px-2 py-1 rounded-full text-xs
                         {% if order.status == 'PENDING' %}bg-yellow-900 text-yellow-300
                         {% elif order.status == 'PROCESSING' %}bg-blue-900 text-blue-300
                         {% elif order.status == 'READY' %}bg-indigo-900 text-indigo-300
@@ -58,44 +59,44 @@
                         {{ order.get_status_display }}
                     </span>
                 </div>
-                
+
                 <div class="flex justify-between">
                     <span class="text-gray-400">Order Type:</span>
                     <span>{{ order.get_order_type_display }}</span>
                 </div>
-                
+
                 {% if order.table_number %}
                 <div class="flex justify-between">
                     <span class="text-gray-400">Table Number:</span>
                     <span>{{ order.table_number }}</span>
                 </div>
                 {% endif %}
-                
+
                 <div class="flex justify-between">
                     <span class="text-gray-400">Date:</span>
                     <span>{{ order.created_at|date:"M d, Y" }}</span>
                 </div>
-                
+
                 <div class="flex justify-between">
                     <span class="text-gray-400">Time:</span>
                     <span>{{ order.created_at|date:"H:i:s" }}</span>
                 </div>
-                
+
                 {% if order.completed_at %}
                 <div class="flex justify-between">
                     <span class="text-gray-400">Completed:</span>
                     <span>{{ order.completed_at|date:"H:i:s" }}</span>
                 </div>
                 {% endif %}
-                
+
                 <div class="border-t border-gray-800 my-2 pt-2">
                     <h3 class="font-medium mb-2">Customer Information</h3>
-                    
+
                     <div class="flex justify-between">
                         <span class="text-gray-400">Name:</span>
                         <span>{{ order.customer_name }}</span>
                     </div>
-                    
+
                     {% if order.customer_phone %}
                     <div class="flex justify-between">
                         <span class="text-gray-400">Phone:</span>
@@ -103,14 +104,14 @@
                     </div>
                     {% endif %}
                 </div>
-                
+
                 {% if order.special_instructions %}
                 <div class="border-t border-gray-800 my-2 pt-2">
                     <h3 class="font-medium mb-2">Special Instructions</h3>
                     <p class="text-gray-300">{{ order.special_instructions }}</p>
                 </div>
                 {% endif %}
-                
+
                 <div class="border-t border-gray-800 my-2 pt-2">
                     <div class="flex justify-between font-bold text-lg">
                         <span>Total:</span>
@@ -119,12 +120,12 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Order Items -->
         <div class="lg:col-span-2">
             <div class="card p-6">
                 <h2 class="text-xl font-bold mb-4">Order Items</h2>
-                
+
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
@@ -146,16 +147,16 @@
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td class="py-3">${{ item.price }}</td>
+                                <td class="py-3">{{ item.price|currency }}</td>
                                 <td class="py-3">{{ item.quantity }}</td>
-                                <td class="py-3">${{ item.subtotal }}</td>
+                                <td class="py-3">{{ item.subtotal|currency }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
                             <tr class="border-t border-gray-700">
                                 <td colspan="3" class="py-3 text-right font-bold">Total:</td>
-                                <td class="py-3 font-bold">${{ order.total_amount }}</td>
+                                <td class="py-3 font-bold">{{ order.total_amount|currency }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -170,7 +171,7 @@
 <script>
     function updateOrderStatus(status) {
         let confirmMessage = 'Are you sure you want to ';
-        
+
         if (status === 'COMPLETED') {
             confirmMessage += 'mark this order as completed?';
         } else if (status === 'CANCELLED') {
@@ -178,7 +179,7 @@
         } else {
             confirmMessage += 'update the status of this order?';
         }
-        
+
         if (confirm(confirmMessage)) {
             fetch('/cashier/order/{{ order.id }}/update-status/', {
                 method: 'POST',
