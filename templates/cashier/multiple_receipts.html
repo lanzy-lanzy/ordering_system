@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+{% load custom_filters %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Receipts - 5th Avenue Grill and Restobar</title>
+    <style>
+        @media print {
+            body {
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.2;
+                margin: 0;
+                padding: 0;
+            }
+
+            .receipt {
+                width: 80mm; /* Standard receipt width */
+                padding: 10px;
+                page-break-after: always;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 10px;
+            }
+
+            .logo {
+                font-size: 18px;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+
+            .info {
+                margin-bottom: 10px;
+            }
+
+            .divider {
+                border-top: 1px dashed #000;
+                margin: 10px 0;
+            }
+
+            .items {
+                width: 100%;
+            }
+
+            .items th {
+                text-align: left;
+                padding-bottom: 5px;
+            }
+
+            .items td {
+                padding: 2px 0;
+            }
+
+            .total {
+                text-align: right;
+                margin-top: 10px;
+            }
+
+            .footer {
+                text-align: center;
+                margin-top: 10px;
+                font-size: 10px;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+        
+        /* Styles for screen view */
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header-bar {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            background-color: #F9A826;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .btn:hover {
+            background-color: #e09016;
+        }
+        
+        .receipts-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .receipt {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            width: 300px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        
+        .divider {
+            border-top: 1px dashed #ccc;
+            margin: 10px 0;
+        }
+        
+        .items {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .items th, .items td {
+            padding: 5px;
+            text-align: left;
+        }
+        
+        .total {
+            text-align: right;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-bar no-print">
+            <h1>Multiple Receipts</h1>
+            <div>
+                <button class="btn" onclick="window.print()">Print All Receipts</button>
+                <button class="btn" style="background-color: #555;" onclick="window.location.href='{% url 'cashier_orders_list' %}'">Back to Orders</button>
+            </div>
+        </div>
+        
+        <div class="receipts-container">
+            {% for order in orders %}
+            <div class="receipt">
+                <div class="header">
+                    <div class="logo">5th Avenue Grill and Restobar</div>
+                    <div>123 Main Street, Anytown</div>
+                    <div>Tel: (123) 456-7890</div>
+                </div>
+                
+                <div class="info">
+                    <div>Order #: {{ order.id }}</div>
+                    <div>Date: {{ order.created_at|date:"M d, Y H:i" }}</div>
+                    <div>Cashier: {{ cashier_name }}</div>
+                    <div>Customer: {{ order.customer_name }}</div>
+                    <div>Type: {{ order.get_order_type_display }}</div>
+                    {% if order.table_number %}
+                    <div>Table: {{ order.table_number }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="divider"></div>
+                
+                <table class="items">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in order.order_items.all %}
+                        <tr>
+                            <td>{{ item.menu_item.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>{{ item.price|currency }}</td>
+                            <td>{{ item.subtotal|currency }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <div class="divider"></div>
+                
+                <div class="total">
+                    <div>Subtotal: {{ order.total_amount|currency }}</div>
+                    {% if order.tax_amount > 0 %}
+                    <div>Tax: {{ order.tax_amount|currency }}</div>
+                    {% endif %}
+                    {% if order.delivery_fee > 0 %}
+                    <div>Delivery Fee: {{ order.delivery_fee|currency }}</div>
+                    {% endif %}
+                    {% if order.discount_amount > 0 %}
+                    <div>Discount: -{{ order.discount_amount|currency }}</div>
+                    {% endif %}
+                    <div style="font-weight: bold; margin-top: 5px;">
+                        Total: {{ order.grand_total|currency }}
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="footer">
+                    <div>Payment Method: {{ order.get_payment_method_display }}</div>
+                    <div>Payment Status: {{ order.get_payment_status_display }}</div>
+                    <div style="margin-top: 10px;">Thank you for dining with us!</div>
+                    <div>Please come again.</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <script>
+        // Auto-print when page loads
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

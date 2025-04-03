@@ -211,7 +211,19 @@
         <div class="divider"></div>
 
         <div class="total">
-            <div>TOTAL: {{ order.total_amount|currency }}</div>
+            <div>Subtotal: {{ order.total_amount|currency }}</div>
+            {% if order.tax_amount > 0 %}
+            <div>Tax: {{ order.tax_amount|currency }}</div>
+            {% endif %}
+            {% if order.delivery_fee > 0 %}
+            <div>Delivery Fee: {{ order.delivery_fee|currency }}</div>
+            {% endif %}
+            {% if order.discount_amount > 0 %}
+            <div>Discount: -{{ order.discount_amount|currency }}</div>
+            {% endif %}
+            <div style="font-weight: bold; margin-top: 5px;">
+                TOTAL: {{ order.grand_total|currency }}
+            </div>
         </div>
 
         {% if order.special_instructions %}
@@ -224,10 +236,31 @@
 
         <div class="divider"></div>
 
+        <div class="payment-info">
+            <div><strong>Payment Method:</strong> {{ order.get_payment_method_display }}</div>
+            <div><strong>Payment Status:</strong> {{ order.get_payment_status_display }}</div>
+            {% if order.payments.exists %}
+            <div style="margin-top: 5px;">
+                {% for payment in order.payments.all %}
+                <div>Payment #{{ payment.id }}: {{ payment.amount|currency }} ({{ payment.get_status_display }})</div>
+                {% if payment.reference_number %}
+                <div>Ref: {{ payment.reference_number }}</div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
         <div class="footer">
             <div>Thank you for dining with us!</div>
             <div>Please come again</div>
             <div>www.5thavenuegrill.com</div>
+
+            <!-- QR Code for digital receipt -->
+            <div style="margin-top: 10px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://5thavenuegrill.com/receipt/{{ order.id }}" width="80" height="80" alt="QR Code">
+                <div style="font-size: 8px; margin-top: 5px;">Scan for digital receipt</div>
+            </div>
         </div>
 
         <div class="no-print">

@@ -18,9 +18,9 @@ from .staff import (
     staff_activity, staff_profile_view
 )
 from .cashier import (
-    cashier_dashboard, new_order, view_order, update_order_status,
-    orders_list as cashier_orders_list, print_receipt,
-    pending_payments, view_payment, verify_payment, reject_payment
+    cashier_dashboard, new_order, view_order, update_order_status, update_prep_time,
+    orders_list as cashier_orders_list, print_receipt, print_multiple_receipts,
+    pending_payments, view_payment, verify_payment, reject_payment, record_payment
 )
 from .manager import (
     manager_dashboard, sales_report, inventory_overview,
@@ -117,7 +117,10 @@ urlpatterns = [
     path('cashier/orders/', cashier_orders_list, name='cashier_orders_list'),
     path('cashier/order/<int:order_id>/', view_order, name='view_order'),
     path('cashier/order/<int:order_id>/update-status/', update_order_status, name='update_order_status'),
+    path('cashier/order/<int:order_id>/update-prep-time/', update_prep_time, name='update_prep_time'),
     path('cashier/order/<int:order_id>/receipt/', print_receipt, name='print_receipt'),
+    path('cashier/print-multiple-receipts/', print_multiple_receipts, name='print_multiple_receipts'),
+    path('cashier/order/<int:order_id>/payment/', record_payment, name='record_payment'),
 
     # Payment Management
     path('cashier/payments/', pending_payments, name='pending_payments'),

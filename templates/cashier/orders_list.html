@@ -1,5 +1,6 @@
 {% extends 'cashier/base.html' %}
 {% load math_filters %}
+{% load custom_filters %}
 
 {% block title %}Orders - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -9,39 +10,98 @@
 {% block content %}
 <div class="space-y-8">
     <!-- Filters -->
-    <div class="card p-6">
-        <h3 class="text-lg font-semibold mb-4">Filter Orders</h3>
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-                <label for="status" class="block text-sm font-medium text-gray-400 mb-2">Status</label>
-                <select name="status" id="status"
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
-                    <option value="">All Statuses</option>
-                    {% for status_code, status_name in status_choices %}
-                    <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>{{ status_name }}</option>
-                    {% endfor %}
-                </select>
+    <div class="card p-6" x-data="{showAdvancedFilters: false}">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Filter Orders</h3>
+            <button @click="showAdvancedFilters = !showAdvancedFilters" type="button" class="text-food-gold hover:text-food-gold-light text-sm flex items-center">
+                <span x-text="showAdvancedFilters ? 'Hide Advanced Filters' : 'Show Advanced Filters'"></span>
+                <i class="fas" :class="showAdvancedFilters ? 'fa-chevron-up ml-2' : 'fa-chevron-down ml-2'"></i>
+            </button>
+        </div>
+        <form method="GET" class="space-y-4">
+            <!-- Basic Filters -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-400 mb-2">Status</label>
+                    <select name="status" id="status"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <option value="">All Statuses</option>
+                        {% for status_code, status_name in status_choices %}
+                        <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>{{ status_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">Date From</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
+
+                <div>
+                    <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">Date To</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
+
+                <div>
+                    <label for="q" class="block text-sm font-medium text-gray-400 mb-2">Search</label>
+                    <input type="text" name="q" id="q" value="{{ search_query }}" placeholder="Order #, customer name..."
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
             </div>
-            
-            <div>
-                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">Date From</label>
-                <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+
+            <!-- Advanced Filters -->
+            <div x-show="showAdvancedFilters" x-transition class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-3 border-t border-gray-700">
+                <div>
+                    <label for="order_type" class="block text-sm font-medium text-gray-400 mb-2">Order Type</label>
+                    <select name="order_type" id="order_type"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <option value="">All Types</option>
+                        <option value="DINE_IN" {% if order_type_filter == 'DINE_IN' %}selected{% endif %}>Dine In</option>
+                        <option value="PICKUP" {% if order_type_filter == 'PICKUP' %}selected{% endif %}>Pickup</option>
+                        <option value="DELIVERY" {% if order_type_filter == 'DELIVERY' %}selected{% endif %}>Delivery</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="payment_status" class="block text-sm font-medium text-gray-400 mb-2">Payment Status</label>
+                    <select name="payment_status" id="payment_status"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <option value="">All Payment Statuses</option>
+                        <option value="PENDING" {% if payment_status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                        <option value="PAID" {% if payment_status_filter == 'PAID' %}selected{% endif %}>Paid</option>
+                        <option value="FAILED" {% if payment_status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                        <option value="REFUNDED" {% if payment_status_filter == 'REFUNDED' %}selected{% endif %}>Refunded</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="payment_method" class="block text-sm font-medium text-gray-400 mb-2">Payment Method</label>
+                    <select name="payment_method" id="payment_method"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <option value="">All Payment Methods</option>
+                        <option value="CASH" {% if payment_method_filter == 'CASH' %}selected{% endif %}>Cash</option>
+                        <option value="CARD" {% if payment_method_filter == 'CARD' %}selected{% endif %}>Credit/Debit Card</option>
+                        <option value="GCASH" {% if payment_method_filter == 'GCASH' %}selected{% endif %}>GCash</option>
+                        <option value="ONLINE" {% if payment_method_filter == 'ONLINE' %}selected{% endif %}>Other Online Payment</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="min_amount" class="block text-sm font-medium text-gray-400 mb-2">Min Amount (₱)</label>
+                    <input type="number" name="min_amount" id="min_amount" value="{{ min_amount }}" step="0.01" min="0"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
+
+                <div>
+                    <label for="max_amount" class="block text-sm font-medium text-gray-400 mb-2">Max Amount (₱)</label>
+                    <input type="number" name="max_amount" id="max_amount" value="{{ max_amount }}" step="0.01" min="0"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                </div>
             </div>
-            
-            <div>
-                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">Date To</label>
-                <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
-            </div>
-            
-            <div>
-                <label for="q" class="block text-sm font-medium text-gray-400 mb-2">Search</label>
-                <input type="text" name="q" id="q" value="{{ search_query }}" placeholder="Order #, customer name..."
-                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
-            </div>
-            
-            <div class="md:col-span-4 flex gap-2">
+
+            <div class="flex flex-wrap gap-2">
                 <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
                     <i class="fas fa-filter mr-2"></i> Apply Filters
                 </button>
@@ -58,70 +118,143 @@
     <!-- Orders Table -->
     <div class="card p-6">
         <h2 class="text-xl font-bold mb-4">Orders</h2>
-        
-        {% if orders %}
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="text-left text-gray-400 border-b border-gray-800">
-                        <th class="pb-3">Order #</th>
-                        <th class="pb-3">Customer</th>
-                        <th class="pb-3">Type</th>
-                        <th class="pb-3">Date & Time</th>
-                        <th class="pb-3">Amount</th>
-                        <th class="pb-3">Status</th>
-                        <th class="pb-3">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in orders %}
-                    <tr class="border-b border-gray-800">
-                        <td class="py-3">{{ order.id }}</td>
-                        <td class="py-3">{{ order.customer_name }}</td>
-                        <td class="py-3">
-                            {% if order.order_type == 'DINE_IN' %}
-                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Dine In</span>
-                            {% elif order.order_type == 'TAKEOUT' %}
-                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Takeout</span>
-                            {% elif order.order_type == 'DELIVERY' %}
-                            <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Delivery</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3">{{ order.created_at|date:"M d, Y H:i" }}</td>
-                        <td class="py-3">${{ order.total_amount }}</td>
-                        <td class="py-3">
-                            {% if order.status == 'PENDING' %}
-                            <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
-                            {% elif order.status == 'PROCESSING' %}
-                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Processing</span>
-                            {% elif order.status == 'READY' %}
-                            <span class="bg-indigo-900 text-indigo-300 text-xs px-2 py-1 rounded-full">Ready</span>
-                            {% elif order.status == 'COMPLETED' %}
-                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Completed</span>
-                            {% elif order.status == 'CANCELLED' %}
-                            <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3">
-                            <div class="flex space-x-2">
-                                <a href="{% url 'view_order' order.id %}" class="text-food-gold hover:text-food-gold-light" title="View Order">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
-                                <button type="button" onclick="completeOrder({{ order.id }})" class="text-green-400 hover:text-green-300" title="Complete Order">
-                                    <i class="fas fa-check-circle"></i>
-                                </button>
-                                {% endif %}
-                                <a href="{% url 'print_receipt' order.id %}" class="text-blue-400 hover:text-blue-300" title="Print Receipt">
-                                    <i class="fas fa-print"></i>
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center">
+                <span class="text-gray-400 mr-2">{{ orders|length }} order(s) found</span>
+                {% if orders %}
+                <div class="dropdown relative" x-data="{open: false}">
+                    <button @click="open = !open" class="text-gray-400 hover:text-white flex items-center">
+                        <i class="fas fa-cog mr-1"></i> Batch Actions
+                        <i class="fas fa-chevron-down ml-1 text-xs"></i>
+                    </button>
+                    <div x-show="open" @click.away="open = false" class="dropdown-menu absolute left-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg z-10">
+                        <div class="py-1">
+                            <button type="button" onclick="batchUpdateStatus('COMPLETED')" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                <i class="fas fa-check-circle mr-2 text-green-400"></i> Mark as Completed
+                            </button>
+                            <button type="button" onclick="batchUpdateStatus('CANCELLED')" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                <i class="fas fa-times-circle mr-2 text-red-400"></i> Mark as Cancelled
+                            </button>
+                            <button type="button" onclick="batchPrintReceipts()" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                <i class="fas fa-print mr-2 text-blue-400"></i> Print Selected Receipts
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="flex items-center">
+                <span class="text-gray-400 mr-2">Sort by:</span>
+                <select id="sort-orders" onchange="sortOrders(this.value)" class="bg-gray-700 text-white border border-gray-600 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-food-gold">
+                    <option value="newest" {% if sort_by == 'newest' %}selected{% endif %}>Newest First</option>
+                    <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest First</option>
+                    <option value="highest" {% if sort_by == 'highest' %}selected{% endif %}>Highest Amount</option>
+                    <option value="lowest" {% if sort_by == 'lowest' %}selected{% endif %}>Lowest Amount</option>
+                </select>
+            </div>
         </div>
+
+        {% if orders %}
+        <form id="batch-form" method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" id="batch-action" value="">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 pl-3">
+                                <input type="checkbox" id="select-all" class="form-checkbox h-4 w-4 text-food-gold rounded border-gray-600 bg-gray-700">
+                            </th>
+                            <th class="pb-3">Order #</th>
+                            <th class="pb-3">Customer</th>
+                            <th class="pb-3">Type</th>
+                            <th class="pb-3">Date & Time</th>
+                            <th class="pb-3">Amount</th>
+                            <th class="pb-3">Payment</th>
+                            <th class="pb-3">Status</th>
+                            <th class="pb-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr class="border-b border-gray-800 hover:bg-gray-800">
+                            <td class="py-3 pl-3">
+                                <input type="checkbox" name="selected_orders" value="{{ order.id }}" class="order-checkbox form-checkbox h-4 w-4 text-food-gold rounded border-gray-600 bg-gray-700">
+                            </td>
+                            <td class="py-3">{{ order.id }}</td>
+                            <td class="py-3">{{ order.customer_name }}</td>
+                            <td class="py-3">
+                                {% if order.order_type == 'DINE_IN' %}
+                                <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Dine In</span>
+                                {% elif order.order_type == 'PICKUP' %}
+                                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Pickup</span>
+                                {% elif order.order_type == 'DELIVERY' %}
+                                <span class="bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Delivery</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">{{ order.created_at|date:"M d, Y H:i" }}</td>
+                            <td class="py-3">{{ order.total_amount|currency }}</td>
+                            <td class="py-3">
+                                <div class="flex flex-col">
+                                    <span class="text-xs {% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'PENDING' %}text-yellow-400{% elif order.payment_status == 'FAILED' %}text-red-400{% else %}text-gray-400{% endif %}">
+                                        {{ order.get_payment_status_display }}
+                                    </span>
+                                    <span class="text-xs text-gray-500 mt-1">{{ order.get_payment_method_display }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3">
+                                {% if order.status == 'PENDING' %}
+                                <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
+                                {% elif order.status == 'PREPARING' %}
+                                <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Preparing</span>
+                                {% elif order.status == 'READY' %}
+                                <span class="bg-indigo-900 text-indigo-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                                {% elif order.status == 'COMPLETED' %}
+                                <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Completed</span>
+                                {% elif order.status == 'CANCELLED' %}
+                                <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <div class="flex space-x-2">
+                                    <a href="{% url 'view_order' order.id %}" class="text-food-gold hover:text-food-gold-light" title="View Order">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+
+                                    <div class="dropdown relative" x-data="{open: false}">
+                                        <button @click="open = !open" class="text-gray-400 hover:text-white" title="More Actions">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div x-show="open" @click.away="open = false" class="dropdown-menu absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg z-10">
+                                            <div class="py-1">
+                                                {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
+                                                <button type="button" onclick="updateOrderStatus({{ order.id }}, 'COMPLETED')" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                                    <i class="fas fa-check-circle mr-2 text-green-400"></i> Mark as Completed
+                                                </button>
+                                                <button type="button" onclick="updateOrderStatus({{ order.id }}, 'CANCELLED')" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                                    <i class="fas fa-times-circle mr-2 text-red-400"></i> Mark as Cancelled
+                                                </button>
+                                                {% endif %}
+                                                <a href="{% url 'print_receipt' order.id %}" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                                    <i class="fas fa-print mr-2 text-blue-400"></i> Print Receipt
+                                                </a>
+                                                {% if order.payment_status == 'PENDING' %}
+                                                <button type="button" onclick="recordPayment({{ order.id }})" class="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
+                                                    <i class="fas fa-money-bill-wave mr-2 text-green-400"></i> Record Payment
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
         {% else %}
         <div class="bg-gray-800 rounded-lg p-6 text-center">
             <p class="text-gray-400">No orders found matching your criteria.</p>
@@ -133,29 +266,127 @@
 
 {% block extra_scripts %}
 <script>
-    function completeOrder(orderId) {
-        if (confirm('Mark this order as completed?')) {
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select all checkbox functionality
+        const selectAllCheckbox = document.getElementById('select-all');
+        const orderCheckboxes = document.querySelectorAll('.order-checkbox');
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const isChecked = this.checked;
+                orderCheckboxes.forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                });
+            });
+        }
+
+        // Update select all checkbox when individual checkboxes change
+        orderCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const allChecked = [...orderCheckboxes].every(cb => cb.checked);
+                const someChecked = [...orderCheckboxes].some(cb => cb.checked);
+
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                    selectAllCheckbox.indeterminate = someChecked && !allChecked;
+                }
+            });
+        });
+    });
+
+    // Update order status
+    function updateOrderStatus(orderId, status) {
+        const statusText = status === 'COMPLETED' ? 'completed' : 'cancelled';
+        if (confirm(`Mark this order as ${statusText}?`)) {
             fetch(`/cashier/order/${orderId}/update-status/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: 'status=COMPLETED'
+                body: `status=${status}`
             })
             .then(response => response.json())
             .then(data => {
                 if (data.status === 'success') {
-                    alert(data.message);
-                    window.location.reload();
+                    showNotification(data.message, 'success');
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    alert(data.message);
+                    showNotification(data.message, 'error');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while updating the order status.');
+                showNotification('An error occurred while updating the order status.', 'error');
             });
+        }
+    }
+
+    // Batch update status
+    function batchUpdateStatus(status) {
+        const selectedOrders = getSelectedOrders();
+        if (selectedOrders.length === 0) {
+            showNotification('Please select at least one order', 'error');
+            return;
+        }
+
+        const statusText = status === 'COMPLETED' ? 'completed' : 'cancelled';
+        if (confirm(`Mark ${selectedOrders.length} order(s) as ${statusText}?`)) {
+            const form = document.getElementById('batch-form');
+            const actionInput = document.getElementById('batch-action');
+
+            actionInput.value = `update_status_${status}`;
+            form.action = '{% url "cashier_orders_list" %}';
+            form.submit();
+        }
+    }
+
+    // Batch print receipts
+    function batchPrintReceipts() {
+        const selectedOrders = getSelectedOrders();
+        if (selectedOrders.length === 0) {
+            showNotification('Please select at least one order', 'error');
+            return;
+        }
+
+        if (confirm(`Print receipts for ${selectedOrders.length} order(s)?`)) {
+            const form = document.getElementById('batch-form');
+            const actionInput = document.getElementById('batch-action');
+
+            actionInput.value = 'print_receipts';
+            form.action = '{% url "cashier_orders_list" %}';
+            form.submit();
+        }
+    }
+
+    // Record payment modal
+    function recordPayment(orderId) {
+        // This would typically open a modal dialog
+        // For now, we'll redirect to a payment page
+        window.location.href = `/cashier/order/${orderId}/payment/`;
+    }
+
+    // Sort orders
+    function sortOrders(sortBy) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('sort', sortBy);
+        window.location.href = currentUrl.toString();
+    }
+
+    // Helper function to get selected orders
+    function getSelectedOrders() {
+        const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // This would typically use a toast notification library
+        // For now, we'll use a simple alert
+        if (type === 'error') {
+            alert(`Error: ${message}`);
+        } else {
+            alert(message);
         }
     }
 </script>

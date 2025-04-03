@@ -101,7 +101,7 @@
                     <tr class="border-b border-gray-800">
                         <td class="py-3">{{ payment.order.id }}</td>
                         <td class="py-3">{{ payment.order.user.get_full_name }}</td>
-                        <td class="py-3">${{ payment.amount|floatformat:2 }}</td>
+                        <td class="py-3">₱{{ payment.amount|floatformat:2 }}</td>
                         <td class="py-3">{{ payment.reference_number }}</td>
                         <td class="py-3">{{ payment.payment_date|date:"M d, H:i" }}</td>
                         <td class="py-3">
@@ -159,14 +159,14 @@
                             {% endif %}
                         </td>
                         <td class="py-3">{{ order.created_at|date:"H:i" }}</td>
-                        <td class="py-3">${{ order.total_amount }}</td>
+                        <td class="py-3">₱{{ order.total_amount }}</td>
                         <td class="py-3">
                             {% if order.status == 'PENDING' %}
                             <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">Pending</span>
-                            {% elif order.status == 'PROCESSING' %}
-                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Processing</span>
+                            {% elif order.status == 'PREPARING' %}
+                            <span class="bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Preparing</span>
                             {% elif order.status == 'READY' %}
-                            <span class="bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Ready</span>
+                            <span class="bg-indigo-900 text-indigo-300 text-xs px-2 py-1 rounded-full">Ready</span>
                             {% endif %}
                         </td>
                         <td class="py-3">
@@ -174,9 +174,21 @@
                                 <a href="{% url 'view_order' order.id %}" class="text-food-gold hover:text-food-gold-light" title="View Order">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <button type="button" onclick="completeOrder({{ order.id }})" class="text-green-400 hover:text-green-300" title="Complete Order">
+
+                                {% if order.status == 'PENDING' %}
+                                <button type="button" onclick="updateOrderStatus({{ order.id }}, 'PREPARING')" class="text-yellow-400 hover:text-yellow-300" title="Start Preparing">
+                                    <i class="fas fa-utensils"></i>
+                                </button>
+                                {% elif order.status == 'PREPARING' %}
+                                <button type="button" onclick="updateOrderStatus({{ order.id }}, 'READY')" class="text-indigo-400 hover:text-indigo-300" title="Mark as Ready">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                                {% elif order.status == 'READY' %}
+                                <button type="button" onclick="updateOrderStatus({{ order.id }}, 'COMPLETED')" class="text-green-400 hover:text-green-300" title="Complete Order">
                                     <i class="fas fa-check-circle"></i>
                                 </button>
+                                {% endif %}
+
                                 <a href="{% url 'print_receipt' order.id %}" class="text-blue-400 hover:text-blue-300" title="Print Receipt">
                                     <i class="fas fa-print"></i>
                                 </a>
@@ -325,16 +337,30 @@
         document.body.removeChild(form);
     }
 
-    // Function to complete an order
-    function completeOrder(orderId) {
-        if (confirm('Mark this order as completed?')) {
+    // Function to update order status
+    function updateOrderStatus(orderId, status) {
+        let confirmMessage = 'Are you sure you want to ';
+
+        if (status === 'PREPARING') {
+            confirmMessage += 'start preparing this order?';
+        } else if (status === 'READY') {
+            confirmMessage += 'mark this order as ready for pickup/service?';
+        } else if (status === 'COMPLETED') {
+            confirmMessage += 'mark this order as completed?';
+        } else if (status === 'CANCELLED') {
+            confirmMessage += 'cancel this order?';
+        } else {
+            confirmMessage += 'update the status of this order?';
+        }
+
+        if (confirm(confirmMessage)) {
             fetch(`/cashier/order/${orderId}/update-status/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: 'status=COMPLETED'
+                body: `status=${status}`
             })
             .then(response => response.json())
             .then(data => {

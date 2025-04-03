@@ -74,12 +74,224 @@
                             <option value="TAKEOUT">Takeout</option>
                             <option value="DELIVERY">Delivery</option>
                         </select>
+                        <p x-show="orderType === 'DINE_IN'" class="mt-2 text-sm text-green-400">
+                            <i class="fas fa-info-circle mr-1"></i> Dine-in orders are automatically marked as paid with cash on hand payment.
+                        </p>
                     </div>
 
-                    <div x-show="orderType === 'DINE_IN'">
-                        <label for="table_number" class="block text-sm font-medium text-gray-400 mb-2">Table Number</label>
-                        <input type="text" name="table_number" id="table_number" x-model="tableNumber"
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <!-- Dine-In Specific Fields -->
+                    <div x-show="orderType === 'DINE_IN'" class="space-y-4 border-t border-gray-700 pt-4 mt-4">
+                        <h3 class="font-medium text-food-gold">Dine-In Details</h3>
+
+                        <!-- Table Selection -->
+                        <div>
+                            <label for="table_number" class="block text-sm font-medium text-gray-400 mb-2">Table Number</label>
+
+                            <!-- Visual Table Layout -->
+                            <div class="mb-4 relative bg-gray-800 p-4 rounded-lg">
+                                <div class="text-xs text-gray-400 mb-2 text-center">Restaurant Floor Plan</div>
+
+                                <!-- Main Dining Area -->
+                                <div class="border border-gray-600 p-3 rounded-lg mb-3">
+                                    <div class="text-xs text-gray-400 mb-2">Main Dining Area</div>
+                                    <div class="grid grid-cols-3 gap-2 mb-3">
+                                        {% for i in '123'|make_list %}
+                                        <button type="button"
+                                                @click="tableNumber = '{{ i }}'"
+                                                class="py-2 rounded-lg text-center transition-colors duration-200 relative"
+                                                :class="tableNumber === '{{ i }}' ? 'bg-food-gold text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                                            <i class="fas fa-utensils text-xs absolute top-1 right-1"></i>
+                                            <div class="text-center">Table {{ i }}</div>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        {% for i in '456'|make_list %}
+                                        <button type="button"
+                                                @click="tableNumber = '{{ i }}'"
+                                                class="py-2 rounded-lg text-center transition-colors duration-200 relative"
+                                                :class="tableNumber === '{{ i }}' ? 'bg-food-gold text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                                            <i class="fas fa-utensils text-xs absolute top-1 right-1"></i>
+                                            <div class="text-center">Table {{ i }}</div>
+                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
+                                <!-- Bar Area -->
+                                <div class="border border-gray-600 p-3 rounded-lg">
+                                    <div class="text-xs text-gray-400 mb-2">Bar Area</div>
+                                    <div class="grid grid-cols-4 gap-2">
+                                        {% for i in '789'|make_list %}
+                                        <button type="button"
+                                                @click="tableNumber = '{{ i }}'"
+                                                class="py-2 rounded-lg text-center transition-colors duration-200 relative"
+                                                :class="tableNumber === '{{ i }}' ? 'bg-food-gold text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                                            <i class="fas fa-glass-martini-alt text-xs absolute top-1 right-1"></i>
+                                            <div class="text-center">Bar {{ i }}</div>
+                                        </button>
+                                        {% endfor %}
+                                        <button type="button"
+                                                @click="tableNumber = 'VIP'"
+                                                class="py-2 rounded-lg text-center transition-colors duration-200 relative"
+                                                :class="tableNumber === 'VIP' ? 'bg-food-gold text-white' : 'bg-purple-700 text-purple-300 hover:bg-purple-600'">
+                                            <i class="fas fa-crown text-xs absolute top-1 right-1"></i>
+                                            <div class="text-center">VIP</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Selection Buttons -->
+                            <div class="grid grid-cols-4 gap-2 mb-2">
+                                {% for i in '10,11,12,13'|split:',' %}
+                                <button type="button"
+                                        @click="tableNumber = '{{ i }}'"
+                                        class="py-2 rounded-lg text-center transition-colors duration-200"
+                                        :class="tableNumber === '{{ i }}' ? 'bg-food-gold text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'">
+                                    {{ i }}
+                                </button>
+                                {% endfor %}
+                            </div>
+
+                            <input type="hidden" name="table_number" id="table_number" x-model="tableNumber">
+                            <div class="mt-2">
+                                <label for="custom_table" class="block text-sm font-medium text-gray-400 mb-1">Or enter custom table:</label>
+                                <input type="text" id="custom_table"
+                                       @input="tableNumber = $event.target.value"
+                                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                            </div>
+                        </div>
+
+                        <!-- Number of Guests -->
+                        <div>
+                            <label for="number_of_guests" class="block text-sm font-medium text-gray-400 mb-2">Number of Guests</label>
+                            <div class="flex items-center">
+                                <button type="button" @click="numberOfGuests > 1 ? numberOfGuests-- : null"
+                                        class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-l-lg">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" name="number_of_guests" id="number_of_guests" x-model.number="numberOfGuests" min="1"
+                                       class="w-16 px-3 py-1 bg-gray-700 border-t border-b border-gray-600 text-center focus:outline-none">
+                                <button type="button" @click="numberOfGuests++"
+                                        class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded-r-lg">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Server Assignment -->
+                        <div>
+                            <label for="server_assigned" class="block text-sm font-medium text-gray-400 mb-2">Assign Server</label>
+                            <select name="server_assigned" id="server_assigned" x-model="serverAssigned"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                                <option value="">-- Select Server --</option>
+                                {% for server in servers %}
+                                <option value="{{ server.id }}">{{ server.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Estimated Dining Time -->
+                        <div>
+                            <label for="estimated_dining_time" class="block text-sm font-medium text-gray-400 mb-2">Estimated Dining Time</label>
+                            <select name="estimated_dining_time" id="estimated_dining_time" x-model="estimatedDiningTime"
+                                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                                <option value="30">30 minutes</option>
+                                <option value="60" selected>1 hour</option>
+                                <option value="90">1.5 hours</option>
+                                <option value="120">2 hours</option>
+                                <option value="180">3 hours</option>
+                                <option value="240">4 hours</option>
+                            </select>
+                        </div>
+
+                        <!-- Cash on Hand (for dine-in) -->
+                        <div>
+                            <label for="cash_on_hand" class="block text-sm font-medium text-gray-400 mb-2">Cash on Hand</label>
+                            <div class="flex items-center space-x-2">
+                                <div class="relative flex-1">
+                                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                                        ₱
+                                    </span>
+                                    <input type="number" name="cash_on_hand" id="cash_on_hand" x-model="cashOnHand" step="0.01" min="0"
+                                           @input="calculateChange()"
+                                           class="w-full pl-8 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                                </div>
+                                <button type="button" @click="cashOnHand = Math.ceil(calculateTotal())"
+                                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">
+                                    Exact
+                                </button>
+                                <button type="button" @click="cashOnHand = Math.ceil(calculateTotal() / 100) * 100"
+                                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">
+                                    ₱100
+                                </button>
+                                <button type="button" @click="cashOnHand = Math.ceil(calculateTotal() / 500) * 500"
+                                        class="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg">
+                                    ₱500
+                                </button>
+                            </div>
+                            <div class="mt-2 flex justify-between items-center" x-show="cashOnHand >= calculateTotal()">
+                                <span class="text-sm text-gray-400">Change:</span>
+                                <span class="text-lg font-bold text-green-400" x-text="'₱' + (cashOnHand - calculateTotal()).toFixed(2)"></span>
+                            </div>
+                            <div class="mt-2 flex justify-between items-center" x-show="cashOnHand > 0 && cashOnHand < calculateTotal()">
+                                <span class="text-sm text-gray-400">Still needed:</span>
+                                <span class="text-lg font-bold text-red-400" x-text="'₱' + (calculateTotal() - cashOnHand).toFixed(2)"></span>
+                            </div>
+                        </div>
+
+                        <!-- Split Bill Options -->
+                        <div>
+                            <label class="flex items-center justify-between text-sm font-medium text-gray-400 mb-2">
+                                <span>Split Bill</span>
+                                <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                                    <input type="checkbox" name="split_bill" id="split_bill" x-model="splitBill"
+                                           class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                    <label for="split_bill" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-700 cursor-pointer"></label>
+                                </div>
+                            </label>
+
+                            <div x-show="splitBill" class="mt-2 space-y-2">
+                                <div class="flex items-center">
+                                    <span class="text-sm text-gray-400 mr-2">Split Type:</span>
+                                    <label class="inline-flex items-center mr-4">
+                                        <input type="radio" name="split_type" value="equal" x-model="splitType" class="form-radio text-food-gold">
+                                        <span class="ml-2 text-sm text-gray-300">Equal</span>
+                                    </label>
+                                    <label class="inline-flex items-center">
+                                        <input type="radio" name="split_type" value="custom" x-model="splitType" class="form-radio text-food-gold">
+                                        <span class="ml-2 text-sm text-gray-300">Custom</span>
+                                    </label>
+                                </div>
+
+                                <div x-show="splitType === 'equal'" class="flex items-center">
+                                    <span class="text-sm text-gray-400 mr-2">Number of Ways:</span>
+                                    <div class="flex items-center">
+                                        <button type="button" @click="splitWays > 2 ? splitWays-- : null"
+                                                class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded-l-lg">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <input type="number" name="split_ways" x-model.number="splitWays" min="2" max="10"
+                                               class="w-12 px-2 py-1 bg-gray-700 border-t border-b border-gray-600 text-center focus:outline-none">
+                                        <button type="button" @click="splitWays < 10 ? splitWays++ : null"
+                                                class="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded-r-lg">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <style>
+                                .toggle-checkbox:checked {
+                                    right: 0;
+                                    border-color: #F9A826;
+                                }
+                                .toggle-checkbox:checked + .toggle-label {
+                                    background-color: #F9A826;
+                                }
+                            </style>
+                        </div>
                     </div>
 
                     <div>
@@ -92,6 +304,40 @@
                 <!-- Order Summary -->
                 <div class="card p-6 mt-6 space-y-6">
                     <h2 class="text-xl font-bold">Order Summary</h2>
+
+                    <!-- Order Type Badge -->
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-sm font-medium text-gray-400">Order Type:</span>
+                            <span x-show="orderType === 'DINE_IN'" class="ml-2 bg-blue-900 text-blue-300 text-xs px-2 py-1 rounded-full">Dine In</span>
+                            <span x-show="orderType === 'TAKEOUT'" class="ml-2 bg-green-900 text-green-300 text-xs px-2 py-1 rounded-full">Takeout</span>
+                            <span x-show="orderType === 'DELIVERY'" class="ml-2 bg-purple-900 text-purple-300 text-xs px-2 py-1 rounded-full">Delivery</span>
+                        </div>
+                    </div>
+
+                    <!-- Dine-In Summary -->
+                    <div x-show="orderType === 'DINE_IN' && tableNumber" class="bg-gray-800 p-3 rounded-lg text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Table:</span>
+                            <span class="font-medium" x-text="tableNumber"></span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-400">Guests:</span>
+                            <span class="font-medium" x-text="numberOfGuests"></span>
+                        </div>
+                        <div class="flex justify-between mt-1" x-show="serverAssigned">
+                            <span class="text-gray-400">Server:</span>
+                            <span class="font-medium">Assigned</span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-400">Payment:</span>
+                            <span class="font-medium text-green-400">Auto-paid (Cash on Hand)</span>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-gray-400">Status:</span>
+                            <span class="font-medium text-blue-400">Preparing</span>
+                        </div>
+                    </div>
 
                     <div x-show="orderItems.length === 0" class="text-center py-4 text-gray-400">
                         <p>No items added yet</p>
@@ -111,7 +357,7 @@
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <div class="font-medium" x-text="'$' + (item.price * item.quantity).toFixed(2)"></div>
+                                        <div class="font-medium" x-text="'₱' + (item.price * item.quantity).toFixed(2)"></div>
                                         <button type="button" @click="removeItem(index)" class="text-red-400 hover:text-red-300 text-sm">
                                             <i class="fas fa-times"></i> Remove
                                         </button>
@@ -123,7 +369,19 @@
                         <div class="border-t border-gray-800 pt-4">
                             <div class="flex justify-between font-bold text-lg">
                                 <span>Total:</span>
-                                <span x-text="'$' + calculateTotal().toFixed(2)"></span>
+                                <span x-text="'₱' + calculateTotal().toFixed(2)"></span>
+                            </div>
+
+                            <!-- Split Bill Preview (if enabled) -->
+                            <div x-show="splitBill && orderType === 'DINE_IN'" class="mt-3 pt-3 border-t border-gray-700">
+                                <div class="text-sm text-gray-400 mb-2">Split Bill Preview:</div>
+                                <div x-show="splitType === 'equal'" class="flex justify-between text-sm">
+                                    <span x-text="splitWays + ' ways equal split'"></span>
+                                    <span x-text="'₱' + (calculateTotal() / splitWays).toFixed(2) + ' per person'"></span>
+                                </div>
+                                <div x-show="splitType === 'custom'" class="text-sm text-gray-400">
+                                    Custom split will be configured after order creation
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -136,6 +394,11 @@
                             <input type="hidden" :name="'item_instructions[]'" :value="item.instructions">
                         </div>
                     </template>
+
+                    <!-- Hidden inputs for split bill information -->
+                    <input type="hidden" name="split_bill" :value="splitBill">
+                    <input type="hidden" name="split_type" :value="splitType">
+                    <input type="hidden" name="split_ways" :value="splitWays">
 
                     <div class="pt-4">
                         <button type="submit"
@@ -223,6 +486,13 @@
         <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
             <h3 class="text-xl font-bold mb-4" x-text="selectedItem.name"></h3>
 
+            <!-- Show message if item already exists in order -->
+            <div x-show="orderItems.some(item => item.id === selectedItem.id && item.instructions === selectedItem.instructions)"
+                 class="mb-4 p-3 bg-blue-900 text-blue-200 rounded-lg">
+                <i class="fas fa-info-circle mr-2"></i>
+                <span>This item is already in your order with a quantity of <strong x-text="getExistingItemQuantity()"></strong>. Adding more will increase the quantity.</span>
+            </div>
+
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-400 mb-2">Quantity</label>
@@ -255,7 +525,12 @@
                         </button>
                         <button type="button" @click="addItemToOrder"
                                 class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg">
-                            Add to Order
+                            <span x-show="!orderItems.some(item => item.id === selectedItem.id && item.instructions === selectedItem.instructions)">
+                                <i class="fas fa-plus mr-1"></i> Add to Order
+                            </span>
+                            <span x-show="orderItems.some(item => item.id === selectedItem.id && item.instructions === selectedItem.instructions)">
+                                <i class="fas fa-plus mr-1"></i> Update Quantity
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -273,6 +548,13 @@
             customerPhone: '',
             orderType: 'DINE_IN',
             tableNumber: '',
+            numberOfGuests: 2,
+            serverAssigned: '',
+            estimatedDiningTime: 60,
+            cashOnHand: 0,
+            splitBill: false,
+            splitType: 'equal',
+            splitWays: 2,
             specialInstructions: '',
             orderItems: [],
             showItemModal: false,
@@ -287,6 +569,7 @@
             selectedCategory: '',
 
             openItemModal(id, name, price) {
+                // Set the selected item
                 this.selectedItem = {
                     id: id,
                     name: name,
@@ -294,11 +577,35 @@
                     quantity: 1,
                     instructions: ''
                 };
+
+                // Check if this item already exists in the order
+                const existingItem = this.orderItems.find(item => item.id === id && item.instructions === '');
+                if (existingItem) {
+                    // If it exists, set the instructions to match
+                    this.selectedItem.instructions = existingItem.instructions;
+                    // Optionally, you could set the quantity to 1 to add to existing
+                    // or set it to match the existing quantity if you want to double it
+                    // this.selectedItem.quantity = existingItem.quantity;
+                }
+
                 this.showItemModal = true;
             },
 
             addItemToOrder() {
-                this.orderItems.push({...this.selectedItem});
+                // Check if the item already exists in the order
+                const existingItemIndex = this.orderItems.findIndex(item =>
+                    item.id === this.selectedItem.id &&
+                    item.instructions === this.selectedItem.instructions
+                );
+
+                if (existingItemIndex !== -1) {
+                    // Item exists, update the quantity
+                    this.orderItems[existingItemIndex].quantity += this.selectedItem.quantity;
+                } else {
+                    // Item doesn't exist, add it as a new item
+                    this.orderItems.push({...this.selectedItem});
+                }
+
                 this.showItemModal = false;
             },
 
@@ -310,6 +617,20 @@
                 return this.orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
             },
 
+            calculateChange() {
+                const total = this.calculateTotal();
+                const cash = parseFloat(this.cashOnHand) || 0;
+                return Math.max(0, cash - total);
+            },
+
+            getExistingItemQuantity() {
+                const existingItem = this.orderItems.find(item =>
+                    item.id === this.selectedItem.id &&
+                    item.instructions === this.selectedItem.instructions
+                );
+                return existingItem ? existingItem.quantity : 0;
+            },
+
             validateForm(e) {
                 if (this.orderItems.length === 0) {
                     e.preventDefault();
@@ -317,9 +638,29 @@
                     return false;
                 }
 
-                if (this.orderType === 'DINE_IN' && !this.tableNumber) {
+                if (this.orderType === 'DINE_IN') {
+                    if (!this.tableNumber) {
+                        e.preventDefault();
+                        alert('Please select or enter a table number for dine-in orders');
+                        return false;
+                    }
+
+                    if (this.numberOfGuests < 1) {
+                        e.preventDefault();
+                        alert('Number of guests must be at least 1');
+                        return false;
+                    }
+
+                    if (parseFloat(this.cashOnHand) < this.calculateTotal()) {
+                        e.preventDefault();
+                        alert('Cash on hand must be at least equal to the total amount');
+                        return false;
+                    }
+                }
+
+                if (this.orderType === 'DELIVERY' && !this.customerPhone) {
                     e.preventDefault();
-                    alert('Please enter a table number for dine-in orders');
+                    alert('Please enter a contact number for delivery orders');
                     return false;
                 }
 

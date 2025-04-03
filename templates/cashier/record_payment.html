@@ -1,0 +1,150 @@
+{% extends 'cashier/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Record Payment - Order #{{ order.id }} - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Record Payment - Order #{{ order.id }}{% endblock page_title %}
+{% block page_subtitle %}Process payment for this order{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-800 text-green-200{% elif message.tags == 'info' %}bg-blue-800 text-blue-200{% else %}bg-red-800 text-red-200{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Order Summary -->
+        <div class="md:col-span-1">
+            <div class="card p-6">
+                <h3 class="text-lg font-semibold mb-4">Order Summary</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Order #:</span>
+                        <span class="font-medium">{{ order.id }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Customer:</span>
+                        <span class="font-medium">{{ order.customer_name }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Order Type:</span>
+                        <span class="font-medium">{{ order.get_order_type_display }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Status:</span>
+                        <span class="font-medium">{{ order.get_status_display }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Date:</span>
+                        <span class="font-medium">{{ order.created_at|date:"M d, Y H:i" }}</span>
+                    </div>
+                    <div class="border-t border-gray-700 my-2 pt-2">
+                        <div class="flex justify-between text-lg">
+                            <span class="text-gray-400">Total Amount:</span>
+                            <span class="font-bold text-food-gold">{{ order.total_amount|currency }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div class="md:col-span-2">
+            <div class="card p-6">
+                <h3 class="text-lg font-semibold mb-4">Payment Details</h3>
+                <form method="POST" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div>
+                        <label for="payment_method" class="block text-sm font-medium text-gray-400 mb-2">Payment Method</label>
+                        <select name="payment_method" id="payment_method" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                            {% for method_code, method_name in payment_methods %}
+                            <option value="{{ method_code }}">{{ method_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-400 mb-2">Amount Received (₱)</label>
+                        <input type="number" name="amount" id="amount" step="0.01" min="{{ order.total_amount }}" value="{{ order.total_amount }}" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <p class="text-sm text-gray-400 mt-1">Enter the exact amount or higher for cash payments to calculate change.</p>
+                    </div>
+                    
+                    <div id="reference_number_field" style="display: none;">
+                        <label for="reference_number" class="block text-sm font-medium text-gray-400 mb-2">Reference Number</label>
+                        <input type="text" name="reference_number" id="reference_number"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                        <p class="text-sm text-gray-400 mt-1">For card, GCash, or other electronic payments.</p>
+                    </div>
+                    
+                    <div>
+                        <label for="notes" class="block text-sm font-medium text-gray-400 mb-2">Notes</label>
+                        <textarea name="notes" id="notes" rows="3"
+                                 class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold"></textarea>
+                    </div>
+                    
+                    <div class="flex justify-between pt-4 border-t border-gray-700">
+                        <a href="{% url 'view_order' order.id %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                            <i class="fas fa-arrow-left mr-2"></i> Back to Order
+                        </a>
+                        <button type="submit" class="px-6 py-2 bg-food-gold hover:bg-food-gold-light text-white font-medium rounded-lg transition duration-200">
+                            <i class="fas fa-check mr-2"></i> Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentMethodSelect = document.getElementById('payment_method');
+        const referenceNumberField = document.getElementById('reference_number_field');
+        const amountInput = document.getElementById('amount');
+        
+        // Show/hide reference number field based on payment method
+        function updateReferenceNumberField() {
+            if (paymentMethodSelect.value === 'CASH') {
+                referenceNumberField.style.display = 'none';
+            } else {
+                referenceNumberField.style.display = 'block';
+            }
+        }
+        
+        // Calculate change for cash payments
+        function calculateChange() {
+            const totalAmount = {{ order.total_amount }};
+            const amountReceived = parseFloat(amountInput.value);
+            
+            if (paymentMethodSelect.value === 'CASH' && !isNaN(amountReceived)) {
+                const changeAmount = amountReceived - totalAmount;
+                if (changeAmount >= 0) {
+                    document.getElementById('change_amount').textContent = `₱${changeAmount.toFixed(2)}`;
+                    document.getElementById('change_display').style.display = 'block';
+                } else {
+                    document.getElementById('change_display').style.display = 'none';
+                }
+            } else {
+                document.getElementById('change_display').style.display = 'none';
+            }
+        }
+        
+        // Initial setup
+        updateReferenceNumberField();
+        
+        // Event listeners
+        paymentMethodSelect.addEventListener('change', updateReferenceNumberField);
+    });
+</script>
+{% endblock extra_scripts %}

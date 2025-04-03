@@ -4,7 +4,8 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, F, Q
 from django.http import JsonResponse
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+from django.contrib.auth.models import User
 
 from .models import Order, OrderItem, MenuItem, StaffActivity, Payment
 
@@ -102,6 +103,9 @@ def new_order(request):
     # Get all menu items
     menu_items = MenuItem.objects.filter(is_available=True).order_by('category__name', 'name')
 
+    # Get servers for dine-in orders
+    servers = User.objects.filter(staff_profile__role__in=['WAITER', 'CASHIER']).order_by('first_name')
+
     if request.method == 'POST':
         # Get customer information
         customer_name = request.POST.get('customer_name', '')
@@ -109,6 +113,17 @@ def new_order(request):
         order_type = request.POST.get('order_type', 'DINE_IN')
         table_number = request.POST.get('table_number', '')
         special_instructions = request.POST.get('special_instructions', '')
+
+        # Get dine-in specific information
+        number_of_guests = request.POST.get('number_of_guests', 1)
+        server_assigned_id = request.POST.get('server_assigned', None)
+        estimated_dining_time = request.POST.get('estimated_dining_time', 60)
+        cash_on_hand = request.POST.get('cash_on_hand', '0')
+
+        # Get split bill information
+        split_bill = request.POST.get('split_bill', 'false').lower() == 'true'
+        split_type = request.POST.get('split_type', 'equal')
+        split_ways = request.POST.get('split_ways', 2)
 
         # Get order items
         item_ids = request.POST.getlist('item_id[]')
@@ -120,19 +135,108 @@ def new_order(request):
             return redirect('new_order')
 
         try:
-            # Create order
+            # Calculate total amount first
+            total_amount = Decimal('0.00')
+
+            # Get menu items and calculate total
+            for i in range(len(item_ids)):
+                item_id = item_ids[i]
+                quantity = int(quantities[i])
+
+                if quantity <= 0:
+                    continue
+
+                menu_item = MenuItem.objects.get(id=item_id)
+                price = menu_item.price
+                total_amount += price * quantity
+
+            # Set default payment status and order status based on order type
+            payment_status = 'PAID' if order_type == 'DINE_IN' else 'PENDING'
+            payment_method = 'CASH_ON_HAND' if order_type == 'DINE_IN' else 'PENDING'
+            order_status = 'PREPARING' if order_type == 'DINE_IN' else 'PENDING'
+
+            # Create order with basic information including total_amount
             order = Order.objects.create(
+                user=request.user,
                 customer_name=customer_name,
                 customer_phone=customer_phone,
                 order_type=order_type,
                 table_number=table_number,
                 special_instructions=special_instructions,
-                status='PENDING',
-                created_by=request.user
+                status=order_status,  # Set status based on order type
+                created_by=request.user,
+                total_amount=total_amount,  # Set the total amount here
+                payment_status=payment_status,  # Set payment status based on order type
+                payment_method=payment_method,  # Set payment method for dine-in
+                preparing_at=timezone.now() if order_type == 'DINE_IN' else None  # Set preparing timestamp for dine-in
             )
 
-            # Calculate total amount
-            total_amount = Decimal('0.00')
+            # Add dine-in specific information if applicable
+            if order_type == 'DINE_IN':
+                try:
+                    order.number_of_guests = int(number_of_guests)
+                except (ValueError, TypeError):
+                    order.number_of_guests = 1
+
+                try:
+                    order.estimated_dining_time = int(estimated_dining_time)
+                except (ValueError, TypeError):
+                    order.estimated_dining_time = 60
+
+                if server_assigned_id:
+                    try:
+                        server = User.objects.get(id=server_assigned_id)
+                        order.server_assigned = server
+                    except User.DoesNotExist:
+                        pass
+
+                # Save split bill information
+                order.split_bill = split_bill
+                order.split_type = split_type.upper()
+
+                try:
+                    order.split_ways = int(split_ways)
+                    if order.split_ways < 2:
+                        order.split_ways = 2
+                except (ValueError, TypeError):
+                    order.split_ways = 2
+
+                # Save the order with the updated dine-in fields
+                order.save()
+
+                # Create a payment record for dine-in orders
+                try:
+                    cash_amount = Decimal(cash_on_hand)
+                    change_amount = cash_amount - total_amount if cash_amount > total_amount else Decimal('0.00')
+
+                    # Save cash and change amounts to the order
+                    order.cash_on_hand = cash_amount
+                    order.change_amount = change_amount
+                    order.save()
+
+                    payment_notes = f'Cash payment: ₱{cash_amount}. Change: ₱{change_amount}'
+
+                    Payment.objects.create(
+                        order=order,
+                        amount=total_amount,
+                        payment_method='CASH_ON_HAND',
+                        status='COMPLETED',
+                        verified_by=request.user,
+                        verification_date=timezone.now(),
+                        reference_number=f'CASH-{order.id}',
+                        notes=payment_notes
+                    )
+                except (ValueError, InvalidOperation):
+                    # Fallback if cash_on_hand is not a valid decimal
+                    Payment.objects.create(
+                        order=order,
+                        amount=total_amount,
+                        payment_method='CASH_ON_HAND',
+                        status='COMPLETED',
+                        verified_by=request.user,
+                        verification_date=timezone.now(),
+                        notes='Automatic payment record for dine-in order'
+                    )
 
             # Add order items
             for i in range(len(item_ids)):
@@ -154,12 +258,6 @@ def new_order(request):
                     special_instructions=item_instructions
                 )
 
-                total_amount += price * quantity
-
-            # Update order total
-            order.total_amount = total_amount
-            order.save()
-
             # Log activity
             StaffActivity.objects.create(
                 staff=request.user,
@@ -168,7 +266,19 @@ def new_order(request):
                 ip_address=get_client_ip(request)
             )
 
-            messages.success(request, f'Order #{order.id} created successfully')
+            # Show success message with change information for dine-in orders
+            if order_type == 'DINE_IN':
+                try:
+                    cash_amount = Decimal(cash_on_hand)
+                    change_amount = cash_amount - total_amount if cash_amount > total_amount else Decimal('0.00')
+                    if change_amount > 0:
+                        messages.success(request, f'Order #{order.id} created successfully. Change: ₱{change_amount:.2f}')
+                    else:
+                        messages.success(request, f'Order #{order.id} created successfully')
+                except (ValueError, InvalidOperation):
+                    messages.success(request, f'Order #{order.id} created successfully')
+            else:
+                messages.success(request, f'Order #{order.id} created successfully')
             return redirect('view_order', order_id=order.id)
 
         except Exception as e:
@@ -176,6 +286,7 @@ def new_order(request):
 
     context = {
         'menu_items': menu_items,
+        'servers': servers,
         'active_section': 'new_order'
     }
 
@@ -196,32 +307,116 @@ def view_order(request, order_id):
     return render(request, 'cashier/view_order.html', context)
 
 @login_required
-def update_order_status(request, order_id):
-    """Update order status"""
+def update_prep_time(request, order_id):
+    """Update the estimated preparation time for an order"""
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
     order = get_object_or_404(Order, id=order_id)
-    new_status = request.POST.get('status')
 
-    if new_status not in dict(Order.STATUS_CHOICES):
-        return JsonResponse({'status': 'error', 'message': 'Invalid status'})
+    # Only allow updating preparation time for orders in PREPARING status
+    if order.status != 'PREPARING':
+        return JsonResponse({'status': 'error', 'message': 'Can only update preparation time for orders in PREPARING status'})
 
     try:
-        old_status = order.status
-        order.status = new_status
+        # Get the new preparation time
+        prep_time = int(request.POST.get('prep_time', 30))
 
-        # If completing the order, set completed_at
-        if new_status == 'COMPLETED' and not order.completed_at:
-            order.completed_at = timezone.now()
+        # Validate the preparation time (between 5 and 120 minutes)
+        if prep_time < 5 or prep_time > 120:
+            return JsonResponse({'status': 'error', 'message': 'Preparation time must be between 5 and 120 minutes'})
 
+        # Update the preparation time
+        order.estimated_preparation_time = prep_time
         order.save()
 
         # Log activity
         StaffActivity.objects.create(
             staff=request.user,
             action='UPDATE_ORDER',
-            details=f"Updated order #{order.id} status from {old_status} to {new_status}",
+            details=f"Updated preparation time for order #{order.id} to {prep_time} minutes",
+            ip_address=get_client_ip(request)
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Preparation time updated to {prep_time} minutes'
+        })
+    except ValueError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid preparation time'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Error updating preparation time: {str(e)}'})
+
+@login_required
+def update_order_status(request, order_id):
+    """Update order status with proper flow validation"""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+    order = get_object_or_404(Order, id=order_id)
+    new_status = request.POST.get('status')
+    old_status = order.status
+
+    # Validate the status exists
+    if new_status not in dict(Order.STATUS_CHOICES):
+        return JsonResponse({'status': 'error', 'message': 'Invalid status'})
+
+    # Validate proper status flow
+    valid_transitions = {
+        'PENDING': ['PREPARING', 'CANCELLED'],
+        'PREPARING': ['READY', 'CANCELLED'],
+        'READY': ['COMPLETED', 'CANCELLED'],
+        'COMPLETED': [],  # Terminal state
+        'CANCELLED': []   # Terminal state
+    }
+
+    if new_status not in valid_transitions[old_status]:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Cannot change order status from {dict(Order.STATUS_CHOICES)[old_status]} to {dict(Order.STATUS_CHOICES)[new_status]}'
+        })
+
+    try:
+        # Update the status
+        order.status = new_status
+
+        # Set timestamps based on status
+        if new_status == 'PREPARING':
+            order.preparing_at = timezone.now()
+
+            # Set estimated preparation time based on order complexity
+            # Default is 30 minutes, but we can adjust based on number of items or item types
+            item_count = order.order_items.count()
+            if item_count <= 2:
+                order.estimated_preparation_time = 15  # Quick orders
+            elif item_count <= 5:
+                order.estimated_preparation_time = 30  # Standard orders
+            else:
+                order.estimated_preparation_time = 45  # Complex orders
+
+        elif new_status == 'READY':
+            order.ready_at = timezone.now()
+        elif new_status == 'COMPLETED':
+            order.completed_at = timezone.now()
+        elif new_status == 'CANCELLED':
+            order.cancelled_at = timezone.now()
+
+        order.save()
+
+        # Log activity with detailed message
+        status_messages = {
+            'PREPARING': 'started preparing',
+            'READY': 'marked as ready for pickup/service',
+            'COMPLETED': 'completed',
+            'CANCELLED': 'cancelled'
+        }
+
+        activity_message = f"Order #{order.id} {status_messages[new_status]}"
+
+        StaffActivity.objects.create(
+            staff=request.user,
+            action='UPDATE_ORDER',
+            details=activity_message,
             ip_address=get_client_ip(request)
         )
 
@@ -234,15 +429,83 @@ def update_order_status(request, order_id):
 
 @login_required
 def orders_list(request):
-    """View list of orders with filtering"""
+    """View list of orders with filtering and batch actions"""
+    # Handle POST requests for batch actions
+    if request.method == 'POST':
+        selected_orders = request.POST.getlist('selected_orders')
+        action = request.POST.get('action', '')
+
+        if selected_orders and action:
+            if action.startswith('update_status_'):
+                status = action.replace('update_status_', '')
+                if status in dict(Order.STATUS_CHOICES):
+                    # Update status for all selected orders
+                    updated_count = 0
+                    for order_id in selected_orders:
+                        try:
+                            order = Order.objects.get(id=order_id)
+                            old_status = order.status
+
+                            # Check if transition is valid
+                            valid_transitions = {
+                                'PENDING': ['PREPARING', 'CANCELLED'],
+                                'PREPARING': ['READY', 'CANCELLED'],
+                                'READY': ['COMPLETED', 'CANCELLED'],
+                                'COMPLETED': [],  # Terminal state
+                                'CANCELLED': []   # Terminal state
+                            }
+
+                            if status in valid_transitions[old_status]:
+                                # Update the status
+                                order.status = status
+
+                                # Set timestamps based on status
+                                if status == 'PREPARING':
+                                    order.preparing_at = timezone.now()
+                                elif status == 'READY':
+                                    order.ready_at = timezone.now()
+                                elif status == 'COMPLETED':
+                                    order.completed_at = timezone.now()
+                                elif status == 'CANCELLED':
+                                    order.cancelled_at = timezone.now()
+
+                                order.save()
+                                updated_count += 1
+
+                                # Log activity
+                                StaffActivity.objects.create(
+                                    staff=request.user,
+                                    action='UPDATE_ORDER',
+                                    details=f"Updated order #{order.id} status to {dict(Order.STATUS_CHOICES)[status]}",
+                                    ip_address=get_client_ip(request)
+                                )
+                        except Order.DoesNotExist:
+                            continue
+                        except Exception as e:
+                            messages.error(request, f"Error updating order #{order_id}: {str(e)}")
+
+                    if updated_count > 0:
+                        messages.success(request, f"Successfully updated {updated_count} order(s) to {dict(Order.STATUS_CHOICES)[status]}")
+
+            elif action == 'print_receipts':
+                # Redirect to a page that will print multiple receipts
+                order_ids = ','.join(selected_orders)
+                return redirect(f"/cashier/print-multiple-receipts/?order_ids={order_ids}")
+
     # Get filters
     status_filter = request.GET.get('status', '')
     date_from = request.GET.get('date_from', timezone.now().date().isoformat())
     date_to = request.GET.get('date_to', timezone.now().date().isoformat())
     search_query = request.GET.get('q', '')
+    order_type_filter = request.GET.get('order_type', '')
+    payment_status_filter = request.GET.get('payment_status', '')
+    payment_method_filter = request.GET.get('payment_method', '')
+    min_amount = request.GET.get('min_amount', '')
+    max_amount = request.GET.get('max_amount', '')
+    sort_by = request.GET.get('sort', 'newest')
 
     # Base queryset
-    orders = Order.objects.all().order_by('-created_at')
+    orders = Order.objects.all()
 
     # Apply filters
     if status_filter:
@@ -262,12 +525,57 @@ def orders_list(request):
             Q(table_number__icontains=search_query)
         )
 
+    if order_type_filter:
+        orders = orders.filter(order_type=order_type_filter)
+
+    if payment_status_filter:
+        orders = orders.filter(payment_status=payment_status_filter)
+
+    if payment_method_filter:
+        orders = orders.filter(payment_method=payment_method_filter)
+
+    if min_amount:
+        try:
+            orders = orders.filter(total_amount__gte=Decimal(min_amount))
+        except (ValueError, TypeError, InvalidOperation):
+            pass
+
+    if max_amount:
+        try:
+            orders = orders.filter(total_amount__lte=Decimal(max_amount))
+        except (ValueError, TypeError, InvalidOperation):
+            pass
+
+    # Apply sorting
+    if sort_by == 'oldest':
+        orders = orders.order_by('created_at')
+    elif sort_by == 'highest':
+        orders = orders.order_by('-total_amount')
+    elif sort_by == 'lowest':
+        orders = orders.order_by('total_amount')
+    else:  # newest
+        orders = orders.order_by('-created_at')
+
+    # Log activity
+    StaffActivity.objects.create(
+        staff=request.user,
+        action='VIEW_ORDERS',
+        details=f"Viewed orders list with {orders.count()} results",
+        ip_address=get_client_ip(request)
+    )
+
     context = {
         'orders': orders,
         'status_filter': status_filter,
         'date_from': date_from,
         'date_to': date_to,
         'search_query': search_query,
+        'order_type_filter': order_type_filter,
+        'payment_status_filter': payment_status_filter,
+        'payment_method_filter': payment_method_filter,
+        'min_amount': min_amount,
+        'max_amount': max_amount,
+        'sort_by': sort_by,
         'status_choices': Order.STATUS_CHOICES,
         'active_section': 'orders'
     }
@@ -296,6 +604,47 @@ def print_receipt(request, order_id):
     }
 
     return render(request, 'cashier/receipt.html', context)
+
+
+@login_required
+def print_multiple_receipts(request):
+    """Print multiple receipts at once"""
+    order_ids = request.GET.get('order_ids', '')
+
+    if not order_ids:
+        messages.error(request, 'No orders selected for printing')
+        return redirect('cashier_orders_list')
+
+    try:
+        # Split the comma-separated list of order IDs
+        order_id_list = [int(id) for id in order_ids.split(',')]
+
+        # Get all the orders
+        orders = Order.objects.filter(id__in=order_id_list)
+
+        if not orders.exists():
+            messages.error(request, 'No valid orders found for printing')
+            return redirect('cashier_orders_list')
+
+        # Log activity
+        StaffActivity.objects.create(
+            staff=request.user,
+            action='OTHER',
+            details=f"Printed multiple receipts for orders: {order_ids}",
+            ip_address=get_client_ip(request)
+        )
+
+        context = {
+            'orders': orders,
+            'print_date': timezone.now(),
+            'cashier_name': request.user.get_full_name()
+        }
+
+        return render(request, 'cashier/multiple_receipts.html', context)
+
+    except Exception as e:
+        messages.error(request, f'Error printing receipts: {str(e)}')
+        return redirect('cashier_orders_list')
 
 def get_client_ip(request):
     """Get client IP address from request"""
@@ -410,6 +759,95 @@ def verify_payment(request, payment_id):
     }
 
     return render(request, 'cashier/verify_payment.html', context)
+
+
+@login_required
+def record_payment(request, order_id):
+    """Record a new payment for an order"""
+    order = get_object_or_404(Order, id=order_id)
+
+    if order.payment_status == 'PAID':
+        messages.warning(request, f'Order #{order.id} is already marked as paid')
+        return redirect('view_order', order_id=order.id)
+
+    if request.method == 'POST':
+        payment_method = request.POST.get('payment_method')
+        amount = request.POST.get('amount')
+        reference_number = request.POST.get('reference_number', '')
+        notes = request.POST.get('notes', '')
+
+        try:
+            # Validate payment method
+            if payment_method not in dict(Order.PAYMENT_METHOD_CHOICES):
+                raise ValueError('Invalid payment method')
+
+            # Validate amount
+            amount_decimal = Decimal(amount)
+            if amount_decimal <= 0:
+                raise ValueError('Payment amount must be greater than zero')
+
+            # Create payment record
+            payment = Payment.objects.create(
+                order=order,
+                amount=amount_decimal,
+                payment_method=payment_method,
+                reference_number=reference_number,
+                notes=notes,
+                status='COMPLETED',  # Mark as completed immediately since cashier is recording it
+                verified_by=request.user,
+                verification_date=timezone.now()
+            )
+
+            # Update order payment status
+            order.payment_status = 'PAID'
+
+            # Use CASH_ON_HAND for dine-in cash payments
+            if order.order_type == 'DINE_IN' and payment_method == 'CASH':
+                order.payment_method = 'CASH_ON_HAND'
+            else:
+                order.payment_method = payment_method
+
+            # If order is still pending, move it to preparing
+            if order.status == 'PENDING':
+                order.status = 'PREPARING'
+                order.preparing_at = timezone.now()
+
+            order.save()
+
+            # Calculate change if cash payment
+            change_amount = Decimal('0.00')
+            if payment_method == 'CASH' and amount_decimal > order.total_amount:
+                change_amount = amount_decimal - order.total_amount
+
+            # Log activity
+            StaffActivity.objects.create(
+                staff=request.user,
+                action='CREATE_PAYMENT',
+                details=f"Recorded {payment.get_payment_method_display()} payment of {amount_decimal} for order #{order.id}",
+                ip_address=get_client_ip(request)
+            )
+
+            messages.success(request, f'Payment of {amount_decimal} recorded successfully for Order #{order.id}')
+
+            if change_amount > 0:
+                messages.info(request, f'Change amount: ₱{change_amount:.2f}')
+
+            return redirect('view_order', order_id=order.id)
+
+        except ValueError as e:
+            messages.error(request, f'Error recording payment: {str(e)}')
+        except InvalidOperation:
+            messages.error(request, 'Invalid amount format')
+        except Exception as e:
+            messages.error(request, f'Error recording payment: {str(e)}')
+
+    context = {
+        'order': order,
+        'payment_methods': Order.PAYMENT_METHOD_CHOICES,
+        'active_section': 'orders'
+    }
+
+    return render(request, 'cashier/record_payment.html', context)
 
 
 @login_required

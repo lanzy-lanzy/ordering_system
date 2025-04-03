@@ -19,6 +19,119 @@
     </div>
     {% endif %}
 
+    <!-- Order Status Tracker -->
+    <div class="mb-6">
+        <h2 class="text-xl font-bold mb-4">Order Status</h2>
+        <div class="relative">
+            <!-- Status Progress Bar -->
+            <div class="h-2 bg-gray-700 rounded-full mb-6">
+                <!-- Static progress bar for non-preparing orders -->
+                <div id="static-progress-bar" class="h-2 rounded-full bg-food-gold" style="width:
+                    {% if order.status == 'PENDING' %}20%
+                    {% elif order.status == 'PREPARING' %}40%
+                    {% elif order.status == 'READY' %}80%
+                    {% elif order.status == 'COMPLETED' %}100%
+                    {% elif order.status == 'CANCELLED' %}0%
+                    {% endif %}
+                " {% if order.status == 'PREPARING' %}style="display: none;"{% endif %}></div>
+
+                <!-- Animated progress bar for preparing orders -->
+                <div id="animated-progress-bar" class="h-2 rounded-full bg-food-gold"
+                     style="width: 40%; display: {% if order.status == 'PREPARING' %}block{% else %}none{% endif %};">
+                </div>
+            </div>
+
+            <!-- Preparation Time Indicator (only shown when preparing) -->
+            {% if order.status == 'PREPARING' and order.preparing_at %}
+            <div class="mb-4 text-center">
+                <div class="text-sm text-gray-400">
+                    <span>Estimated completion: </span>
+                    <span id="completion-time" class="font-medium text-food-gold"></span>
+                </div>
+                <div class="text-sm text-gray-400">
+                    <span>Time remaining: </span>
+                    <span id="time-remaining" class="font-medium text-food-gold"></span>
+                </div>
+                <div class="mt-1">
+                    <div class="text-xs text-gray-500">Preparation progress:</div>
+                    <div id="progress-percentage" class="text-sm font-medium text-food-gold">0%</div>
+                </div>
+
+                <!-- Adjust Preparation Time -->
+                <div class="mt-3 pt-3 border-t border-gray-700">
+                    <div class="text-xs text-gray-500 mb-2">Adjust preparation time:</div>
+                    <div class="flex items-center justify-center space-x-2">
+                        <button onclick="adjustPreparationTime(-5)" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs">
+                            -5 min
+                        </button>
+                        <div class="text-sm font-medium text-food-gold">
+                            <span id="prep-time-display">{{ order.estimated_preparation_time }}</span> min
+                        </div>
+                        <button onclick="adjustPreparationTime(5)" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs">
+                            +5 min
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Status Steps -->
+            <div class="flex justify-between">
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                        {% if order.status == 'PENDING' or order.status == 'PREPARING' or order.status == 'READY' or order.status == 'COMPLETED' %}
+                            bg-food-gold text-gray-900
+                        {% else %}
+                            bg-gray-700 text-gray-400
+                        {% endif %}
+                    ">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="text-sm">Pending</div>
+                </div>
+
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                        {% if order.status == 'PREPARING' or order.status == 'READY' or order.status == 'COMPLETED' %}
+                            bg-food-gold text-gray-900
+                        {% else %}
+                            bg-gray-700 text-gray-400
+                        {% endif %}
+                    ">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <div class="text-sm">Preparing</div>
+                </div>
+
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                        {% if order.status == 'READY' or order.status == 'COMPLETED' %}
+                            bg-food-gold text-gray-900
+                        {% else %}
+                            bg-gray-700 text-gray-400
+                        {% endif %}
+                    ">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="text-sm">Ready</div>
+                </div>
+
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                        {% if order.status == 'COMPLETED' %}
+                            bg-food-gold text-gray-900
+                        {% else %}
+                            bg-gray-700 text-gray-400
+                        {% endif %}
+                    ">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="text-sm">Completed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Order Actions -->
     <div class="flex flex-wrap gap-4">
         <a href="{% url 'cashier_orders_list' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center">
@@ -30,13 +143,23 @@
         </a>
 
         {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
-        <button type="button" onclick="updateOrderStatus('COMPLETED')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center">
-            <i class="fas fa-check-circle mr-2"></i> Complete Order
-        </button>
+            {% if order.status == 'PENDING' %}
+            <button type="button" onclick="updateOrderStatus('PREPARING')" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg flex items-center">
+                <i class="fas fa-utensils mr-2"></i> Start Preparing
+            </button>
+            {% elif order.status == 'PREPARING' %}
+            <button type="button" onclick="updateOrderStatus('READY')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center">
+                <i class="fas fa-bell mr-2"></i> Mark as Ready
+            </button>
+            {% elif order.status == 'READY' %}
+            <button type="button" onclick="updateOrderStatus('COMPLETED')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center">
+                <i class="fas fa-check-circle mr-2"></i> Complete Order
+            </button>
+            {% endif %}
 
-        <button type="button" onclick="updateOrderStatus('CANCELLED')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center">
-            <i class="fas fa-times-circle mr-2"></i> Cancel Order
-        </button>
+            <button type="button" onclick="updateOrderStatus('CANCELLED')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center">
+                <i class="fas fa-times-circle mr-2"></i> Cancel Order
+            </button>
         {% endif %}
     </div>
 
@@ -51,7 +174,7 @@
                     <span class="text-gray-400">Status:</span>
                     <span class="px-2 py-1 rounded-full text-xs
                         {% if order.status == 'PENDING' %}bg-yellow-900 text-yellow-300
-                        {% elif order.status == 'PROCESSING' %}bg-blue-900 text-blue-300
+                        {% elif order.status == 'PREPARING' %}bg-blue-900 text-blue-300
                         {% elif order.status == 'READY' %}bg-indigo-900 text-indigo-300
                         {% elif order.status == 'COMPLETED' %}bg-green-900 text-green-300
                         {% elif order.status == 'CANCELLED' %}bg-red-900 text-red-300
@@ -113,9 +236,39 @@
                 {% endif %}
 
                 <div class="border-t border-gray-800 my-2 pt-2">
+                    <h3 class="font-medium mb-2">Payment Information</h3>
+
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Payment Status:</span>
+                        <span class="{% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'PENDING' %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            {{ order.get_payment_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Payment Method:</span>
+                        <span>{{ order.get_payment_method_display }}</span>
+                    </div>
+
+                    {% if order.order_type == 'DINE_IN' and order.cash_on_hand > 0 %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Cash Received:</span>
+                        <span>{{ order.cash_on_hand|currency }}</span>
+                    </div>
+
+                    {% if order.change_amount > 0 %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Change:</span>
+                        <span class="text-green-400">{{ order.change_amount|currency }}</span>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+
+                <div class="border-t border-gray-800 my-2 pt-2">
                     <div class="flex justify-between font-bold text-lg">
                         <span>Total:</span>
-                        <span>${{ order.total_amount }}</span>
+                        <span>₱{{ order.total_amount }}</span>
                     </div>
                 </div>
             </div>
@@ -169,10 +322,158 @@
 
 {% block extra_scripts %}
 <script>
+    // Order preparation timer variables
+    let preparationTimer;
+    let startTime;
+    let estimatedEndTime;
+    let preparationDuration = {{ order.estimated_preparation_time|default:30 }} * 60 * 1000; // Convert minutes to milliseconds
+
+    // Initialize the preparation timer if the order is in PREPARING status
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if order.status == 'PREPARING' and order.preparing_at %}
+            initPreparationTimer();
+        {% endif %}
+    });
+
+    // Initialize the preparation timer
+    function initPreparationTimer() {
+        const preparingAtStr = '{{ order.preparing_at|date:"c" }}';
+        startTime = new Date(preparingAtStr);
+        estimatedEndTime = new Date(startTime.getTime() + preparationDuration);
+
+        // Set the estimated completion time
+        document.getElementById('completion-time').textContent = formatTime(estimatedEndTime);
+
+        // Start the timer
+        updatePreparationProgress();
+        preparationTimer = setInterval(updatePreparationProgress, 1000);
+    }
+
+    // Update the preparation progress
+    function updatePreparationProgress() {
+        const now = new Date();
+        const elapsedTime = now - startTime;
+        const remainingTime = preparationDuration - elapsedTime;
+
+        // Calculate progress percentage
+        const progressPercentage = Math.min(100, Math.floor((elapsedTime / preparationDuration) * 100));
+
+        // Update the progress bar width
+        const progressBar = document.getElementById('animated-progress-bar');
+        progressBar.style.width = `${40 + (progressPercentage * 0.4)}%`; // Scale from 40% to 80%
+
+        // Update the progress percentage text
+        document.getElementById('progress-percentage').textContent = `${progressPercentage}%`;
+
+        // Update the time remaining
+        document.getElementById('time-remaining').textContent = formatDuration(remainingTime);
+
+        // If preparation time is up, mark the order as ready
+        if (remainingTime <= 0) {
+            clearInterval(preparationTimer);
+            document.getElementById('time-remaining').textContent = 'Time is up!';
+
+            // Automatically mark as ready after a short delay
+            setTimeout(() => {
+                if (confirm('Preparation time is up! Mark this order as ready?')) {
+                    updateOrderStatus('READY');
+                }
+            }, 1000);
+        }
+    }
+
+    // Format time as HH:MM AM/PM
+    function formatTime(date) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Format duration as MM:SS
+    function formatDuration(milliseconds) {
+        if (milliseconds <= 0) return '00:00';
+
+        const totalSeconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    // Adjust preparation time
+    function adjustPreparationTime(minutes) {
+        // Get current preparation time
+        const currentPrepTime = parseInt(document.getElementById('prep-time-display').textContent);
+
+        // Calculate new preparation time (minimum 5 minutes, maximum 120 minutes)
+        const newPrepTime = Math.max(5, Math.min(120, currentPrepTime + minutes));
+
+        // Update the display
+        document.getElementById('prep-time-display').textContent = newPrepTime;
+
+        // Update the preparation duration
+        preparationDuration = newPrepTime * 60 * 1000;
+
+        // Recalculate the estimated end time
+        estimatedEndTime = new Date(startTime.getTime() + preparationDuration);
+
+        // Update the estimated completion time
+        document.getElementById('completion-time').textContent = formatTime(estimatedEndTime);
+
+        // Save the new preparation time to the server
+        fetch('/cashier/order/{{ order.id }}/update-prep-time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `prep_time=${newPrepTime}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Flash the time display to indicate success
+                const timeDisplay = document.getElementById('prep-time-display');
+                timeDisplay.classList.add('text-green-400');
+                setTimeout(() => {
+                    timeDisplay.classList.remove('text-green-400');
+                }, 500);
+            } else {
+                console.error('Error updating preparation time:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error updating preparation time:', error);
+        });
+    }
+
+    // Add a pulsing animation to the progress bar
+    {% if order.status == 'PREPARING' %}
+    const progressBar = document.getElementById('animated-progress-bar');
+    progressBar.classList.add('progress-pulse');
+
+    // Add the CSS for the pulsing animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+
+        .progress-pulse {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+    `;
+    document.head.appendChild(style);
+    {% endif %}
+
     function updateOrderStatus(status) {
         let confirmMessage = 'Are you sure you want to ';
 
-        if (status === 'COMPLETED') {
+        if (status === 'PREPARING') {
+            confirmMessage += 'start preparing this order?';
+        } else if (status === 'READY') {
+            confirmMessage += 'mark this order as ready for pickup/service?';
+        } else if (status === 'COMPLETED') {
             confirmMessage += 'mark this order as completed?';
         } else if (status === 'CANCELLED') {
             confirmMessage += 'cancel this order?';

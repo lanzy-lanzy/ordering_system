@@ -22,3 +22,8 @@ def currency(value):
         return f"₱{float(value):.2f}"
     except (ValueError, TypeError):
         return value
+
+@register.filter
+def split(value, arg):
+    """Split a string by a delimiter"""
+    return value.split(arg)

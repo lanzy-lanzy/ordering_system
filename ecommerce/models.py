@@ -149,7 +149,8 @@ class Order(models.Model):
     ]
 
     PAYMENT_METHOD_CHOICES = [
-        ('CASH', 'Cash on Delivery'),
+        ('CASH', 'Cash'),
+        ('CASH_ON_HAND', 'Cash on Hand'),
         ('CARD', 'Credit/Debit Card'),
         ('GCASH', 'GCash'),
         ('ONLINE', 'Other Online Payment'),
@@ -163,6 +164,9 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='created_orders', null=True, blank=True)
+    customer_name = models.CharField(max_length=100, blank=True)
+    customer_phone = models.CharField(max_length=20, blank=True)
     items = models.ManyToManyField(MenuItem, through='OrderItem')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='DELIVERY')
@@ -174,9 +178,23 @@ class Order(models.Model):
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     delivery_address = models.TextField(blank=True, null=True)
     contact_number = models.CharField(max_length=20, blank=True, null=True)
+    table_number = models.CharField(max_length=20, blank=True)
+    number_of_guests = models.PositiveIntegerField(default=1)
+    server_assigned = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='served_orders', null=True, blank=True)
+    estimated_dining_time = models.PositiveIntegerField(default=60, help_text='Estimated dining time in minutes')
+    split_bill = models.BooleanField(default=False)
+    split_type = models.CharField(max_length=20, choices=[('EQUAL', 'Equal Split'), ('CUSTOM', 'Custom Split')], default='EQUAL')
+    split_ways = models.PositiveIntegerField(default=2)
+    cash_on_hand = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    change_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    estimated_preparation_time = models.PositiveIntegerField(default=30, help_text='Estimated preparation time in minutes')
     special_instructions = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    preparing_at = models.DateTimeField(null=True, blank=True)
+    ready_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
