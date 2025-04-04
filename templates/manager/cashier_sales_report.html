@@ -1,0 +1,238 @@
+{% extends 'manager/base.html' %}
+{% load math_filters custom_filters %}
+
+{% block title %}Cashier Sales Report - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Cashier Sales Report{% endblock page_title %}
+{% block page_subtitle %}Track sales performance by cashier{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Filters -->
+    <div class="card p-6">
+        <h3 class="text-lg font-semibold mb-4">Filter Sales Data</h3>
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">Date From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">Date To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <div>
+                <label for="cashier" class="block text-sm font-medium text-gray-400 mb-2">Cashier</label>
+                <select name="cashier" id="cashier"
+                       class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+                    <option value="">All Cashiers</option>
+                    {% for cashier in cashiers %}
+                    <option value="{{ cashier.id }}" {% if cashier_id == cashier.id|stringformat:"i" %}selected{% endif %}>
+                        {{ cashier.get_full_name|default:cashier.username }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="md:col-span-3 flex gap-2">
+                <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                    <i class="fas fa-filter mr-2"></i> Apply Filters
+                </button>
+                <a href="{% url 'cashier_sales_report' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                    <i class="fas fa-times mr-2"></i> Clear Filters
+                </a>
+                <button type="button" onclick="window.print()" class="ml-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200 no-print">
+                    <i class="fas fa-print mr-2"></i> Print Report
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Sales Summary -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales Summary</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="stat-card p-6 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Revenue</h3>
+                        <p class="text-2xl font-bold mt-1 text-green-400">₱{{ total_revenue|floatformat:2 }}</p>
+                    </div>
+                    <div class="bg-green-900 p-3 rounded-full">
+                        <i class="fas fa-money-bill-wave text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card p-6 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Orders</h3>
+                        <p class="text-2xl font-bold mt-1 text-blue-400">{{ total_orders }}</p>
+                    </div>
+                    <div class="bg-blue-900 p-3 rounded-full">
+                        <i class="fas fa-shopping-cart text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card p-6 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Average Order Value</h3>
+                        <p class="text-2xl font-bold mt-1 text-food-gold">
+                            ₱{% if total_orders > 0 %}{{ avg_order_value|floatformat:2 }}{% else %}0.00{% endif %}
+                        </p>
+                    </div>
+                    <div class="bg-food-gold bg-opacity-20 p-3 rounded-full">
+                        <i class="fas fa-tag text-food-gold text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales by Cashier -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales by Cashier</h2>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Cashier</th>
+                        <th class="pb-3">Employee ID</th>
+                        <th class="pb-3">Orders</th>
+                        <th class="pb-3">Revenue</th>
+                        <th class="pb-3">Avg. Order Value</th>
+                        <th class="pb-3">% of Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in cashier_sales %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3">{{ sale.full_name }}</td>
+                        <td class="py-3">{{ sale.employee_id|default:"N/A" }}</td>
+                        <td class="py-3">{{ sale.order_count }}</td>
+                        <td class="py-3">₱{{ sale.total_sales|floatformat:2 }}</td>
+                        <td class="py-3">₱{{ sale.avg_order_value|floatformat:2 }}</td>
+                        <td class="py-3">
+                            {% if total_revenue > 0 %}
+                            <div class="flex items-center">
+                                <span class="mr-2">{{ sale.total_sales|div:total_revenue|mul:100|floatformat:1 }}%</span>
+                                <div class="w-16 bg-gray-700 rounded-full h-2">
+                                    <div class="bg-food-gold h-2 rounded-full" style="width: {{ sale.total_sales|div:total_revenue|mul:100 }}%;"></div>
+                                </div>
+                            </div>
+                            {% else %}
+                            0%
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-4 text-center text-gray-500">No sales data available for the selected period</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sales Visualization -->
+    <div class="grid grid-cols-1 gap-6">
+        <div class="card p-6">
+            <h2 class="text-xl font-bold mb-4">Daily Sales Trend</h2>
+            <div class="h-80">
+                <canvas id="dailySalesChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Daily Sales Chart
+        const ctx = document.getElementById('dailySalesChart').getContext('2d');
+        
+        const dailySalesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_labels|safe }},
+                datasets: [{
+                    label: 'Sales (₱)',
+                    data: {{ chart_data|safe }},
+                    backgroundColor: 'rgba(249, 168, 38, 0.2)',
+                    borderColor: 'rgba(249, 168, 38, 1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Orders',
+                    data: {{ order_counts|safe }},
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF',
+                            callback: function(value) {
+                                return '₱' + value;
+                            }
+                        }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.dataset.label === 'Sales (₱)') {
+                                    return '₱' + context.parsed.y.toFixed(2);
+                                } else {
+                                    return context.parsed.y + ' orders';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}

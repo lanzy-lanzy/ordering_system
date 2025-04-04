@@ -1,13 +1,13 @@
 {% load custom_filters %}
 <!-- Menu Items Grid -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
     {% for item in menu_items %}
-    <div class="bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl hover-scale transition-all duration-300 border border-gray-800 hover:border-food-gold">
-        <div class="h-64 overflow-hidden relative">
+    <div class="menu-item bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-all duration-300 border border-gray-800 hover:border-food-gold hover:shadow-2xl hover:shadow-food-gold/20">
+        <div class="h-48 sm:h-56 md:h-64 overflow-hidden relative">
             {% if item.image %}
-            <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-full h-full object-cover">
+            <img src="{{ item.image.url }}" alt="{{ item.name }}" class="w-full h-full object-cover transition-transform duration-700 hover:scale-110">
             {% else %}
-            <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c" alt="Food" class="w-full h-full object-cover">
+            <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c" alt="Food" class="w-full h-full object-cover transition-transform duration-700 hover:scale-110">
             {% endif %}
             {% if item.is_featured %}
             <div class="absolute top-4 right-4 bg-food-gold text-food-black text-xs font-bold px-3 py-1 rounded-full">
@@ -20,150 +20,198 @@
             </div>
             {% endif %}
         </div>
-        <div class="p-6">
+        <div class="p-3 sm:p-4 md:p-6">
             <div class="flex justify-between items-start mb-2">
-                <h3 class="text-xl font-bold text-white">{{ item.name }}</h3>
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-white">{{ item.name }}</h3>
                 <span class="text-food-gold font-bold">{{ item.price|currency }}</span>
             </div>
-            <p class="text-gray-400 mb-4 text-sm">{{ item.description|truncatechars:100 }}</p>
+            <p class="text-gray-400 mb-4 text-xs sm:text-sm">{{ item.description|truncatechars:80 }}</p>
 
             {% if item.spice_level > 0 %}
             <div class="flex items-center mb-4">
-                <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
+                <span class="text-xs sm:text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
                     {% for i in "12345" %}
                         {% if forloop.counter <= item.spice_level %}
-                        <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
+                        <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
                         {% else %}
-                        <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
+                        <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
                         {% endif %}
                     {% endfor %}
                 </div>
             </div>
             {% endif %}
 
-            <div class="flex justify-between items-center">
+            <!-- Rating display -->
+            <div class="flex items-center mb-3">
+                <div class="flex items-center bg-gray-800 bg-opacity-50 rounded-full px-3 py-1 text-xs sm:text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-star text-food-gold mr-1"></i>
+                        <span class="text-white font-medium">
+                            {% if item.reviews.count > 0 %}
+                                {{ item.reviews.all|dictsort:"rating"|last }}
+                            {% else %}
+                                5.0
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if item.reviews.count > 0 %}
+                    <div class="flex items-center ml-2 pl-2 border-l border-gray-600">
+                        <i class="fas fa-user-circle text-gray-400 mr-1"></i>
+                        <span class="text-gray-300">{{ item.reviews.first.user.username|truncatechars:10 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Add to Cart button -->
+            <div class="flex justify-center">
                 <button hx-post="{% url 'add_to_cart' item.id %}"
                         hx-target="#cart-count"
                         hx-swap="innerHTML"
                         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                        class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
+                        class="cart-btn w-full bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center justify-center shadow-md hover:shadow-lg">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                 </button>
-                <div class="text-gray-400 text-sm">
-                    <i class="fas fa-star text-food-gold"></i>
-                    {% if item.reviews.count > 0 %}
-                        {{ item.reviews.all|dictsort:"rating"|last }}
-                    {% else %}
-                        5.0
-                    {% endif %}
-                </div>
+
             </div>
         </div>
     </div>
     {% empty %}
     <!-- Sample Menu Items (shown when no database items exist) -->
-    <div class="bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl hover-scale transition-all duration-300 border border-gray-800 hover:border-food-gold">
-        <div class="h-64 overflow-hidden relative">
-            <img src="https://images.unsplash.com/photo-1544025162-d76694265947" alt="Ribeye Steak" class="w-full h-full object-cover">
+    <div class="menu-item bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-all duration-300 border border-gray-800 hover:border-food-gold hover:shadow-2xl hover:shadow-food-gold/20">
+        <div class="h-48 sm:h-56 md:h-64 overflow-hidden relative">
+            <img src="https://images.unsplash.com/photo-1544025162-d76694265947" alt="Ribeye Steak" class="w-full h-full object-cover transition-transform duration-700 hover:scale-110">
             <div class="absolute top-4 right-4 bg-food-gold text-food-black text-xs font-bold px-3 py-1 rounded-full">
                 Featured
             </div>
         </div>
-        <div class="p-6">
+        <div class="p-3 sm:p-4 md:p-6">
             <div class="flex justify-between items-start mb-2">
-                <h3 class="text-xl font-bold text-white">Ribeye Steak</h3>
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-white">Ribeye Steak</h3>
                 <span class="text-food-gold font-bold">₱32.99</span>
             </div>
-            <p class="text-gray-400 mb-4 text-sm">Prime cut ribeye steak grilled to perfection, served with roasted vegetables and garlic mashed potatoes.</p>
+            <p class="text-gray-400 mb-4 text-xs sm:text-sm">Prime cut ribeye steak grilled to perfection, served with roasted vegetables and garlic mashed potatoes.</p>
 
             <div class="flex items-center mb-4">
-                <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
+                <span class="text-xs sm:text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
-                    <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
+                    <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center">
-                <button class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
+            <!-- Rating display -->
+            <div class="flex items-center mb-3">
+                <div class="flex items-center bg-gray-800 bg-opacity-50 rounded-full px-3 py-1 text-xs sm:text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-star text-food-gold mr-1"></i>
+                        <span class="text-white font-medium">4.9</span>
+                    </div>
+                    <div class="flex items-center ml-2 pl-2 border-l border-gray-600">
+                        <i class="fas fa-user-circle text-gray-400 mr-1"></i>
+                        <span class="text-gray-300">JohnDoe</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add to Cart button -->
+            <div class="flex justify-center">
+                <button class="cart-btn w-full bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center justify-center shadow-md hover:shadow-lg">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                 </button>
-                <div class="text-gray-400 text-sm">
-                    <i class="fas fa-star text-food-gold"></i> 4.9
-                </div>
             </div>
         </div>
     </div>
 
-    <div class="bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl hover-scale transition-all duration-300 border border-gray-800 hover:border-food-gold">
-        <div class="h-64 overflow-hidden relative">
-            <img src="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b" alt="Pasta" class="w-full h-full object-cover">
+    <div class="menu-item bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-all duration-300 border border-gray-800 hover:border-food-gold hover:shadow-2xl hover:shadow-food-gold/20">
+        <div class="h-48 sm:h-56 md:h-64 overflow-hidden relative">
+            <img src="https://images.unsplash.com/photo-1551504734-5ee1c4a1479b" alt="Pasta" class="w-full h-full object-cover transition-transform duration-700 hover:scale-110">
         </div>
-        <div class="p-6">
+        <div class="p-3 sm:p-4 md:p-6">
             <div class="flex justify-between items-start mb-2">
-                <h3 class="text-xl font-bold text-white">Seafood Pasta</h3>
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-white">Seafood Pasta</h3>
                 <span class="text-food-gold font-bold">₱24.99</span>
             </div>
-            <p class="text-gray-400 mb-4 text-sm">Fresh linguine pasta with shrimp, mussels, and calamari in a rich tomato sauce with a hint of white wine.</p>
+            <p class="text-gray-400 mb-4 text-xs sm:text-sm">Fresh linguine pasta with shrimp, mussels, and calamari in a rich tomato sauce with a hint of white wine.</p>
 
             <div class="flex items-center mb-4">
-                <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
+                <span class="text-xs sm:text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
-                    <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
+                    <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center">
-                <button class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
+            <!-- Rating display -->
+            <div class="flex items-center mb-3">
+                <div class="flex items-center bg-gray-800 bg-opacity-50 rounded-full px-3 py-1 text-xs sm:text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-star text-food-gold mr-1"></i>
+                        <span class="text-white font-medium">4.7</span>
+                    </div>
+                    <div class="flex items-center ml-2 pl-2 border-l border-gray-600">
+                        <i class="fas fa-user-circle text-gray-400 mr-1"></i>
+                        <span class="text-gray-300">MarySmith</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add to Cart button -->
+            <div class="flex justify-center">
+                <button class="cart-btn w-full bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center justify-center shadow-md hover:shadow-lg">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                 </button>
-                <div class="text-gray-400 text-sm">
-                    <i class="fas fa-star text-food-gold"></i> 4.7
-                </div>
             </div>
         </div>
     </div>
 
-    <div class="bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl hover-scale transition-all duration-300 border border-gray-800 hover:border-food-gold">
-        <div class="h-64 overflow-hidden relative">
-            <img src="https://images.unsplash.com/photo-1623855244183-52fd8d3ce2f7" alt="Salad" class="w-full h-full object-cover">
+    <div class="menu-item bg-gradient-to-br from-gray-900 to-black rounded-xl overflow-hidden shadow-xl transform hover:scale-105 transition-all duration-300 border border-gray-800 hover:border-food-gold hover:shadow-2xl hover:shadow-food-gold/20">
+        <div class="h-48 sm:h-56 md:h-64 overflow-hidden relative">
+            <img src="https://images.unsplash.com/photo-1623855244183-52fd8d3ce2f7" alt="Salad" class="w-full h-full object-cover transition-transform duration-700 hover:scale-110">
             <div class="absolute top-4 left-4 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
                 Vegetarian
             </div>
         </div>
-        <div class="p-6">
+        <div class="p-3 sm:p-4 md:p-6">
             <div class="flex justify-between items-start mb-2">
-                <h3 class="text-xl font-bold text-white">Mediterranean Salad</h3>
+                <h3 class="text-base sm:text-lg md:text-xl font-bold text-white">Mediterranean Salad</h3>
                 <span class="text-food-gold font-bold">₱14.99</span>
             </div>
-            <p class="text-gray-400 mb-4 text-sm">Fresh mixed greens with feta cheese, kalamata olives, cherry tomatoes, cucumber, and red onion with balsamic vinaigrette.</p>
+            <p class="text-gray-400 mb-4 text-xs sm:text-sm">Fresh mixed greens with feta cheese, kalamata olives, cherry tomatoes, cucumber, and red onion with balsamic vinaigrette.</p>
 
             <div class="flex items-center mb-4">
-                <span class="text-sm text-gray-400 mr-2">Spice Level:</span>
+                <span class="text-xs sm:text-sm text-gray-400 mr-2">Spice Level:</span>
                 <div class="flex">
-                    <i class="fas fa-pepper-hot text-food-red mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
-                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5"></i>
+                    <i class="fas fa-pepper-hot text-food-red mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
+                    <i class="fas fa-pepper-hot text-gray-600 mx-0.5 text-xs sm:text-sm"></i>
                 </div>
             </div>
 
-            <div class="flex justify-between items-center">
-                <button class="bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center">
+            <!-- Rating display -->
+            <div class="flex items-center mb-3">
+                <div class="flex items-center bg-gray-800 bg-opacity-50 rounded-full px-3 py-1 text-xs sm:text-sm">
+                    <div class="flex items-center">
+                        <i class="fas fa-star text-food-gold mr-1"></i>
+                        <span class="text-white font-medium">4.5</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add to Cart button -->
+            <div class="flex justify-center">
+                <button class="cart-btn w-full bg-food-gold text-food-black hover:bg-food-red hover:text-white font-bold py-2 px-4 rounded-full transition duration-300 text-sm flex items-center justify-center shadow-md hover:shadow-lg">
                     <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                 </button>
-                <div class="text-gray-400 text-sm">
-                    <i class="fas fa-star text-food-gold"></i> 4.5
-                </div>
             </div>
         </div>
     </div>

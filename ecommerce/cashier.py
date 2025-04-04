@@ -1,13 +1,15 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, F, Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseRedirect
 from decimal import Decimal, InvalidOperation
 from django.contrib.auth.models import User
+from django.urls import reverse
 
-from .models import Order, OrderItem, MenuItem, StaffActivity, Payment
+from .models import Order, OrderItem, MenuItem, StaffActivity, Payment, Refund, Reservation, Category, ReservationPayment
 
 @login_required
 def cashier_dashboard(request):
@@ -48,6 +50,13 @@ def cashier_dashboard(request):
     # Get cancelled orders
     cancelled_orders = today_orders.filter(status='CANCELLED')
 
+    # Get unprocessed reservations
+    unprocessed_reservations = Reservation.objects.filter(
+        status='CONFIRMED',
+        date=today,
+        is_processed=False
+    ).order_by('time')
+
     # Calculate today's sales
     today_sales = completed_orders.aggregate(
         total=Sum('total_amount')
@@ -87,11 +96,13 @@ def cashier_dashboard(request):
         'pending_orders': pending_orders,
         'completed_orders': completed_orders,
         'cancelled_orders': cancelled_orders,
+        'unprocessed_reservations': unprocessed_reservations,
         'today_sales': today_sales,
         'today_order_count': today_order_count,
         'avg_order_value': avg_order_value,
         'top_items': top_items,
         'pending_payments': pending_payments,
+        'unprocessed_reservations_count': unprocessed_reservations.count(),
         'active_section': 'cashier_dashboard'
     }
 
@@ -298,9 +309,13 @@ def view_order(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     order_items = order.order_items.all()
 
+    # Get payment information if available
+    payment = Payment.objects.filter(order=order).first()
+
     context = {
         'order': order,
         'order_items': order_items,
+        'payment': payment,
         'active_section': 'orders'
     }
 
@@ -886,3 +901,246 @@ def reject_payment(request, payment_id):
     }
 
     return render(request, 'cashier/reject_payment.html', context)
+
+
+@login_required
+def cancel_order(request, order_id):
+    """Cancel an order and handle all related processes"""
+    order = get_object_or_404(Order, id=order_id)
+
+    # Check if order can be cancelled (not already completed or cancelled)
+    if order.status in ['COMPLETED', 'CANCELLED']:
+        messages.error(request, f'Order #{order.id} cannot be cancelled because it is already {order.get_status_display().lower()}')
+        return redirect('view_order', order_id=order.id)
+
+    if request.method == 'POST':
+        cancellation_reason = request.POST.get('cancellation_reason', 'OTHER')
+        cancellation_notes = request.POST.get('cancellation_notes', '')
+
+        # Begin transaction to ensure all changes are atomic
+        with transaction.atomic():
+            # 1. Update order status
+            order.status = 'CANCELLED'
+            order.cancelled_at = timezone.now()
+            order.cancellation_reason = cancellation_reason
+            order.cancellation_notes = cancellation_notes
+            order.cancelled_by = request.user
+            order.save()
+
+            # 2. Handle payment if already paid
+            if order.payment_status == 'PAID':
+                # Create refund record
+                refund = Refund.objects.create(
+                    order=order,
+                    amount=order.grand_total,
+                    reason=f"Order cancelled: {dict(Order.CANCELLATION_REASON_CHOICES).get(cancellation_reason, 'Other reason')}",
+                    status='PENDING',
+                    initiated_by=request.user,
+                    notes=cancellation_notes
+                )
+
+                # Update payment status
+                order.payment_status = 'REFUNDED'
+                order.save(update_fields=['payment_status'])
+
+                # Update any existing payments
+                for payment in Payment.objects.filter(order=order, status='COMPLETED'):
+                    payment.status = 'REFUNDED'
+                    payment.save()
+
+                messages.info(request, f'A refund of ₱{order.grand_total} has been initiated for this order')
+
+            # 3. Free up table reservation (for dine-in)
+            if order.order_type == 'DINE_IN' and order.table_number:
+                messages.info(request, f'Table {order.table_number} has been released')
+
+            # 4. Log activity
+            StaffActivity.objects.create(
+                staff=request.user,
+                action='CANCEL_ORDER',
+                details=f"Cancelled order #{order.id}. Reason: {dict(Order.CANCELLATION_REASON_CHOICES).get(cancellation_reason, 'Other reason')}",
+                ip_address=get_client_ip(request)
+            )
+
+        messages.success(request, f'Order #{order.id} has been cancelled successfully')
+        return redirect('cashier_orders_list')
+
+    context = {
+        'order': order,
+        'cancellation_reasons': Order.CANCELLATION_REASON_CHOICES,
+        'active_section': 'orders'
+    }
+
+    return render(request, 'cashier/cancel_order.html', context)
+
+
+@login_required
+def reservations_list(request):
+    """View for cashiers to see and process confirmed reservations"""
+    today = timezone.now().date()
+
+    # Get confirmed reservations for today
+    reservations = Reservation.objects.filter(
+        status='CONFIRMED',
+        date=today
+    ).order_by('time')
+
+    # Filter by processed status if requested
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'unprocessed':
+        reservations = reservations.filter(is_processed=False)
+    elif status_filter == 'processed':
+        reservations = reservations.filter(is_processed=True)
+
+    context = {
+        'reservations': reservations,
+        'status_filter': status_filter,
+        'today': today,
+        'active_section': 'reservations_list'
+    }
+
+    return render(request, 'cashier/reservations_list.html', context)
+
+
+@login_required
+def process_reservation(request, reservation_id):
+    """Process a confirmed reservation and create an order"""
+    reservation = get_object_or_404(Reservation, id=reservation_id, status='CONFIRMED')
+
+    # Check if already processed
+    if reservation.is_processed:
+        messages.warning(request, f'Reservation #{reservation_id} has already been processed.')
+        return redirect('reservations_list')
+
+    if request.method == 'POST':
+        with transaction.atomic():
+            # Mark reservation as processed
+            reservation.is_processed = True
+            reservation.processed_by = request.user
+            reservation.processed_at = timezone.now()
+            reservation.save()
+
+            # Create a new order for this reservation
+            order = Order.objects.create(
+                user=reservation.user,
+                status='PENDING',
+                order_type='DINE_IN',
+                payment_method='CASH',  # Default, can be changed later
+                payment_status='PENDING',
+                table_number=reservation.table_number,
+                number_of_guests=reservation.party_size,
+                special_instructions=reservation.special_requests,
+                created_by=request.user,
+                total_amount=Decimal('0.00'),  # Default value, will be updated when items are added
+                tax_amount=Decimal('0.00'),
+                delivery_fee=Decimal('0.00'),
+                discount_amount=Decimal('0.00')
+            )
+
+            # Log the activity
+            StaffActivity.objects.create(
+                staff=request.user,
+                action='PROCESS_RESERVATION',
+                details=f"Processed reservation #{reservation_id} and created order #{order.id}"
+            )
+
+            messages.success(request, f'Reservation #{reservation_id} has been processed. Order #{order.id} created.')
+            return redirect('view_order', order_id=order.id)
+
+    # Get menu items for the order creation form
+    menu_items = MenuItem.objects.filter(is_available=True).order_by('category', 'name')
+    categories = Category.objects.filter(is_active=True)
+
+    context = {
+        'reservation': reservation,
+        'menu_items': menu_items,
+        'categories': categories,
+        'active_section': 'reservations_list'
+    }
+
+    return render(request, 'cashier/process_reservation.html', context)
+
+
+@login_required
+def pending_reservation_payments(request):
+    """View for cashiers to see and verify pending reservation payments"""
+    # Get pending reservation payments
+    pending_payments = ReservationPayment.objects.filter(status='PENDING').order_by('-payment_date')
+
+    context = {
+        'pending_payments': pending_payments,
+        'active_section': 'pending_reservation_payments'
+    }
+
+    return render(request, 'cashier/pending_reservation_payments.html', context)
+
+
+@login_required
+def view_reservation_payment(request, payment_id):
+    """View details of a reservation payment"""
+    payment = get_object_or_404(ReservationPayment, id=payment_id)
+
+    context = {
+        'payment': payment,
+        'active_section': 'pending_reservation_payments'
+    }
+
+    return render(request, 'cashier/view_reservation_payment.html', context)
+
+
+@login_required
+def verify_reservation_payment(request, payment_id):
+    """Verify a reservation payment"""
+    payment = get_object_or_404(ReservationPayment, id=payment_id)
+
+    if request.method == 'POST':
+        # Mark payment as completed
+        payment.status = 'COMPLETED'
+        payment.verified_by = request.user
+        payment.verification_date = timezone.now()
+        payment.save()
+
+        # Update reservation status
+        reservation = payment.reservation
+        reservation.status = 'CONFIRMED'
+        reservation.save()
+
+        # Log the activity
+        StaffActivity.objects.create(
+            staff=request.user,
+            action='VERIFY_RESERVATION_PAYMENT',
+            details=f"Verified payment of ₱{payment.amount} for Reservation #{reservation.id}"
+        )
+
+        messages.success(request, f'Payment for Reservation #{reservation.id} has been verified successfully!')
+        return redirect('pending_reservation_payments')
+
+    return redirect('view_reservation_payment', payment_id=payment_id)
+
+
+@login_required
+def reject_reservation_payment(request, payment_id):
+    """Reject a reservation payment"""
+    payment = get_object_or_404(ReservationPayment, id=payment_id)
+
+    if request.method == 'POST':
+        reason = request.POST.get('reason', 'Payment rejected')
+
+        # Mark payment as failed
+        payment.status = 'FAILED'
+        payment.notes = reason
+        payment.verified_by = request.user
+        payment.verification_date = timezone.now()
+        payment.save()
+
+        # Log the activity
+        StaffActivity.objects.create(
+            staff=request.user,
+            action='REJECT_RESERVATION_PAYMENT',
+            details=f"Rejected payment for Reservation #{payment.reservation.id}. Reason: {reason}"
+        )
+
+        messages.success(request, f'Payment for Reservation #{payment.reservation.id} has been rejected.')
+        return redirect('pending_reservation_payments')
+
+    return redirect('view_reservation_payment', payment_id=payment_id)

@@ -7,26 +7,87 @@
 {% block page_title %}Order #{{ order.id }}{% endblock page_title %}
 {% block page_subtitle %}View order details and update status{% endblock page_subtitle %}
 
+{% block extra_css %}
+<style>
+    /* Enhanced styling for order details page */
+    .card {
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-2px);
+    }
+
+    .action-button {
+        transition: all 0.3s ease;
+        transform: translateY(0);
+    }
+
+    .action-button:hover {
+        transform: translateY(-2px);
+    }
+
+    .status-badge {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .status-badge.preparing::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .status-step {
+        position: relative;
+    }
+
+    .status-step.active .step-icon {
+        transform: scale(1.1);
+        box-shadow: 0 0 15px rgba(249, 168, 38, 0.5);
+    }
+
+    .progress-bar-container {
+        position: relative;
+        overflow: hidden;
+        border-radius: 9999px;
+    }
+
+    .order-items-table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .order-items-table tbody tr:hover {
+        background-color: rgba(31, 41, 55, 0.7);
+    }
+</style>
+{% endblock extra_css %}
+
 {% block content %}
 <div class="space-y-8">
-    {% if messages %}
-    <div class="mb-6">
-        {% for message in messages %}
-        <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-800 text-green-200{% else %}bg-red-800 text-red-200{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
     <!-- Order Status Tracker -->
-    <div class="mb-6">
-        <h2 class="text-xl font-bold mb-4">Order Status</h2>
+    <div class="card mb-6 p-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-tasks mr-2 text-food-gold"></i> Order Status
+        </h2>
         <div class="relative">
             <!-- Status Progress Bar -->
-            <div class="h-2 bg-gray-700 rounded-full mb-6">
+            <div class="h-3 bg-gray-700 rounded-full mb-6 progress-bar-container shadow-inner">
                 <!-- Static progress bar for non-preparing orders -->
-                <div id="static-progress-bar" class="h-2 rounded-full bg-food-gold" style="width:
+                <div id="static-progress-bar" class="h-3 rounded-full bg-gradient-to-r from-food-gold to-food-gold-light" style="width:
                     {% if order.status == 'PENDING' %}20%
                     {% elif order.status == 'PREPARING' %}40%
                     {% elif order.status == 'READY' %}80%
@@ -36,39 +97,47 @@
                 " {% if order.status == 'PREPARING' %}style="display: none;"{% endif %}></div>
 
                 <!-- Animated progress bar for preparing orders -->
-                <div id="animated-progress-bar" class="h-2 rounded-full bg-food-gold"
+                <div id="animated-progress-bar" class="h-3 rounded-full bg-gradient-to-r from-food-gold to-food-gold-light"
                      style="width: 40%; display: {% if order.status == 'PREPARING' %}block{% else %}none{% endif %};">
                 </div>
             </div>
 
             <!-- Preparation Time Indicator (only shown when preparing) -->
             {% if order.status == 'PREPARING' and order.preparing_at %}
-            <div class="mb-4 text-center">
-                <div class="text-sm text-gray-400">
-                    <span>Estimated completion: </span>
-                    <span id="completion-time" class="font-medium text-food-gold"></span>
+            <div class="mb-4 text-center bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-700">
+                <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div class="bg-gray-900 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Estimated Completion</div>
+                        <div id="completion-time" class="font-medium text-food-gold text-lg"></div>
+                    </div>
+                    <div class="bg-gray-900 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Time Remaining</div>
+                        <div id="time-remaining" class="font-medium text-food-gold text-lg"></div>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-400">
-                    <span>Time remaining: </span>
-                    <span id="time-remaining" class="font-medium text-food-gold"></span>
-                </div>
-                <div class="mt-1">
-                    <div class="text-xs text-gray-500">Preparation progress:</div>
-                    <div id="progress-percentage" class="text-sm font-medium text-food-gold">0%</div>
+
+                <div class="mt-3">
+                    <div class="text-xs text-gray-500 mb-1">Preparation Progress</div>
+                    <div class="flex items-center justify-center">
+                        <div class="w-full bg-gray-900 rounded-full h-4 mr-2">
+                            <div id="progress-percentage-bar" class="bg-gradient-to-r from-food-gold to-food-gold-light h-4 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div id="progress-percentage" class="text-sm font-medium text-food-gold w-10">0%</div>
+                    </div>
                 </div>
 
                 <!-- Adjust Preparation Time -->
-                <div class="mt-3 pt-3 border-t border-gray-700">
-                    <div class="text-xs text-gray-500 mb-2">Adjust preparation time:</div>
-                    <div class="flex items-center justify-center space-x-2">
-                        <button onclick="adjustPreparationTime(-5)" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs">
-                            -5 min
+                <div class="mt-4 pt-3 border-t border-gray-700">
+                    <div class="text-sm text-gray-400 mb-2">Adjust Preparation Time</div>
+                    <div class="flex items-center justify-center space-x-3">
+                        <button onclick="adjustPreparationTime(-5)" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm flex items-center action-button">
+                            <i class="fas fa-minus mr-1"></i> 5 min
                         </button>
-                        <div class="text-sm font-medium text-food-gold">
+                        <div class="text-lg font-medium text-food-gold bg-gray-900 px-4 py-1 rounded-lg">
                             <span id="prep-time-display">{{ order.estimated_preparation_time }}</span> min
                         </div>
-                        <button onclick="adjustPreparationTime(5)" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs">
-                            +5 min
+                        <button onclick="adjustPreparationTime(5)" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm flex items-center action-button">
+                            <i class="fas fa-plus mr-1"></i> 5 min
                         </button>
                     </div>
                 </div>
@@ -77,198 +146,235 @@
 
             <!-- Status Steps -->
             <div class="flex justify-between">
-                <div class="text-center">
-                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                <div class="text-center status-step {% if order.status == 'PENDING' or order.status == 'PREPARING' or order.status == 'READY' or order.status == 'COMPLETED' %}active{% endif %}">
+                    <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center step-icon transition-all duration-300
                         {% if order.status == 'PENDING' or order.status == 'PREPARING' or order.status == 'READY' or order.status == 'COMPLETED' %}
                             bg-food-gold text-gray-900
                         {% else %}
                             bg-gray-700 text-gray-400
                         {% endif %}
                     ">
-                        <i class="fas fa-clipboard-list"></i>
+                        <i class="fas fa-clipboard-list text-lg"></i>
                     </div>
-                    <div class="text-sm">Pending</div>
+                    <div class="text-sm font-medium {% if order.status == 'PENDING' %}text-food-gold{% endif %}">Pending</div>
                 </div>
 
-                <div class="text-center">
-                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                <div class="text-center status-step {% if order.status == 'PREPARING' or order.status == 'READY' or order.status == 'COMPLETED' %}active{% endif %}">
+                    <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center step-icon transition-all duration-300
                         {% if order.status == 'PREPARING' or order.status == 'READY' or order.status == 'COMPLETED' %}
                             bg-food-gold text-gray-900
                         {% else %}
                             bg-gray-700 text-gray-400
                         {% endif %}
                     ">
-                        <i class="fas fa-utensils"></i>
+                        <i class="fas fa-utensils text-lg"></i>
                     </div>
-                    <div class="text-sm">Preparing</div>
+                    <div class="text-sm font-medium {% if order.status == 'PREPARING' %}text-food-gold{% endif %}">Preparing</div>
                 </div>
 
-                <div class="text-center">
-                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                <div class="text-center status-step {% if order.status == 'READY' or order.status == 'COMPLETED' %}active{% endif %}">
+                    <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center step-icon transition-all duration-300
                         {% if order.status == 'READY' or order.status == 'COMPLETED' %}
                             bg-food-gold text-gray-900
                         {% else %}
                             bg-gray-700 text-gray-400
                         {% endif %}
                     ">
-                        <i class="fas fa-bell"></i>
+                        <i class="fas fa-bell text-lg"></i>
                     </div>
-                    <div class="text-sm">Ready</div>
+                    <div class="text-sm font-medium {% if order.status == 'READY' %}text-food-gold{% endif %}">Ready</div>
                 </div>
 
-                <div class="text-center">
-                    <div class="w-8 h-8 rounded-full mx-auto mb-2 flex items-center justify-center
+                <div class="text-center status-step {% if order.status == 'COMPLETED' %}active{% endif %}">
+                    <div class="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center step-icon transition-all duration-300
                         {% if order.status == 'COMPLETED' %}
                             bg-food-gold text-gray-900
                         {% else %}
                             bg-gray-700 text-gray-400
                         {% endif %}
                     ">
-                        <i class="fas fa-check"></i>
+                        <i class="fas fa-check text-lg"></i>
                     </div>
-                    <div class="text-sm">Completed</div>
+                    <div class="text-sm font-medium {% if order.status == 'COMPLETED' %}text-food-gold{% endif %}">Completed</div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Order Actions -->
-    <div class="flex flex-wrap gap-4">
-        <a href="{% url 'cashier_orders_list' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center">
-            <i class="fas fa-arrow-left mr-2"></i> Back to Orders
-        </a>
+    <div class="card p-6 mb-6">
+        <h2 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-cogs mr-2 text-food-gold"></i> Order Actions
+        </h2>
+        <div class="flex flex-wrap gap-4">
+            <a href="{% url 'cashier_orders_list' %}" class="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center action-button shadow-lg">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Orders
+            </a>
 
-        <a href="{% url 'print_receipt' order.id %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center">
-            <i class="fas fa-print mr-2"></i> Print Receipt
-        </a>
+            <a href="{% url 'print_receipt' order.id %}" class="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center action-button shadow-lg">
+                <i class="fas fa-print mr-2"></i> Print Receipt
+            </a>
 
-        {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
-            {% if order.status == 'PENDING' %}
-            <button type="button" onclick="updateOrderStatus('PREPARING')" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg flex items-center">
-                <i class="fas fa-utensils mr-2"></i> Start Preparing
-            </button>
-            {% elif order.status == 'PREPARING' %}
-            <button type="button" onclick="updateOrderStatus('READY')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center">
-                <i class="fas fa-bell mr-2"></i> Mark as Ready
-            </button>
-            {% elif order.status == 'READY' %}
-            <button type="button" onclick="updateOrderStatus('COMPLETED')" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center">
-                <i class="fas fa-check-circle mr-2"></i> Complete Order
-            </button>
+            {% if order.status != 'COMPLETED' and order.status != 'CANCELLED' %}
+                {% if order.status == 'PENDING' %}
+                <button type="button" onclick="updateOrderStatus('PREPARING')" class="px-4 py-3 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg flex items-center action-button shadow-lg">
+                    <i class="fas fa-utensils mr-2"></i> Start Preparing
+                </button>
+                {% elif order.status == 'PREPARING' %}
+                <button type="button" onclick="updateOrderStatus('READY')" class="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center action-button shadow-lg">
+                    <i class="fas fa-bell mr-2"></i> Mark as Ready
+                </button>
+                {% elif order.status == 'READY' %}
+                <button type="button" onclick="updateOrderStatus('COMPLETED')" class="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center action-button shadow-lg">
+                    <i class="fas fa-check-circle mr-2"></i> Complete Order
+                </button>
+                {% endif %}
+
+                <a href="{% url 'cancel_order' order.id %}" class="px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center action-button shadow-lg">
+                    <i class="fas fa-times-circle mr-2"></i> Cancel Order
+                </a>
             {% endif %}
-
-            <button type="button" onclick="updateOrderStatus('CANCELLED')" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center">
-                <i class="fas fa-times-circle mr-2"></i> Cancel Order
-            </button>
-        {% endif %}
+        </div>
     </div>
 
     <!-- Order Details -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Order Information -->
         <div class="lg:col-span-1">
-            <div class="card p-6 space-y-4">
-                <h2 class="text-xl font-bold">Order Information</h2>
+            <div class="card p-6 space-y-4 h-full">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-food-gold"></i> Order Information
+                </h2>
 
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Status:</span>
-                    <span class="px-2 py-1 rounded-full text-xs
-                        {% if order.status == 'PENDING' %}bg-yellow-900 text-yellow-300
-                        {% elif order.status == 'PREPARING' %}bg-blue-900 text-blue-300
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-400 font-medium">Status:</span>
+                    <span class="px-3 py-1 rounded-full text-sm font-medium status-badge
+                        {% if order.status == 'PENDING' %}bg-yellow-900 text-yellow-300 preparing
+                        {% elif order.status == 'PREPARING' %}bg-blue-900 text-blue-300 preparing
                         {% elif order.status == 'READY' %}bg-indigo-900 text-indigo-300
                         {% elif order.status == 'COMPLETED' %}bg-green-900 text-green-300
                         {% elif order.status == 'CANCELLED' %}bg-red-900 text-red-300
                         {% endif %}">
+                        <i class="
+                            {% if order.status == 'PENDING' %}fas fa-clock
+                            {% elif order.status == 'PREPARING' %}fas fa-spinner fa-spin
+                            {% elif order.status == 'READY' %}fas fa-bell
+                            {% elif order.status == 'COMPLETED' %}fas fa-check-circle
+                            {% elif order.status == 'CANCELLED' %}fas fa-times-circle
+                            {% endif %} mr-1"></i>
                         {{ order.get_status_display }}
                     </span>
                 </div>
 
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Order Type:</span>
-                    <span>{{ order.get_order_type_display }}</span>
+                <div class="flex justify-between items-center bg-gray-800 p-3 rounded-lg">
+                    <span class="text-gray-400 font-medium">Order Type:</span>
+                    <span class="font-medium">{{ order.get_order_type_display }}</span>
                 </div>
 
                 {% if order.table_number %}
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Table Number:</span>
-                    <span>{{ order.table_number }}</span>
+                <div class="flex justify-between items-center bg-gray-800 p-3 rounded-lg">
+                    <span class="text-gray-400 font-medium">Table Number:</span>
+                    <span class="font-medium text-food-gold">{{ order.table_number }}</span>
                 </div>
                 {% endif %}
 
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Date:</span>
-                    <span>{{ order.created_at|date:"M d, Y" }}</span>
-                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Date</div>
+                        <div class="font-medium">{{ order.created_at|date:"M d, Y" }}</div>
+                    </div>
 
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Time:</span>
-                    <span>{{ order.created_at|date:"H:i:s" }}</span>
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Time</div>
+                        <div class="font-medium">{{ order.created_at|date:"H:i:s" }}</div>
+                    </div>
                 </div>
 
                 {% if order.completed_at %}
-                <div class="flex justify-between">
-                    <span class="text-gray-400">Completed:</span>
-                    <span>{{ order.completed_at|date:"H:i:s" }}</span>
+                <div class="flex justify-between items-center bg-gray-800 p-3 rounded-lg">
+                    <span class="text-gray-400 font-medium">Completed:</span>
+                    <span class="font-medium text-green-400">{{ order.completed_at|date:"H:i:s" }}</span>
                 </div>
                 {% endif %}
 
-                <div class="border-t border-gray-800 my-2 pt-2">
-                    <h3 class="font-medium mb-2">Customer Information</h3>
+                <div class="border-t border-gray-800 my-4 pt-4">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-user-circle mr-2 text-food-gold"></i> Customer Information
+                    </h3>
 
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Name:</span>
-                        <span>{{ order.customer_name }}</span>
+                    <div class="bg-gray-800 p-3 rounded-lg mb-3">
+                        <div class="text-xs text-gray-500 mb-1">Name</div>
+                        <div class="font-medium">{{ order.customer_name|default:"Not provided" }}</div>
                     </div>
 
                     {% if order.customer_phone %}
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Phone:</span>
-                        <span>{{ order.customer_phone }}</span>
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Phone</div>
+                        <div class="font-medium">{{ order.customer_phone }}</div>
                     </div>
                     {% endif %}
                 </div>
 
                 {% if order.special_instructions %}
-                <div class="border-t border-gray-800 my-2 pt-2">
-                    <h3 class="font-medium mb-2">Special Instructions</h3>
-                    <p class="text-gray-300">{{ order.special_instructions }}</p>
+                <div class="border-t border-gray-800 my-4 pt-4">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-comment-alt mr-2 text-food-gold"></i> Special Instructions
+                    </h3>
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <p class="text-gray-300">{{ order.special_instructions }}</p>
+                    </div>
                 </div>
                 {% endif %}
 
-                <div class="border-t border-gray-800 my-2 pt-2">
-                    <h3 class="font-medium mb-2">Payment Information</h3>
+                <div class="border-t border-gray-800 my-4 pt-4">
+                    <h3 class="font-medium mb-3 flex items-center">
+                        <i class="fas fa-credit-card mr-2 text-food-gold"></i> Payment Information
+                    </h3>
 
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Payment Status:</span>
-                        <span class="{% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'PENDING' %}text-yellow-400{% else %}text-red-400{% endif %}">
-                            {{ order.get_payment_status_display }}
-                        </span>
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Status</div>
+                            <div class="font-medium {% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'PENDING' %}text-yellow-400{% else %}text-red-400{% endif %}">
+                                {{ order.get_payment_status_display }}
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Method</div>
+                            <div class="font-medium">{{ order.get_payment_method_display }}</div>
+                        </div>
                     </div>
 
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Payment Method:</span>
-                        <span>{{ order.get_payment_method_display }}</span>
-                    </div>
-
-                    {% if order.order_type == 'DINE_IN' and order.cash_on_hand > 0 %}
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Cash Received:</span>
-                        <span>{{ order.cash_on_hand|currency }}</span>
-                    </div>
-
-                    {% if order.change_amount > 0 %}
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Change:</span>
-                        <span class="text-green-400">{{ order.change_amount|currency }}</span>
+                    {% if payment and payment.payment_proof %}
+                    <div class="mt-4 bg-gray-800 p-3 rounded-lg">
+                        <p class="text-sm text-gray-400 mb-2">Payment Proof:</p>
+                        <a href="{{ payment.payment_proof.url }}" target="_blank" class="block transition-transform duration-300 hover:scale-105">
+                            <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="max-w-full h-auto rounded-lg border border-gray-700 object-contain shadow-lg" style="max-height: 200px;">
+                        </a>
                     </div>
                     {% endif %}
+
+                    {% if order.order_type == 'DINE_IN' and order.cash_on_hand > 0 %}
+                    <div class="grid grid-cols-2 gap-3 mt-3">
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Cash Received</div>
+                            <div class="font-medium">{{ order.cash_on_hand|currency }}</div>
+                        </div>
+
+                        {% if order.change_amount > 0 %}
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Change</div>
+                            <div class="font-medium text-green-400">{{ order.change_amount|currency }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
 
-                <div class="border-t border-gray-800 my-2 pt-2">
-                    <div class="flex justify-between font-bold text-lg">
-                        <span>Total:</span>
-                        <span>₱{{ order.total_amount }}</span>
+                <div class="border-t border-gray-800 my-4 pt-4">
+                    <div class="bg-food-gold bg-opacity-20 p-4 rounded-lg flex justify-between items-center">
+                        <span class="font-bold text-lg text-white">Total:</span>
+                        <span class="font-bold text-xl text-food-gold">₱{{ order.total_amount }}</span>
                     </div>
                 </div>
             </div>
@@ -276,44 +382,69 @@
 
         <!-- Order Items -->
         <div class="lg:col-span-2">
-            <div class="card p-6">
-                <h2 class="text-xl font-bold mb-4">Order Items</h2>
+            <div class="card p-6 h-full">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-utensils mr-2 text-food-gold"></i> Order Items
+                </h2>
 
                 <div class="overflow-x-auto">
-                    <table class="w-full">
+                    <table class="w-full order-items-table">
                         <thead>
-                            <tr class="text-left text-gray-400 border-b border-gray-800">
-                                <th class="pb-3">Item</th>
+                            <tr class="text-left text-gray-400 border-b border-gray-700">
+                                <th class="pb-3 pl-3">Item</th>
                                 <th class="pb-3">Price</th>
                                 <th class="pb-3">Quantity</th>
-                                <th class="pb-3">Subtotal</th>
+                                <th class="pb-3 pr-3">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for item in order_items %}
-                            <tr class="border-b border-gray-800">
-                                <td class="py-3">
+                            <tr class="border-b border-gray-800 hover:bg-gray-800 transition-colors duration-200">
+                                <td class="py-4 pl-3">
                                     <div>
-                                        <div class="font-medium">{{ item.menu_item.name }}</div>
+                                        <div class="font-medium text-white">{{ item.menu_item.name }}</div>
                                         {% if item.special_instructions %}
-                                        <div class="text-sm text-gray-400">{{ item.special_instructions }}</div>
+                                        <div class="text-sm text-gray-400 mt-1">
+                                            <i class="fas fa-comment-alt text-xs mr-1 text-gray-500"></i> {{ item.special_instructions }}
+                                        </div>
                                         {% endif %}
                                     </div>
                                 </td>
-                                <td class="py-3">{{ item.price|currency }}</td>
-                                <td class="py-3">{{ item.quantity }}</td>
-                                <td class="py-3">{{ item.subtotal|currency }}</td>
+                                <td class="py-4">{{ item.price|currency }}</td>
+                                <td class="py-4">
+                                    <span class="bg-gray-700 px-3 py-1 rounded-full text-sm">{{ item.quantity }}</span>
+                                </td>
+                                <td class="py-4 pr-3 font-medium text-food-gold">{{ item.subtotal|currency }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
-                            <tr class="border-t border-gray-700">
-                                <td colspan="3" class="py-3 text-right font-bold">Total:</td>
-                                <td class="py-3 font-bold">{{ order.total_amount|currency }}</td>
+                            <tr>
+                                <td colspan="3" class="py-4 text-right font-bold text-lg">Total:</td>
+                                <td class="py-4 pr-3 font-bold text-lg text-food-gold">{{ order.total_amount|currency }}</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
+
+                {% if order_items|length > 0 %}
+                <div class="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                    <div class="flex items-center text-gray-400 mb-2">
+                        <i class="fas fa-info-circle mr-2 text-food-gold"></i>
+                        <span class="text-sm">Order Summary</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">Total Items:</span>
+                            <span class="ml-2 font-medium">{{ order_items|length }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">Total Quantity:</span>
+                            <span class="ml-2 font-medium">{{ order_items|sum_attr:'quantity' }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -361,6 +492,12 @@
         // Update the progress bar width
         const progressBar = document.getElementById('animated-progress-bar');
         progressBar.style.width = `${40 + (progressPercentage * 0.4)}%`; // Scale from 40% to 80%
+
+        // Update the progress percentage bar
+        const progressPercentageBar = document.getElementById('progress-percentage-bar');
+        if (progressPercentageBar) {
+            progressPercentageBar.style.width = `${progressPercentage}%`;
+        }
 
         // Update the progress percentage text
         document.getElementById('progress-percentage').textContent = `${progressPercentage}%`;

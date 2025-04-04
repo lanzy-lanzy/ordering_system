@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Sum, Count, Q, F, Avg
+from django.db.models import Sum, Count, Q, F, Avg, DecimalField, Value
+from django.db.models.expressions import ExpressionWrapper, RawSQL
 from django.http import JsonResponse
 from django.contrib.auth.models import User
 from decimal import Decimal
@@ -46,6 +47,9 @@ def manager_dashboard(request):
     today_orders = Order.objects.filter(created_at__date=today).count()
     pending_orders = Order.objects.filter(status__in=['PENDING', 'PROCESSING']).count()
 
+    # Get reservation statistics
+    pending_reservations = Reservation.objects.filter(status='PENDING').count()
+
     # Get inventory alerts
     low_stock_items = MenuItem.objects.filter(
         current_stock__lt=F('stock_alert_threshold'),
@@ -56,6 +60,29 @@ def manager_dashboard(request):
 
     # Get staff statistics
     active_staff = StaffProfile.objects.filter(is_active_staff=True).count()
+
+    # Get cashier sales for today
+    cashier_sales = Order.objects.filter(
+        status='COMPLETED',
+        created_at__date=today,
+        created_by__isnull=False
+    ).values(
+        'created_by__id',
+        'created_by__username',
+        'created_by__first_name',
+        'created_by__last_name'
+    ).annotate(
+        order_count=Count('id'),
+        total_sales=Sum('total_amount')
+    ).order_by('-total_sales')[:5]  # Top 5 cashiers
+
+    # Enrich cashier data
+    for sale in cashier_sales:
+        try:
+            cashier = User.objects.get(id=sale['created_by__id'])
+            sale['full_name'] = cashier.get_full_name() or cashier.username
+        except User.DoesNotExist:
+            sale['full_name'] = f"{sale['created_by__first_name']} {sale['created_by__last_name']}".strip() or sale['created_by__username']
 
     # Get recent activities
     recent_activities = StaffActivity.objects.select_related('staff').order_by('-timestamp')[:10]
@@ -112,9 +139,11 @@ def manager_dashboard(request):
         'month_sales': month_sales,
         'today_orders': today_orders,
         'pending_orders': pending_orders,
+        'pending_reservations': pending_reservations,
         'low_stock_items': low_stock_items,
         'out_of_stock_items': out_of_stock_items,
         'active_staff': active_staff,
+        'cashier_sales': cashier_sales,  # Add cashier sales to context
         'recent_activities': recent_activities,
         'top_items': top_items,
         'chart_labels': chart_labels,
@@ -143,21 +172,47 @@ def sales_report(request):
     if category_id:
         sales_data = sales_data.filter(menu_item__category_id=category_id)
 
-    # Group by menu item
-    item_sales = sales_data.values(
-        'menu_item__id',
-        'menu_item__name',
-        'menu_item__category__name'
-    ).annotate(
-        quantity=Sum('quantity'),
-        revenue=Sum(F('quantity') * F('price')),
-        orders=Count('order', distinct=True),
-        avg_price=Avg('price')
-    ).order_by('-quantity')
+    # Use a simpler approach with two separate queries
+    # First, get the basic aggregations
+    item_sales = []
+
+    # Get unique menu items in the filtered data
+    menu_item_ids = sales_data.values_list('menu_item_id', flat=True).distinct()
+
+    for menu_item_id in menu_item_ids:
+        # Get menu item details
+        menu_item = MenuItem.objects.get(id=menu_item_id)
+
+        # Get order items for this menu item
+        item_orders = sales_data.filter(menu_item_id=menu_item_id)
+
+        # Calculate metrics
+        quantity = item_orders.aggregate(total=Sum('quantity'))['total'] or 0
+        orders_count = item_orders.values('order').distinct().count()
+        avg_price = item_orders.aggregate(avg=Avg('price'))['avg'] or 0
+
+        # Calculate revenue manually
+        revenue = sum(oi.quantity * oi.price for oi in item_orders)
+
+        # Create item dict
+        item = {
+            'menu_item__id': menu_item_id,
+            'menu_item__name': menu_item.name,
+            'menu_item__category__name': menu_item.category.name if menu_item.category else 'No Category',
+            'quantity': quantity,
+            'revenue': revenue,
+            'orders': orders_count,
+            'avg_price': avg_price
+        }
+
+        item_sales.append(item)
+
+    # Sort by quantity
+    item_sales = sorted(item_sales, key=lambda x: x['quantity'], reverse=True)
 
     # Calculate totals
-    total_quantity = sum(item['quantity'] for item in item_sales)
-    total_revenue = sum(item['revenue'] for item in item_sales)
+    total_quantity = sum(item['quantity'] or 0 for item in item_sales)
+    total_revenue = sum(item['revenue'] or 0 for item in item_sales)
 
     # Get categories for filter
     categories = Category.objects.all()
@@ -350,12 +405,17 @@ def performance_metrics(request):
     }
 
     # Get sales by day of week
-    sales_by_day = current_orders.extra(
-        select={'day_of_week': "EXTRACT(DOW FROM created_at)"}
-    ).values('day_of_week').annotate(
-        total=Sum('total_amount'),
-        count=Count('id')
-    ).order_by('day_of_week')
+    # Use annotate with functions that work in SQLite
+    sales_by_day = []
+    for i in range(7):
+        # Filter orders for each day of the week
+        day_orders = current_orders.filter(created_at__week_day=i+1)  # Django uses 1-7 for week_day
+        if day_orders.exists():
+            sales_by_day.append({
+                'day_of_week': i,  # Convert to 0-6 format for our display
+                'total': day_orders.aggregate(total=Sum('total_amount'))['total'] or 0,
+                'count': day_orders.count()
+            })
 
     # Format day of week data
     days_of_week = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -370,12 +430,17 @@ def performance_metrics(request):
         })
 
     # Get sales by hour
-    sales_by_hour = current_orders.extra(
-        select={'hour': "EXTRACT(HOUR FROM created_at)"}
-    ).values('hour').annotate(
-        total=Sum('total_amount'),
-        count=Count('id')
-    ).order_by('hour')
+    # Use a more compatible approach for SQLite
+    sales_by_hour = []
+    for i in range(24):
+        # Filter orders for each hour
+        hour_orders = current_orders.filter(created_at__hour=i)
+        if hour_orders.exists():
+            sales_by_hour.append({
+                'hour': i,
+                'total': hour_orders.aggregate(total=Sum('total_amount'))['total'] or 0,
+                'count': hour_orders.count()
+            })
 
     # Format hour data
     hour_data = []
@@ -504,6 +569,127 @@ def reservations_dashboard(request):
     }
 
     return render(request, 'manager/reservations_dashboard.html', context)
+
+@login_required
+def cashier_sales_report(request):
+    """Sales report filtered by cashier"""
+    # Get date range
+    today = timezone.now().date()
+    date_from = request.GET.get('date_from', (today - datetime.timedelta(days=30)).isoformat())
+    date_to = request.GET.get('date_to', today.isoformat())
+    cashier_id = request.GET.get('cashier', '')
+
+    # Get all cashiers (users with staff profile and CASHIER role)
+    cashiers = User.objects.filter(
+        staff_profile__isnull=False,
+        staff_profile__role='CASHIER',
+        staff_profile__is_active_staff=True
+    ).select_related('staff_profile')
+
+    # Get completed orders within date range
+    orders_query = Order.objects.filter(
+        status='COMPLETED',
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+        created_by__isnull=False
+    )
+
+    # Filter by specific cashier if selected
+    if cashier_id:
+        orders_query = orders_query.filter(created_by_id=cashier_id)
+
+    # Get sales data by cashier
+    cashier_sales = orders_query.values(
+        'created_by__id',
+        'created_by__username',
+        'created_by__first_name',
+        'created_by__last_name'
+    ).annotate(
+        order_count=Count('id'),
+        total_sales=Sum('total_amount'),
+        avg_order_value=Avg('total_amount')
+    ).order_by('-total_sales')
+
+    # Enrich data with additional cashier information
+    for sale in cashier_sales:
+        # Get the cashier user object
+        try:
+            cashier = User.objects.get(id=sale['created_by__id'])
+            sale['full_name'] = cashier.get_full_name() or cashier.username
+            sale['role'] = cashier.staff_profile.get_role_display() if hasattr(cashier, 'staff_profile') else 'Unknown'
+            sale['employee_id'] = cashier.staff_profile.employee_id if hasattr(cashier, 'staff_profile') else ''
+        except User.DoesNotExist:
+            sale['full_name'] = f"{sale['created_by__first_name']} {sale['created_by__last_name']}".strip() or sale['created_by__username']
+            sale['role'] = 'Unknown'
+            sale['employee_id'] = ''
+
+    # Get daily sales data for selected cashier or all cashiers
+    daily_sales = []
+    date_range = []
+    current_date = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
+    end_date = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
+
+    while current_date <= end_date:
+        date_range.append(current_date)
+        current_date += datetime.timedelta(days=1)
+
+    # Get daily sales for chart
+    if cashier_id:
+        # For a specific cashier
+        for day in date_range:
+            day_sales = orders_query.filter(
+                created_by_id=cashier_id,
+                created_at__date=day
+            ).aggregate(
+                total=Sum('total_amount'),
+                count=Count('id')
+            )
+            daily_sales.append({
+                'date': day,
+                'total': day_sales['total'] or 0,
+                'count': day_sales['count'] or 0
+            })
+    else:
+        # For all cashiers combined
+        for day in date_range:
+            day_sales = orders_query.filter(
+                created_at__date=day
+            ).aggregate(
+                total=Sum('total_amount'),
+                count=Count('id')
+            )
+            daily_sales.append({
+                'date': day,
+                'total': day_sales['total'] or 0,
+                'count': day_sales['count'] or 0
+            })
+
+    # Calculate totals
+    total_orders = sum(sale['order_count'] for sale in cashier_sales)
+    total_revenue = sum(sale['total_sales'] or 0 for sale in cashier_sales)
+    avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
+
+    # Format data for charts
+    chart_labels = [day['date'].strftime('%b %d') for day in daily_sales]
+    chart_data = [float(day['total']) for day in daily_sales]
+    order_counts = [day['count'] for day in daily_sales]
+
+    context = {
+        'date_from': date_from,
+        'date_to': date_to,
+        'cashier_id': cashier_id,
+        'cashiers': cashiers,
+        'cashier_sales': cashier_sales,
+        'total_orders': total_orders,
+        'total_revenue': total_revenue,
+        'avg_order_value': avg_order_value,
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
+        'order_counts': order_counts,
+        'active_section': 'cashier_sales_report'
+    }
+
+    return render(request, 'manager/cashier_sales_report.html', context)
 
 def calculate_percentage_change(old_value, new_value):
     """Calculate percentage change between two values"""

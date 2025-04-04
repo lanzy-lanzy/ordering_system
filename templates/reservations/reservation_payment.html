@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reservation Payment - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block content %}
+<section class="py-12 bg-gray-900 min-h-screen">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold mb-8 text-center flex items-center justify-center text-white">
+            <div class="bg-blue-600 p-2 rounded-full mr-3">
+                <img src="/static/images/gcash_logo.png" alt="GCash" class="h-8 object-contain">
+            </div>
+            <span>Reservation Payment</span>
+        </h1>
+
+        <div class="max-w-3xl mx-auto">
+            <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+                <!-- Payment Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-800 p-6 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 -mt-32 -mr-32 rounded-full bg-blue-500 opacity-20"></div>
+                    <div class="absolute bottom-0 left-0 w-40 h-40 -mb-20 -ml-20 rounded-full bg-blue-500 opacity-20"></div>
+                    <div class="relative z-10 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold">Reservation #{{ reservation.id }}</h2>
+                            <p class="text-blue-200">Please complete your payment to confirm your reservation</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-blue-200">Reservation Date</div>
+                            <div class="font-bold">{{ reservation.date|date:"F d, Y" }}</div>
+                            <div class="text-sm text-blue-200 mt-1">Time</div>
+                            <div class="font-bold">{{ reservation.time|time:"g:i A" }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reservation Details -->
+                <div class="p-6 border-b border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4 text-white">Reservation Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-gray-400 text-sm">Guest Name</p>
+                                <p class="font-medium text-white">{{ reservation.name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm">Contact</p>
+                                <p class="font-medium text-white">{{ reservation.phone }}</p>
+                                <p class="text-sm text-gray-500">{{ reservation.email }}</p>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-gray-400 text-sm">Party Size</p>
+                                <p class="font-medium text-white">{{ reservation.party_size }} people</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm">Table</p>
+                                <p class="font-medium text-white">{% if reservation.table_number %}Table {{ reservation.table_number }}{% else %}Not assigned{% endif %}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if reservation.special_requests %}
+                    <div class="mt-4">
+                        <p class="text-gray-400 text-sm">Special Requests</p>
+                        <p class="text-gray-300 bg-gray-700 p-3 rounded-lg mt-1">{{ reservation.special_requests }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Payment Options -->
+                <div class="p-6 border-b border-gray-700 bg-gradient-to-b from-gray-800 to-gray-900">
+                    <div class="flex items-start mb-6">
+                        <div class="bg-blue-600/30 rounded-full p-3 mr-4 shadow-lg shadow-blue-900/20">
+                            <i class="fas fa-info-circle text-blue-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-3 text-white">Payment Options</h3>
+                            <div class="bg-gray-800/50 p-4 rounded-lg border-l-4 border-blue-500">
+                                <p class="text-gray-300 mb-3">Choose your preferred payment option:</p>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-semibold text-white">Full Payment</h4>
+                                            <span class="bg-green-900/50 text-green-400 text-xs px-2 py-1 rounded-full">Recommended</span>
+                                        </div>
+                                        <p class="text-gray-400 text-sm mb-2">Pay the full amount now to secure your reservation.</p>
+                                        <div class="text-xl font-bold text-food-gold">₱{{ reservation.total_amount }}</div>
+                                    </div>
+                                    
+                                    <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                                        <h4 class="font-semibold text-white mb-2">50% Deposit</h4>
+                                        <p class="text-gray-400 text-sm mb-2">Pay 50% now and the rest upon arrival.</p>
+                                        <div class="text-xl font-bold text-food-gold">₱{{ reservation.total_amount|floatformat:2|cut:',0' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Instructions -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div class="flex flex-col justify-center">
+                            <div class="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                                <h3 class="text-lg font-semibold mb-4 text-gray-200 flex items-center">
+                                    <i class="fas fa-qrcode mr-2 text-blue-400"></i> GCash QR Code
+                                </h3>
+                                <div class="flex justify-center mb-4">
+                                    <div class="bg-white p-3 rounded-lg">
+                                        <img src="/static/images/gcash_qr.png" alt="GCash QR Code" class="w-48 h-48 object-contain">
+                                    </div>
+                                </div>
+                                <p class="text-gray-400 text-sm text-center">Scan this QR code with your GCash app to pay</p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col justify-center">
+                            <div class="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-gray-700 shadow-lg">
+                                <h3 class="text-lg font-semibold mb-4 text-gray-200 flex items-center">
+                                    <i class="fas fa-mobile-alt mr-2 text-blue-400"></i> Manual Payment
+                                </h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <p class="text-gray-400 text-sm">Send payment to GCash number:</p>
+                                        <div class="flex items-center justify-center bg-gray-800 p-3 rounded-lg mt-1 border border-gray-700">
+                                            <span class="text-xl font-bold text-white">0917-123-4567</span>
+                                            <button class="ml-2 text-blue-400 hover:text-blue-300 transition-colors" title="Copy number" onclick="navigator.clipboard.writeText('09171234567')">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-400 text-sm">Account Name:</p>
+                                        <div class="bg-gray-800 p-3 rounded-lg mt-1 border border-gray-700 text-center">
+                                            <span class="font-medium text-white">5TH AVENUE GRILL</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-green-900/30 p-4 rounded-lg border border-green-800 mt-6">
+                        <h4 class="font-semibold text-green-400 flex items-center mb-2">
+                            <i class="fas fa-check-circle mr-2"></i> After Payment
+                        </h4>
+                        <p class="text-gray-300 mb-3">Once you've completed the payment in your GCash app, please provide the following:</p>
+                        <ol class="list-decimal list-inside space-y-1 text-gray-300 pl-2">
+                            <li>The reference number from your GCash transaction</li>
+                            <li>A screenshot of your payment confirmation</li>
+                        </ol>
+                        <p class="text-gray-300 mt-3 bg-blue-900/30 p-2 rounded"><i class="fas fa-info-circle mr-2 text-blue-400"></i> After submitting your payment details, our staff will verify and confirm your payment before processing your reservation.</p>
+                        <p class="text-gray-300 mt-3 bg-green-900/30 p-2 rounded"><i class="fas fa-utensils mr-2 text-green-400"></i> Your table reservation (Table {{ reservation.table_number }}) will be confirmed once payment is verified. Please arrive within 30 minutes of your reservation time.</p>
+                    </div>
+
+                    <form method="POST" action="{% url 'reservation_payment' reservation.id %}" enctype="multipart/form-data" class="mt-6">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                        <div class="bg-red-900/50 text-red-300 p-4 rounded-lg mb-6">
+                            {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Payment Type Selection -->
+                        <div class="form-group mb-6">
+                            <label class="block text-white font-medium mb-2">{{ form.payment_type.label }}</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {% for radio in form.payment_type %}
+                                <label class="bg-gray-800 p-4 rounded-lg border border-gray-700 flex items-start cursor-pointer hover:border-blue-500 transition-colors">
+                                    <div class="mr-3 mt-1">{{ radio.tag }}</div>
+                                    <div>
+                                        <div class="font-medium text-white">{{ radio.choice_label }}</div>
+                                        <div class="text-sm text-gray-400">
+                                            {% if radio.choice_value == 'FULL' %}
+                                            Pay the full amount of ₱{{ reservation.total_amount }}
+                                            {% else %}
+                                            Pay 50% deposit of ₱{{ reservation.total_amount|floatformat:2|cut:',0' }}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {% if form.payment_type.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.payment_type.errors.0 }}</p>
+                            {% endif %}
+                            {% if form.payment_type.help_text %}
+                            <p class="text-gray-500 text-xs mt-1">{{ form.payment_type.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Reference Number -->
+                        <div class="form-group mb-6">
+                            <label for="{{ form.reference_number.id_for_label }}" class="block text-white font-medium mb-2">{{ form.reference_number.label }}</label>
+                            {{ form.reference_number }}
+                            {% if form.reference_number.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.reference_number.errors.0 }}</p>
+                            {% endif %}
+                            {% if form.reference_number.help_text %}
+                            <p class="text-gray-500 text-xs mt-1">{{ form.reference_number.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Payment Proof -->
+                        <div class="form-group mb-6">
+                            <label for="{{ form.payment_proof.id_for_label }}" class="block text-white font-medium mb-2">{{ form.payment_proof.label }}</label>
+                            <div class="bg-gray-700 border border-gray-600 rounded-lg p-4">
+                                {{ form.payment_proof }}
+                            </div>
+                            {% if form.payment_proof.errors %}
+                            <p class="text-red-500 text-sm mt-1">{{ form.payment_proof.errors.0 }}</p>
+                            {% endif %}
+                            {% if form.payment_proof.help_text %}
+                            <p class="text-gray-500 text-xs mt-1">{{ form.payment_proof.help_text }}</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-6 flex items-center justify-between">
+                            <a href="{% url 'my_reservations' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
+                                <i class="fas fa-arrow-left mr-1"></i> Cancel Payment
+                            </a>
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-md transition-colors duration-200 text-lg">
+                                <i class="fas fa-check-circle mr-2"></i> Submit Payment Details
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-6 text-center text-gray-500 text-sm">
+                <p>Having trouble with your payment? Contact our support at support@5thavenuegrill.com</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+    .form-group input, .form-group select, .form-group textarea, .form-group input[type="file"] {
+        @apply bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    }
+
+    /* Custom file input styling */
+    input[type="file"] {
+        @apply cursor-pointer;
+    }
+
+    input[type="file"]::file-selector-button {
+        @apply bg-gray-600 border-0 text-white px-4 py-1 mr-4 rounded cursor-pointer;
+    }
+
+    input[type="file"]::file-selector-button:hover {
+        @apply bg-gray-500;
+    }
+
+    textarea {
+        @apply resize-none;
+    }
+</style>
+{% endblock extra_css %}

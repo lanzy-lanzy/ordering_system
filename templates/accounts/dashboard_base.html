@@ -21,7 +21,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Alpine.js -->
-    <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.8.2/dist/alpine.min.js" defer></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 
     <!-- Custom CSS -->
     <style>
@@ -165,239 +171,224 @@
 
     {% block extra_css %}{% endblock extra_css %}
 </head>
-<body class="min-h-screen" x-data="{ sidebarOpen: true, mobileSidebarOpen: false }">
-    <!-- Mobile Menu Toggle -->
-    <div class="fixed top-4 left-4 z-50 md:hidden">
-        <button @click="mobileSidebarOpen = !mobileSidebarOpen" class="bg-gray-800 p-2 rounded-lg text-white focus:outline-none">
-            <i class="fas fa-bars"></i>
-        </button>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900" x-data="{ open: true }">
+  <!-- Sidebar -->
+  <aside class="fixed inset-y-0 left-0 bg-gray-800 text-gray-300 w-64 transform transition-transform duration-150 ease-in lg:translate-x-0"
+         :class="{'translate-x-0': open, '-translate-x-full': !open}">
+    <div class="flex items-center justify-between h-16 px-4 border-b border-gray-700">
+      <div class="flex items-center">
+        <div class="flex items-center space-x-3">
+          <div class="relative">
+            <img src="/static/logo/5th_avenue_logo.jpg" alt="5th Avenue Logo" class="h-8 w-8 rounded-full object-cover border-2 border-primary">
+          </div>
+          <span class="text-xl font-bold text-primary">5th Avenue Admin</span>
+        </div>
+      </div>
+      <button @click="open = !open" class="lg:hidden text-gray-400 hover:text-white">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
     </div>
 
-    <!-- Sidebar -->
-    <aside class="sidebar fixed h-full overflow-y-auto z-40 shadow-lg"
-           :class="{ 'sidebar-collapsed': !sidebarOpen && !$screen('md'), 'open': mobileSidebarOpen }"
-           @click.away="mobileSidebarOpen = false">
+    <nav class="mt-5 px-2">
 
-        <!-- Sidebar Header -->
-        <div class="flex items-center justify-between p-4 border-b border-gray-800">
-            <div class="flex items-center space-x-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
-                <div class="relative">
-                    <i class="fas fa-utensils text-white text-2xl"></i>
-                    <i class="fas fa-fire absolute -top-1 -right-1 text-food-gold text-xs animate-pulse"></i>
-                </div>
-                <div>
-                    <div class="text-xl font-bold text-white">5th Avenue</div>
-                    <div class="text-xs font-medium gold-text-gradient">ADMIN DASHBOARD</div>
-                </div>
-            </div>
-            <button @click="sidebarOpen = !sidebarOpen" class="text-gray-400 hover:text-white focus:outline-none hidden md:block">
-                <i class="fas" :class="sidebarOpen ? 'fa-chevron-left' : 'fa-chevron-right'"></i>
-            </button>
-            <button @click="mobileSidebarOpen = false" class="text-gray-400 hover:text-white focus:outline-none md:hidden">
-                <i class="fas fa-times"></i>
-            </button>
+      <a href="{% url 'admin_dashboard' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'dashboard' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %}">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'dashboard' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+        </svg>
+        Dashboard
+      </a>
+
+      <a href="{% url 'menu_items' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'menu_items' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'menu_items' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+        Menu Items
+      </a>
+
+      <a href="{% url 'categories' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'categories' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'categories' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+        </svg>
+        Categories
+      </a>
+
+      <a href="{% url 'orders' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'orders' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'orders' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+        </svg>
+        Orders
+        {% with pending_orders=pending_orders|default:0 %}
+        {% if pending_orders > 0 %}
+        <span class="ml-auto bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">{{ pending_orders }}</span>
+        {% endif %}
+        {% endwith %}
+      </a>
+
+      <a href="{% url 'reservations' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'reservations' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'reservations' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+        </svg>
+        Reservations
+      </a>
+
+      <a href="{% url 'reviews' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'reviews' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'reviews' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+        </svg>
+        Reviews
+      </a>
+
+      <a href="{% url 'inventory_dashboard' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'inventory' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'inventory' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        Inventory
+      </a>
+
+      <a href="{% url 'admin_sales_report' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'sales' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'sales' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        Sales Reports
+      </a>
+
+      {% if perms.ecommerce.manage_staff %}
+      <a href="{% url 'staff_list' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'staff' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'staff' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        Staff Management
+      </a>
+
+      <a href="{% url 'staff_activity' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'staff_activity' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'staff_activity' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Activity Logs
+      </a>
+            {% endif %}
+
+      {% if perms.ecommerce.manage_customers %}
+      <a href="{% url 'customer_list' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'customers' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'customers' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+        Customer Management
+      </a>
+      {% endif %}
+
+      {% if request.user.staff_profile.role == 'CASHIER' %}
+      <a href="{% url 'cashier_dashboard' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-300 hover:text-white hover:bg-gray-700 mt-1">
+        <svg class="mr-3 h-6 w-6 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+        Cashier Dashboard
+      </a>
+      {% endif %}
+
+      <div class="border-t border-gray-700 my-4"></div>
+
+      <!-- Profile -->
+      {% if request.user.is_staff %}
+      <a href="{% url 'staff_profile' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'profile' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'profile' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+        My Profile
+      </a>
+      {% else %}
+      <a href="{% url 'user_profile' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'profile' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'profile' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+        Profile
+      </a>
+      {% endif %}
+
+      <!-- Settings -->
+      <a href="{% url 'user_settings' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md {% if active_section == 'settings' %}text-white bg-gray-900{% else %}text-gray-300 hover:text-white hover:bg-gray-700{% endif %} mt-1">
+        <svg class="mr-3 h-6 w-6 {% if active_section == 'settings' %}text-white{% else %}text-gray-400 group-hover:text-white{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        Settings
+      </a>
+
+      <!-- Logout -->
+      <a href="{% url 'logout' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-300 hover:text-white hover:bg-gray-700 mt-1">
+        <svg class="mr-3 h-6 w-6 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+        </svg>
+        Logout
+      </a>
+
+      <!-- Back to Website -->
+      <div class="px-2 mt-8">
+        <a href="{% url 'home' %}" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-300 hover:text-white hover:bg-gray-700 mt-1">
+          <svg class="mr-3 h-6 w-6 text-gray-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+          </svg>
+          Back to Website
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="lg:pl-64 flex flex-col flex-1">
+    <!-- Top Navigation -->
+    <div class="sticky top-0 z-10 flex-shrink-0 flex h-16 bg-white dark:bg-gray-800 shadow">
+      <button @click="open = !open" class="px-4 border-r border-gray-200 dark:border-gray-700 text-gray-500 lg:hidden">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+        </svg>
+      </button>
+      <div class="flex-1 px-4 flex justify-between">
+        <div class="flex-1 flex items-center">
+          <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{% block page_title %}Admin Dashboard{% endblock page_title %}</h1>
         </div>
-
-        <!-- Sidebar Navigation -->
-        <nav class="py-4">
-            <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
-                Main
-            </div>
-
-            <!-- Dashboard Link -->
-            <a href="{% url 'dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'dashboard' %}active{% endif %}">
-                <i class="fas fa-tachometer-alt w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Dashboard</span>
-            </a>
-
-            <!-- Menu Management -->
-            <a href="{% url 'menu_items' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'menu_items' %}active{% endif %}">
-                <i class="fas fa-utensils w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Menu Items</span>
-            </a>
-
-            <!-- Categories -->
-            <a href="{% url 'categories' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'categories' %}active{% endif %}">
-                <i class="fas fa-list w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Categories</span>
-            </a>
-
-            <!-- Orders -->
-            <a href="{% url 'orders' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'orders' %}active{% endif %}">
-                <i class="fas fa-shopping-bag w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Orders</span>
-                {% with pending_orders=pending_orders|default:0 %}
-                {% if pending_orders > 0 %}
-                <span class="ml-auto bg-food-red text-white text-xs font-bold px-2 py-1 rounded-full" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">{{ pending_orders }}</span>
-                {% endif %}
-                {% endwith %}
-            </a>
-
-            <!-- Reservations -->
-            <a href="{% url 'reservations' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'reservations' %}active{% endif %}">
-                <i class="fas fa-calendar-alt w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Reservations</span>
-            </a>
-
-            <!-- Reviews -->
-            <a href="{% url 'reviews' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'reviews' %}active{% endif %}">
-                <i class="fas fa-star w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Reviews</span>
-            </a>
-
-            <!-- Inventory -->
-            <a href="{% url 'inventory_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'inventory' %}active{% endif %}">
-                <i class="fas fa-boxes w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Inventory</span>
-            </a>
-
-            <!-- Sales Analysis -->
-            <a href="{% url 'sales_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'sales' %}active{% endif %}">
-                <i class="fas fa-chart-line w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Sales Analysis</span>
-            </a>
-
-            {% if perms.ecommerce.manage_staff %}
-            <!-- Staff Management -->
-            <a href="{% url 'staff_list' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'staff' %}active{% endif %}">
-                <i class="fas fa-users w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Staff Management</span>
-            </a>
-
-            <!-- Staff Activity -->
-            <a href="{% url 'staff_activity' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'staff_activity' %}active{% endif %}">
-                <i class="fas fa-history w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Activity Logs</span>
-            </a>
-            {% endif %}
-
-            {% if perms.ecommerce.manage_customers %}
-            <!-- Customer Management -->
-            <a href="{% url 'customer_list' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'customers' %}active{% endif %}">
-                <i class="fas fa-user-friends w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Customer Management</span>
-            </a>
-            {% endif %}
-
-            {% if request.user.staff_profile.role == 'CASHIER' %}
-            <!-- Cashier Dashboard -->
-            <a href="{% url 'cashier_dashboard' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
-                <i class="fas fa-cash-register w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Cashier Dashboard</span>
-            </a>
-            {% endif %}
-
-            <div class="border-t border-gray-800 my-4"></div>
-
-            <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
-                Settings
-            </div>
-
-            <!-- Profile -->
-            {% if request.user.is_staff %}
-            <a href="{% url 'staff_profile' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'profile' %}active{% endif %}">
-                <i class="fas fa-user w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">My Profile</span>
-            </a>
-            {% else %}
-            <a href="{% url 'user_profile' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'profile' %}active{% endif %}">
-                <i class="fas fa-user w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Profile</span>
-            </a>
-            {% endif %}
-
-            <!-- Settings -->
-            <a href="{% url 'user_settings' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white {% if active_section == 'settings' %}active{% endif %}">
-                <i class="fas fa-cog w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Settings</span>
-            </a>
-
-            <!-- Logout -->
-            <a href="{% url 'logout' %}" class="nav-link flex items-center py-3 px-4 text-gray-300 hover:text-white">
-                <i class="fas fa-sign-out-alt w-6 text-center"></i>
-                <span class="ml-3" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">Logout</span>
-            </a>
-
-            <!-- Back to Website -->
-            <div class="px-4 mt-8" :class="{ 'hidden': !sidebarOpen && !$screen('md') }">
-                <a href="{% url 'home' %}" class="flex items-center justify-center py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition duration-300">
-                    <i class="fas fa-globe mr-2"></i>
-                    Back to Website
-                </a>
-            </div>
-        </nav>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="main-content min-h-screen py-6 px-4 md:px-8" :class="{ 'main-content-expanded': !sidebarOpen && !$screen('md') }">
-        <!-- Page Header -->
-        <div class="flex justify-between items-center mb-8">
+        <div class="ml-4 flex items-center md:ml-6">
+          <!-- Profile dropdown -->
+          <div class="ml-3 relative" x-data="{ open: false }">
             <div>
-                <h1 class="text-2xl font-bold">{% block page_title %}Dashboard{% endblock page_title %}</h1>
-                <p class="text-gray-400">{% block page_subtitle %}Welcome to your restaurant management dashboard{% endblock page_subtitle %}</p>
+              <button @click="open = !open" class="max-w-xs bg-gray-800 rounded-full flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white" id="user-menu-button">
+                <span class="sr-only">Open user menu</span>
+                <img class="h-8 w-8 rounded-full" src="{% if request.user.staff_profile.profile_picture %}{{ request.user.staff_profile.profile_picture.url }}{% else %}/static/img/default-avatar.png{% endif %}" alt="">
+              </button>
             </div>
-
-            <!-- User Menu -->
-            <div class="relative" x-data="{ userMenuOpen: false }">
-                <button @click="userMenuOpen = !userMenuOpen" class="flex items-center space-x-3 focus:outline-none">
-                    {% if request.user.staff_profile.profile_picture %}
-                    <img src="{{ request.user.staff_profile.profile_picture.url }}" alt="Profile Picture" class="w-10 h-10 rounded-full object-cover">
-                    {% else %}
-                    <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                        <i class="fas fa-user text-gray-300"></i>
-                    </div>
-                    {% endif %}
-                    <div class="hidden md:block text-right">
-                        <div class="text-sm font-medium">{{ request.user.get_full_name|default:request.user.username }}</div>
-                        <div class="text-xs text-gray-400">{{ request.user.staff_profile.get_role_display }}</div>
-                    </div>
-                    <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
-                </button>
-
-                <div x-show="userMenuOpen" @click.away="userMenuOpen = false" class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-2 z-50">
-                    <a href="{% url 'staff_profile' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-user mr-2"></i> Profile
-                    </a>
-                    <a href="{% url 'user_settings' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-cog mr-2"></i> Settings
-                    </a>
-                    <div class="border-t border-gray-700 my-1"></div>
-                    <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white">
-                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                    </a>
-                </div>
+            <div x-show="open" @click.away="open = false" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white dark:bg-gray-700 ring-1 ring-black ring-opacity-5 focus:outline-none" role="menu">
+              <a href="{% url 'staff_profile' %}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">Your Profile</a>
+              <a href="{% url 'change_password' %}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">Change Password</a>
+              <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600" role="menuitem">Sign out</a>
             </div>
+          </div>
         </div>
-
-        <!-- Main Content Area -->
-        {% block content %}{% endblock content %}
-    </main>
-
-    <!-- Notification Toast -->
-    {% if messages %}
-    <div class="fixed bottom-4 right-4 z-50">
-        {% for message in messages %}
-        <div class="mb-3 p-4 rounded-lg shadow-lg {% if message.tags == 'error' %}bg-red-900 text-white{% elif message.tags == 'success' %}bg-green-900 text-white{% else %}bg-gray-800 text-white{% endif %} flex items-center justify-between"
-             x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)">
-            <div class="flex items-center">
-                {% if message.tags == 'error' %}
-                <i class="fas fa-exclamation-circle mr-3 text-red-300"></i>
-                {% elif message.tags == 'success' %}
-                <i class="fas fa-check-circle mr-3 text-green-300"></i>
-                {% else %}
-                <i class="fas fa-info-circle mr-3 text-blue-300"></i>
-                {% endif %}
-                <span>{{ message }}</span>
-            </div>
-            <button @click="show = false" class="ml-4 text-gray-400 hover:text-white focus:outline-none">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        {% endfor %}
+      </div>
     </div>
-    {% endif %}
 
-    <!-- Scripts -->
-    {% block extra_scripts %}{% endblock extra_scripts %}
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
+      <div class="mb-6 no-print">
+        <p class="text-gray-400">{% block page_subtitle %}Manage restaurant operations and performance{% endblock page_subtitle %}</p>
+      </div>
+      <div class="w-full overflow-x-hidden">
+        {% block content %}{% endblock content %}
+      </div>
+    </main>
+  </div>
+
+<!-- Footer -->
+<footer class="bg-gray-900 text-gray-400 py-4 text-center text-sm no-print">
+    <div class="container mx-auto px-4">
+        <p>&copy; {% now "Y" %} 5th Avenue Grill and Restobar. All rights reserved.</p>
+    </div>
+</footer>
+
+<!-- Django Messages -->
+{% include 'components/messages/messages.html' %}
+
+{% block extra_scripts %}{% endblock extra_scripts %}
 </body>
 </html>

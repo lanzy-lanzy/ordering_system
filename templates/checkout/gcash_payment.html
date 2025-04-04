@@ -23,13 +23,16 @@
                         <div>
                             <h2 class="text-2xl font-bold">Order #{{ order.id }}</h2>
                             <p class="text-blue-200">Please complete your payment to confirm your order</p>
+                            {% if order.order_type == 'DINE_IN' %}
+                            <p class="text-blue-200 text-xs mt-1"><i class="fas fa-chair mr-1"></i> Table {{ order.table_number }} has been temporarily reserved for you</p>
+                            {% endif %}
                             <div class="mt-2 text-xs bg-blue-700/50 inline-block px-2 py-1 rounded-full">
                                 <i class="fas fa-clock mr-1"></i> Awaiting Payment
                             </div>
                         </div>
                         <div class="text-right bg-blue-700/30 p-4 rounded-lg shadow-inner">
                             <div class="text-sm text-blue-200 mb-1">Total Amount</div>
-                            <div class="text-2xl font-bold">${{ order.grand_total|floatformat:2 }}</div>
+                            <div class="text-2xl font-bold">₱{{ order.grand_total|floatformat:2 }}</div>
                         </div>
                     </div>
                 </div>
@@ -54,7 +57,7 @@
                                     </li>
                                     <li class="flex items-start">
                                         <span class="bg-blue-600/20 text-blue-400 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">3</span>
-                                        <span>Enter the exact amount: <span class="font-bold text-white bg-blue-900/50 px-2 py-0.5 rounded">${{ order.grand_total|floatformat:2 }}</span></span>
+                                        <span>Enter the exact amount: <span class="font-bold text-white bg-blue-900/50 px-2 py-0.5 rounded">₱{{ order.grand_total|floatformat:2 }}</span></span>
                                     </li>
                                     <li class="flex items-start">
                                         <span class="bg-blue-600/20 text-blue-400 rounded-full w-6 h-6 flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">4</span>
@@ -96,7 +99,7 @@
                             </div>
                             <div class="text-center bg-blue-900/30 p-3 rounded-lg">
                                 <p class="text-gray-300 mb-1">Amount to pay:</p>
-                                <p class="text-2xl font-bold text-white">${{ payment.amount|floatformat:2 }}</p>
+                                <p class="text-2xl font-bold text-white">₱{{ payment.amount|floatformat:2 }}</p>
                             </div>
                         </div>
 
@@ -145,6 +148,9 @@
                             <li>A screenshot of your payment confirmation</li>
                         </ol>
                         <p class="text-gray-300 mt-3 bg-blue-900/30 p-2 rounded"><i class="fas fa-info-circle mr-2 text-blue-400"></i> After submitting your payment details, our cashier will verify and confirm your payment before processing your order.</p>
+                        {% if order.order_type == 'DINE_IN' %}
+                        <p class="text-gray-300 mt-3 bg-green-900/30 p-2 rounded"><i class="fas fa-utensils mr-2 text-green-400"></i> Your table reservation (Table {{ order.table_number }}) will be confirmed once payment is verified. Please arrive within 30 minutes of payment confirmation.</p>
+                        {% endif %}
                     </div>
 
                     <form method="POST" action="{% url 'gcash_payment' order.id %}" enctype="multipart/form-data">

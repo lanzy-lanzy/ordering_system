@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from .models import CustomerProfile, Order, Payment, Reservation
+from .models import CustomerProfile, Order, Payment, Reservation, ReservationPayment
 from django.utils import timezone
 
 class RegistrationForm(UserCreationForm):
@@ -48,12 +48,35 @@ class CheckoutForm(forms.ModelForm):
     last_name = forms.CharField(max_length=100, required=True, widget=forms.HiddenInput())
     email = forms.EmailField(required=True, widget=forms.HiddenInput())
     phone = forms.CharField(max_length=20, required=True, widget=forms.HiddenInput())
-    special_instructions = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=False,
-                                         help_text="Add any special instructions for your order here.")
+    order_type = forms.ChoiceField(
+        choices=Order.ORDER_TYPE_CHOICES,
+        initial='PICKUP',
+        required=True,
+        widget=forms.RadioSelect(),
+        help_text="Select how you'd like to receive your order"
+    )
+    table_number = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.HiddenInput(),
+        help_text="Table number for dine-in orders"
+    )
+    number_of_guests = forms.IntegerField(
+        min_value=1,
+        max_value=20,
+        initial=2,
+        required=False,
+        help_text="Number of guests for dine-in orders"
+    )
+    special_instructions = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3}),
+        required=False,
+        help_text="Add any special instructions for your order here."
+    )
 
     class Meta:
         model = Order
-        fields = ('special_instructions',)
+        fields = ('order_type', 'table_number', 'number_of_guests', 'special_instructions')
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
@@ -61,7 +84,7 @@ class CheckoutForm(forms.ModelForm):
 
         # Set payment method to GCash by default
         self.instance.payment_method = 'GCASH'
-        # Set order type to PICKUP by default
+        # Set order type to PICKUP by default (can be changed by user)
         self.instance.order_type = 'PICKUP'
 
         # Pre-fill form with user data if available
@@ -83,6 +106,34 @@ class GCashPaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
         fields = ('reference_number', 'payment_proof')
+
+
+class ReservationPaymentForm(forms.ModelForm):
+    """Form for reservation payment"""
+    PAYMENT_TYPE_CHOICES = [
+        ('FULL', 'Full Payment'),
+        ('DEPOSIT', 'Deposit (50%)')
+    ]
+
+    payment_type = forms.ChoiceField(
+        choices=PAYMENT_TYPE_CHOICES,
+        widget=forms.RadioSelect,
+        initial='DEPOSIT',
+        help_text="Choose whether to pay the full amount or a 50% deposit"
+    )
+    reference_number = forms.CharField(
+        max_length=100,
+        required=True,
+        help_text="Enter the GCash reference number from your transaction"
+    )
+    payment_proof = forms.ImageField(
+        required=True,
+        help_text="Upload a screenshot of your GCash payment confirmation"
+    )
+
+    class Meta:
+        model = ReservationPayment
+        fields = ('payment_type', 'reference_number', 'payment_proof')
 
 
 class ReservationForm(forms.ModelForm):

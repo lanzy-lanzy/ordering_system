@@ -27,3 +27,16 @@ def currency(value):
 def split(value, arg):
     """Split a string by a delimiter"""
     return value.split(arg)
+
+@register.filter
+def sum_attr(items, attr):
+    """Sum a specific attribute across a list of dictionaries"""
+    try:
+        return sum(float(item[attr]) if item[attr] is not None else 0 for item in items)
+    except (KeyError, TypeError, ValueError):
+        return 0
+
+@register.filter
+def js(value):
+    """Pass through filter for JavaScript code"""
+    return value

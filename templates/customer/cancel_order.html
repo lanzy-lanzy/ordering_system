@@ -1,0 +1,106 @@
+{% extends 'accounts/customer_base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}Cancel Order - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="bg-gray-800 rounded-lg p-6">
+        <h1 class="text-2xl font-bold mb-4">Cancel Order</h1>
+        
+        <!-- Order Information -->
+        <div class="bg-gray-700 rounded-lg p-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <div class="space-y-2">
+                        <div>
+                            <p class="text-sm text-gray-400">Order Number</p>
+                            <p class="font-medium">#{{ order.id }}</p>
+                        </div>
+                        
+                        <div>
+                            <p class="text-sm text-gray-400">Order Date</p>
+                            <p class="font-medium">{{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"g:i A" }}</p>
+                        </div>
+                        
+                        <div>
+                            <p class="text-sm text-gray-400">Order Type</p>
+                            <p class="font-medium">{{ order.get_order_type_display }}</p>
+                        </div>
+                        
+                        {% if order.order_type == 'DINE_IN' and order.table_number %}
+                        <div>
+                            <p class="text-sm text-gray-400">Table Number</p>
+                            <p class="font-medium">{{ order.table_number }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="space-y-2">
+                        <div>
+                            <p class="text-sm text-gray-400">Order Status</p>
+                            <p class="font-medium">{{ order.get_status_display }}</p>
+                        </div>
+                        
+                        <div>
+                            <p class="text-sm text-gray-400">Payment Status</p>
+                            <p class="font-medium">{{ order.get_payment_status_display }}</p>
+                        </div>
+                        
+                        <div>
+                            <p class="text-sm text-gray-400">Total Amount</p>
+                            <p class="font-medium text-xl">{{ order.total_amount|currency }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cancellation Form -->
+        <form method="POST" action="{% url 'customer_cancel_order' order.id %}">
+            {% csrf_token %}
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="cancellation_reason" class="block text-sm font-medium text-gray-400 mb-1">Reason for Cancellation</label>
+                    <select id="cancellation_reason" name="cancellation_reason" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
+                        {% for value, label in cancellation_reasons %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="cancellation_notes" class="block text-sm font-medium text-gray-400 mb-1">Additional Notes</label>
+                    <textarea id="cancellation_notes" name="cancellation_notes" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-food-gold" placeholder="Please provide any additional details about your cancellation..."></textarea>
+                </div>
+                
+                {% if order.payment_status == 'PAID' %}
+                <div class="bg-yellow-900/50 text-yellow-300 p-4 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle mt-1 mr-3"></i>
+                        <div>
+                            <p class="font-medium">This order has already been paid</p>
+                            <p class="text-sm mt-1">Cancelling this order will initiate a refund process for the amount of {{ order.total_amount|currency }}.</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 mt-6">
+                    <a href="{% url 'my_orders' %}" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 text-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Back to Orders
+                    </a>
+                    
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-md transition-colors duration-200">
+                        <i class="fas fa-times-circle mr-2"></i> Cancel Order
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

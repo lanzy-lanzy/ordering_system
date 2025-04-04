@@ -51,15 +51,7 @@
         {% endfor %}
     </div>
 
-    {% if messages %}
-    <div class="mb-4">
-        {% for message in messages %}
-        <div class="p-4 rounded-lg {% if message.tags == 'success' %}bg-green-900 text-green-200{% elif message.tags == 'error' %}bg-red-900 text-red-200{% else %}bg-yellow-900 text-yellow-200{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
+
 
     <!-- Reservations List -->
     <div class="card p-6 shadow-lg border border-gray-800">

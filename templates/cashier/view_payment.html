@@ -90,9 +90,9 @@
         <div class="card p-6">
             <h3 class="text-lg font-semibold mb-4">Payment Screenshot</h3>
 
-            <div class="bg-gray-800 rounded-lg overflow-hidden">
+            <div class="bg-gray-800 rounded-lg overflow-hidden" style="min-height: 200px;">
                 {% if payment.payment_proof %}
-                <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="w-full h-auto">
+                <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="w-full h-auto object-contain max-h-96" onerror="this.onerror=null; this.src='/static/images/no-image.png'; this.alt='Image not available';">
                 {% else %}
                 <div class="p-8 text-center">
                     <i class="fas fa-image text-4xl text-gray-600 mb-2"></i>

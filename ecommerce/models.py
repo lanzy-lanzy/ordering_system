@@ -98,6 +98,13 @@ class Reservation(models.Model):
         ('CANCELLED', 'Cancelled')
     ]
 
+    PAYMENT_STATUS_CHOICES = [
+        ('UNPAID', 'Unpaid'),
+        ('PARTIALLY_PAID', 'Partially Paid'),
+        ('PAID', 'Paid'),
+        ('REFUNDED', 'Refunded')
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservations', null=True, blank=True)
     name = models.CharField(max_length=100)
     email = models.EmailField()
@@ -108,12 +115,22 @@ class Reservation(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(20)],
         help_text="Number of guests"
     )
+    table_number = models.CharField(max_length=10, blank=True, null=True)
     special_requests = models.TextField(blank=True)
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
         default='PENDING'
     )
+    payment_status = models.CharField(
+        max_length=15,
+        choices=PAYMENT_STATUS_CHOICES,
+        default='UNPAID'
+    )
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    is_processed = models.BooleanField(default=False, help_text="Whether the reservation has been processed by a cashier")
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='processed_reservations', null=True, blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -140,6 +157,15 @@ class Order(models.Model):
         ('READY', 'Ready for Pickup'),
         ('COMPLETED', 'Completed'),
         ('CANCELLED', 'Cancelled')
+    ]
+
+    CANCELLATION_REASON_CHOICES = [
+        ('CUSTOMER_REQUEST', 'Customer Request'),
+        ('PAYMENT_ISSUE', 'Payment Issue'),
+        ('OUT_OF_STOCK', 'Items Out of Stock'),
+        ('STORE_CLOSED', 'Store Closed'),
+        ('DUPLICATE_ORDER', 'Duplicate Order'),
+        ('OTHER', 'Other Reason')
     ]
 
     ORDER_TYPE_CHOICES = [
@@ -195,6 +221,9 @@ class Order(models.Model):
     ready_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancellation_reason = models.CharField(max_length=50, choices=CANCELLATION_REASON_CHOICES, blank=True, null=True)
+    cancellation_notes = models.TextField(blank=True, null=True)
+    cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_orders')
 
     class Meta:
         ordering = ['-created_at']
@@ -233,7 +262,7 @@ class Payment(models.Model):
         ordering = ['-payment_date']
 
     def __str__(self):
-        return f"Payment of ${self.amount} for Order #{self.order.id} via {self.get_payment_method_display()}"
+        return f"Payment of ₱{self.amount} for Order #{self.order.id} via {self.get_payment_method_display()}"
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -242,6 +271,79 @@ class Payment(models.Model):
         if self.status == 'COMPLETED' and self.order.payment_status != 'PAID':
             self.order.payment_status = 'PAID'
             self.order.save(update_fields=['payment_status'])
+
+
+class Refund(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('PROCESSED', 'Processed'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='refunds')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reason = models.CharField(max_length=255)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    notes = models.TextField(blank=True)
+    initiated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='initiated_refunds')
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_refunds')
+    created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Refund of ₱{self.amount} for Order #{self.order.id}"
+
+
+class ReservationPayment(models.Model):
+    PAYMENT_TYPE_CHOICES = [
+        ('FULL', 'Full Payment'),
+        ('DEPOSIT', 'Deposit (50%)')
+    ]
+
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
+        ('REFUNDED', 'Refunded'),
+    ]
+
+    reservation = models.ForeignKey(Reservation, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='DEPOSIT')
+    payment_method = models.CharField(max_length=20, choices=Order.PAYMENT_METHOD_CHOICES, default='GCASH')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reference_number = models.CharField(max_length=100, blank=True, null=True)
+    payment_proof = models.ImageField(upload_to='reservation_payment_proofs/', blank=True, null=True)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_reservation_payments')
+    verification_date = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-payment_date']
+
+    def __str__(self):
+        return f"Payment of ₱{self.amount} for Reservation #{self.reservation.id} via {self.get_payment_method_display()}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        # Update reservation payment status if this payment is completed
+        if self.status == 'COMPLETED':
+            reservation = self.reservation
+            total_paid = ReservationPayment.objects.filter(
+                reservation=reservation,
+                status='COMPLETED'
+            ).aggregate(total=models.Sum('amount'))['total'] or 0
+
+            if total_paid >= reservation.total_amount:
+                reservation.payment_status = 'PAID'
+            elif total_paid > 0:
+                reservation.payment_status = 'PARTIALLY_PAID'
+            else:
+                reservation.payment_status = 'UNPAID'
+
+            reservation.save(update_fields=['payment_status'])
 
 
 class OrderItem(models.Model):

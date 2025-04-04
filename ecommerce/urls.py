@@ -6,7 +6,8 @@ from .views import (
     orders_list, reservations_list, reviews_list, user_settings,
     edit_menu_item, delete_menu_item, edit_category, delete_category,
     customer_dashboard, my_orders, my_reviews, profile, change_password,
-    make_reservation, my_reservations, cancel_reservation, update_reservation_status
+    make_reservation, reservation_payment, my_reservations, cancel_reservation, update_reservation_status,
+    customer_cancel_order, view_customer_order
 )
 from .admin import admin_dashboard
 from .inventory import (
@@ -20,11 +21,14 @@ from .staff import (
 from .cashier import (
     cashier_dashboard, new_order, view_order, update_order_status, update_prep_time,
     orders_list as cashier_orders_list, print_receipt, print_multiple_receipts,
-    pending_payments, view_payment, verify_payment, reject_payment, record_payment
+    pending_payments, view_payment, verify_payment, reject_payment, record_payment,
+    cancel_order, reservations_list as cashier_reservations_list, process_reservation,
+    pending_reservation_payments, view_reservation_payment, verify_reservation_payment, reject_reservation_payment
 )
 from .manager import (
     manager_dashboard, sales_report, inventory_overview,
-    staff_overview, performance_metrics, reservations_dashboard
+    staff_overview, performance_metrics, reservations_dashboard,
+    cashier_sales_report
 )
 from .customer_management import (
     customer_list, customer_detail, blacklist_customer, unblacklist_customer
@@ -51,6 +55,8 @@ urlpatterns = [
     path('dashboard/', user_dashboard, name='dashboard'),
     path('customer/dashboard/', customer_dashboard, name='customer_dashboard'),
     path('customer/orders/', my_orders, name='my_orders'),
+    path('customer/orders/<int:order_id>/', view_customer_order, name='view_customer_order'),
+    path('customer/orders/<int:order_id>/cancel/', customer_cancel_order, name='customer_cancel_order'),
     path('customer/reviews/', my_reviews, name='my_reviews'),
     path('customer/profile/', profile, name='profile'),
     path('customer/change-password/', change_password, name='change_password'),
@@ -75,6 +81,7 @@ urlpatterns = [
 
     # Customer Reservations
     path('reservations/', make_reservation, name='make_reservation'),
+    path('reservations/<int:reservation_id>/payment/', reservation_payment, name='reservation_payment'),
     path('customer/reservations/', my_reservations, name='my_reservations'),
     path('customer/reservations/<int:reservation_id>/cancel/', cancel_reservation, name='cancel_reservation'),
 
@@ -121,6 +128,17 @@ urlpatterns = [
     path('cashier/order/<int:order_id>/receipt/', print_receipt, name='print_receipt'),
     path('cashier/print-multiple-receipts/', print_multiple_receipts, name='print_multiple_receipts'),
     path('cashier/order/<int:order_id>/payment/', record_payment, name='record_payment'),
+    path('cashier/order/<int:order_id>/cancel/', cancel_order, name='cancel_order'),
+
+    # Cashier Reservation Management
+    path('cashier/reservations/', cashier_reservations_list, name='cashier_reservations_list'),
+    path('cashier/reservations/<int:reservation_id>/process/', process_reservation, name='process_reservation'),
+
+    # Cashier Reservation Payment Management
+    path('cashier/reservation-payments/', pending_reservation_payments, name='pending_reservation_payments'),
+    path('cashier/reservation-payments/<int:payment_id>/', view_reservation_payment, name='view_reservation_payment'),
+    path('cashier/reservation-payments/<int:payment_id>/verify/', verify_reservation_payment, name='verify_reservation_payment'),
+    path('cashier/reservation-payments/<int:payment_id>/reject/', reject_reservation_payment, name='reject_reservation_payment'),
 
     # Payment Management
     path('cashier/payments/', pending_payments, name='pending_payments'),
@@ -135,4 +153,5 @@ urlpatterns = [
     path('manager/staff-overview/', staff_overview, name='staff_overview'),
     path('manager/performance-metrics/', performance_metrics, name='performance_metrics'),
     path('manager/reservations/', reservations_dashboard, name='reservations_dashboard'),
+    path('manager/cashier-sales/', cashier_sales_report, name='cashier_sales_report'),
 ]

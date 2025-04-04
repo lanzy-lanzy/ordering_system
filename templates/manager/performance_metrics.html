@@ -1,0 +1,362 @@
+{% extends 'manager/base.html' %}
+{% load math_filters custom_filters %}
+
+{% block title %}Performance Metrics - 5th Avenue Grill and Restobar{% endblock title %}
+
+{% block page_title %}Performance Metrics{% endblock page_title %}
+{% block page_subtitle %}Advanced analytics and key performance indicators{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Date Range Filter -->
+    <div class="card p-6">
+        <h3 class="text-lg font-semibold mb-4">Select Date Range</h3>
+        <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-400 mb-2">From</label>
+                <input type="date" name="date_from" id="date_from" value="{{ date_from }}"
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-400 mb-2">To</label>
+                <input type="date" name="date_to" id="date_to" value="{{ date_to }}"
+                       class="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-food-gold">
+            </div>
+
+            <button type="submit" class="px-4 py-2 bg-food-gold hover:bg-food-gold-light text-white rounded-lg transition duration-200">
+                Apply
+            </button>
+
+            <a href="{% url 'performance_metrics' %}" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition duration-200">
+                Reset
+            </a>
+        </form>
+    </div>
+
+    <!-- Performance Summary -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Performance Summary</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="stat-card p-6 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Sales</h3>
+                        <p class="text-2xl font-bold mt-1 text-green-400">₱{{ current_metrics.total_sales|floatformat:2 }}</p>
+                        <div class="flex items-center mt-2">
+                            <span class="text-sm {% if changes.sales_change > 0 %}text-green-400{% elif changes.sales_change < 0 %}text-red-400{% else %}text-gray-400{% endif %}">
+                                {% if changes.sales_change > 0 %}
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                {% elif changes.sales_change < 0 %}
+                                <i class="fas fa-arrow-down mr-1"></i>
+                                {% endif %}
+                                {{ changes.sales_change|floatformat:1 }}%
+                            </span>
+                            <span class="text-xs text-gray-500 ml-2">vs previous period</span>
+                        </div>
+                    </div>
+                    <div class="bg-green-900 p-3 rounded-full">
+                        <i class="fas fa-money-bill-wave text-green-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card p-6 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Total Orders</h3>
+                        <p class="text-2xl font-bold mt-1 text-blue-400">{{ current_metrics.order_count }}</p>
+                        <div class="flex items-center mt-2">
+                            <span class="text-sm {% if changes.order_change > 0 %}text-green-400{% elif changes.order_change < 0 %}text-red-400{% else %}text-gray-400{% endif %}">
+                                {% if changes.order_change > 0 %}
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                {% elif changes.order_change < 0 %}
+                                <i class="fas fa-arrow-down mr-1"></i>
+                                {% endif %}
+                                {{ changes.order_change|floatformat:1 }}%
+                            </span>
+                            <span class="text-xs text-gray-500 ml-2">vs previous period</span>
+                        </div>
+                    </div>
+                    <div class="bg-blue-900 p-3 rounded-full">
+                        <i class="fas fa-shopping-cart text-blue-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card p-6 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-gray-400 text-sm font-medium">Average Order Value</h3>
+                        <p class="text-2xl font-bold mt-1 text-food-gold">₱{{ current_metrics.avg_order_value|floatformat:2 }}</p>
+                        <div class="flex items-center mt-2">
+                            <span class="text-sm {% if changes.aov_change > 0 %}text-green-400{% elif changes.aov_change < 0 %}text-red-400{% else %}text-gray-400{% endif %}">
+                                {% if changes.aov_change > 0 %}
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                {% elif changes.aov_change < 0 %}
+                                <i class="fas fa-arrow-down mr-1"></i>
+                                {% endif %}
+                                {{ changes.aov_change|floatformat:1 }}%
+                            </span>
+                            <span class="text-xs text-gray-500 ml-2">vs previous period</span>
+                        </div>
+                    </div>
+                    <div class="bg-food-gold bg-opacity-20 p-3 rounded-full">
+                        <i class="fas fa-tag text-food-gold text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales by Day of Week -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales by Day of Week</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="h-80">
+                <canvas id="dayOfWeekChart"></canvas>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Day</th>
+                            <th class="pb-3">Orders</th>
+                            <th class="pb-3">Sales</th>
+                            <th class="pb-3">Avg. Order Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in day_data %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">{{ day.name }}</td>
+                            <td class="py-3">{{ day.count }}</td>
+                            <td class="py-3">₱{{ day.total|floatformat:2 }}</td>
+                            <td class="py-3">
+                                {% if day.count > 0 %}
+                                ₱{{ day.total|div:day.count|floatformat:2 }}
+                                {% else %}
+                                ₱0.00
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales by Hour -->
+    <div class="card p-6">
+        <h2 class="text-xl font-bold mb-4">Sales by Hour</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="h-80">
+                <canvas id="hourlyChart"></canvas>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left text-gray-400 border-b border-gray-800">
+                            <th class="pb-3">Hour</th>
+                            <th class="pb-3">Orders</th>
+                            <th class="pb-3">Sales</th>
+                            <th class="pb-3">Avg. Order Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hour in hour_data %}
+                        {% if hour.count > 0 %}
+                        <tr class="border-b border-gray-800">
+                            <td class="py-3">{{ hour.hour }}</td>
+                            <td class="py-3">{{ hour.count }}</td>
+                            <td class="py-3">₱{{ hour.total|floatformat:2 }}</td>
+                            <td class="py-3">₱{{ hour.total|div:hour.count|floatformat:2 }}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Day of Week Chart
+        const dayLabels = [];
+        const daySales = [];
+        const dayOrders = [];
+        
+        {% for day in day_data %}
+            dayLabels.push('{{ day.name }}');
+            daySales.push({{ day.total|floatformat:2 }});
+            dayOrders.push({{ day.count }});
+        {% endfor %}
+        
+        const dayCtx = document.getElementById('dayOfWeekChart').getContext('2d');
+        const dayChart = new Chart(dayCtx, {
+            type: 'bar',
+            data: {
+                labels: dayLabels,
+                datasets: [{
+                    label: 'Sales (₱)',
+                    data: daySales,
+                    backgroundColor: 'rgba(249, 168, 38, 0.7)',
+                    borderColor: 'rgba(249, 168, 38, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Orders',
+                    data: dayOrders,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    type: 'line',
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF',
+                            callback: function(value) {
+                                return '₱' + value;
+                            }
+                        }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.dataset.label === 'Sales (₱)') {
+                                    return '₱' + context.parsed.y.toFixed(2);
+                                } else {
+                                    return context.parsed.y + ' orders';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Hourly Chart
+        const hourLabels = [];
+        const hourSales = [];
+        const hourOrders = [];
+        
+        {% for hour in hour_data %}
+            {% if hour.count > 0 %}
+            hourLabels.push('{{ hour.hour }}');
+            hourSales.push({{ hour.total|floatformat:2 }});
+            hourOrders.push({{ hour.count }});
+            {% endif %}
+        {% endfor %}
+        
+        const hourCtx = document.getElementById('hourlyChart').getContext('2d');
+        const hourChart = new Chart(hourCtx, {
+            type: 'bar',
+            data: {
+                labels: hourLabels,
+                datasets: [{
+                    label: 'Sales (₱)',
+                    data: hourSales,
+                    backgroundColor: 'rgba(249, 168, 38, 0.7)',
+                    borderColor: 'rgba(249, 168, 38, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y'
+                }, {
+                    label: 'Orders',
+                    data: hourOrders,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    type: 'line',
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#9CA3AF',
+                            callback: function(value) {
+                                return '₱' + value;
+                            }
+                        }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false
+                        },
+                        ticks: {
+                            color: '#9CA3AF'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (context.dataset.label === 'Sales (₱)') {
+                                    return '₱' + context.parsed.y.toFixed(2);
+                                } else {
+                                    return context.parsed.y + ' orders';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock extra_scripts %}

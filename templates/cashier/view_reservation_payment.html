@@ -1,0 +1,228 @@
+{% extends 'cashier/base.html' %}
+{% load static %}
+
+{% block title %}View Reservation Payment - Cashier Dashboard{% endblock title %}
+
+{% block page_title %}Reservation Payment Details{% endblock page_title %}
+{% block page_subtitle %}Verify payment for Reservation #{{ payment.reservation.id }}{% endblock page_subtitle %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Payment Information -->
+        <div class="lg:col-span-1">
+            <div class="card p-6 h-full">
+                <h2 class="text-xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-info-circle mr-2 text-food-gold"></i> Payment Information
+                </h2>
+                
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Payment Type</div>
+                            <div class="font-medium">
+                                {% if payment.payment_type == 'FULL' %}
+                                Full Payment
+                                {% else %}
+                                50% Deposit
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Amount</div>
+                            <div class="font-medium text-xl text-food-gold">₱{{ payment.amount }}</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Reference Number</div>
+                        <div class="font-medium">{{ payment.reference_number }}</div>
+                    </div>
+
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Payment Date</div>
+                        <div class="font-medium">{{ payment.payment_date|date:"F d, Y" }} at {{ payment.payment_date|time:"H:i" }}</div>
+                    </div>
+
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Status</div>
+                        <div class="font-medium">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-900 text-yellow-300">
+                                Pending Verification
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Verification Actions -->
+                <div class="mt-8 border-t border-gray-700 pt-6">
+                    <h3 class="font-bold mb-4 text-white">Verification Actions</h3>
+                    
+                    <div class="flex flex-col space-y-3">
+                        <form method="post" action="{% url 'verify_reservation_payment' payment.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                                <i class="fas fa-check-circle mr-2"></i> Verify Payment
+                            </button>
+                        </form>
+                        
+                        <button type="button" onclick="openRejectModal()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+                            <i class="fas fa-times-circle mr-2"></i> Reject Payment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reservation Details -->
+        <div class="lg:col-span-1">
+            <div class="card p-6 h-full">
+                <h2 class="text-xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-calendar-alt mr-2 text-food-gold"></i> Reservation Details
+                </h2>
+                
+                <div class="space-y-4">
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Reservation #</div>
+                        <div class="font-medium">{{ payment.reservation.id }}</div>
+                    </div>
+                    
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Guest Name</div>
+                        <div class="font-medium">{{ payment.reservation.name }}</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Date</div>
+                            <div class="font-medium">{{ payment.reservation.date|date:"F d, Y" }}</div>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Time</div>
+                            <div class="font-medium">{{ payment.reservation.time|time:"H:i" }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Party Size</div>
+                            <div class="font-medium">{{ payment.reservation.party_size }} people</div>
+                        </div>
+                        <div class="bg-gray-800 p-3 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">Table</div>
+                            <div class="font-medium">
+                                {% if payment.reservation.table_number %}
+                                Table {{ payment.reservation.table_number }}
+                                {% else %}
+                                Not assigned
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if payment.reservation.special_requests %}
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Special Requests</div>
+                        <div class="text-sm">{{ payment.reservation.special_requests }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="bg-gray-800 p-3 rounded-lg">
+                        <div class="text-xs text-gray-500 mb-1">Status</div>
+                        <div class="font-medium">
+                            <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-900 text-yellow-300">
+                                {{ payment.reservation.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Payment Proof -->
+        <div class="lg:col-span-1">
+            <div class="card p-6 h-full">
+                <h2 class="text-xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-image mr-2 text-food-gold"></i> Payment Proof
+                </h2>
+                
+                {% if payment.payment_proof %}
+                <div class="flex justify-center mb-4">
+                    <div class="bg-gray-800 p-2 rounded-lg border border-gray-700 w-full">
+                        <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="max-w-full h-auto rounded-lg object-contain mx-auto" style="max-height: 400px;">
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <a href="{{ payment.payment_proof.url }}" target="_blank" class="text-food-gold hover:text-food-gold-light transition duration-300">
+                        <i class="fas fa-external-link-alt mr-1"></i> View Full Image
+                    </a>
+                </div>
+                {% else %}
+                <div class="flex items-center justify-center h-64 bg-gray-800 rounded-lg">
+                    <div class="text-center text-gray-500">
+                        <i class="fas fa-image text-4xl mb-2"></i>
+                        <p>No payment proof provided</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+        <a href="{% url 'pending_reservation_payments' %}" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 text-center">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Payments
+        </a>
+        <a href="{% url 'cashier_reservations_list' %}" class="bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-3 px-6 rounded-md transition-colors duration-200 text-center">
+            <i class="fas fa-calendar-alt mr-2"></i> View All Reservations
+        </a>
+    </div>
+</div>
+
+<!-- Reject Payment Modal -->
+<div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-xl font-bold mb-4 text-white">Reject Payment</h3>
+            <p class="text-gray-300 mb-4">Please provide a reason for rejecting this payment:</p>
+            
+            <form method="post" action="{% url 'reject_reservation_payment' payment.id %}">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <textarea name="reason" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-food-gold" placeholder="Enter reason for rejection"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeRejectModal()" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition duration-300">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-300">
+                        Reject Payment
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    function openRejectModal() {
+        document.getElementById('rejectModal').classList.remove('hidden');
+    }
+    
+    function closeRejectModal() {
+        document.getElementById('rejectModal').classList.add('hidden');
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('rejectModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeRejectModal();
+        }
+    });
+</script>
+{% endblock extra_scripts %}

@@ -116,7 +116,7 @@
                 </thead>
                 <tbody>
                     {% for reservation in today_reservations %}
-                    <tr class="border-b border-gray-800">
+                    <tr class="border-b border-gray-800" data-table-number="{{ reservation.table_number|default:'Not assigned' }}" data-special-requests="{{ reservation.special_requests|default:'No special requests' }}">
                         <td class="py-4 text-white font-medium">{{ reservation.time|time:"H:i" }}</td>
                         <td class="py-4 text-white">{{ reservation.name }}</td>
                         <td class="py-4 text-gray-400">{{ reservation.party_size }} people</td>
@@ -280,7 +280,7 @@
                 </thead>
                 <tbody>
                     {% for reservation in reservations %}
-                    <tr class="border-b border-gray-800">
+                    <tr class="border-b border-gray-800" data-table-number="{{ reservation.table_number|default:'Not assigned' }}" data-special-requests="{{ reservation.special_requests|default:'No special requests' }}">
                         <td class="py-4 text-white font-medium">{{ reservation.date|date:"M d, Y" }} at {{ reservation.time|time:"H:i" }}</td>
                         <td class="py-4 text-white">{{ reservation.name }}</td>
                         <td class="py-4 text-gray-400">{{ reservation.party_size }} people</td>
@@ -392,6 +392,10 @@
             const statusClass = statusElement.classList.contains('pending') ? 'pending' :
                                statusElement.classList.contains('confirmed') ? 'confirmed' : 'cancelled';
 
+            // Get table number and special requests if available
+            const tableNumber = row.getAttribute('data-table-number') || 'Not assigned';
+            const specialRequests = row.getAttribute('data-special-requests') || 'No special requests';
+
             reservationDetailsContent.innerHTML = `
                 <div class="mb-4 pb-4 border-b border-gray-800">
                     <div class="flex justify-between">
@@ -413,38 +417,54 @@
                         <h4 class="text-white font-bold mb-2">Reservation Details</h4>
                         <p class="text-gray-400">${dateTime}</p>
                         <p class="text-gray-400">${partySize}</p>
+                        <div class="mt-2">
+                            <span class="text-white font-medium">Table:</span>
+                            <span class="text-gray-400">${tableNumber}</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mb-4">
+                <div class="mb-4 pb-4 border-b border-gray-800">
                     <h4 class="text-white font-bold mb-2">Special Requests</h4>
-                    <p class="text-gray-400">Special requests will appear here.</p>
+                    <p class="text-gray-400">${specialRequests}</p>
                 </div>
 
-                <div class="flex justify-end mt-6 space-x-2">
-                    <button class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300">
-                        <i class="fas fa-print mr-2"></i> Print
-                    </button>
+                <!-- Menu Items Section -->
+                <div class="mb-4">
+                    <h4 class="text-white font-bold mb-2">Menu Items</h4>
+                    <div id="menu-items-container" class="bg-gray-900 p-3 rounded-lg">
+                        <p class="text-gray-400">Any menu items ordered with this reservation will appear here.</p>
+                    </div>
+                </div>
 
-                    ${status === 'Pending' ? `
-                    <form method="post" class="inline">
-                        {% csrf_token %}
-                        <input type="hidden" name="reservation_id" value="${reservationId}">
-                        <input type="hidden" name="status" value="CONFIRMED">
-                        <button type="submit" class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300">
-                            <i class="fas fa-check mr-2"></i> Confirm
+                <div class="flex justify-between mt-6">
+                    <div>
+                        <button class="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition duration-300">
+                            <i class="fas fa-print mr-2"></i> Print
                         </button>
-                    </form>
+                    </div>
 
-                    <form method="post" class="inline">
-                        {% csrf_token %}
-                        <input type="hidden" name="reservation_id" value="${reservationId}">
-                        <input type="hidden" name="status" value="CANCELLED">
-                        <button type="submit" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300">
-                            <i class="fas fa-times mr-2"></i> Cancel
-                        </button>
-                    </form>
-                    ` : ''}
+                    <div class="space-x-2">
+                        ${status === 'Pending' ? `
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="reservation_id" value="${reservationId}">
+                            <input type="hidden" name="status" value="CONFIRMED">
+                            <button type="submit" class="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-300">
+                                <i class="fas fa-check mr-2"></i> Confirm
+                            </button>
+                        </form>
+
+                        <form method="post" class="inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="reservation_id" value="${reservationId}">
+                            <input type="hidden" name="status" value="CANCELLED">
+                            <button type="submit" class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300">
+                                <i class="fas fa-times mr-2"></i> Cancel
+                            </button>
+                        </form>
+                        ` : ''}
+                    </div>
                 </div>
             `;
         }

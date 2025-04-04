@@ -23,6 +23,9 @@
 
     {% include 'components/footer/footer.html' %}
 
+    <!-- Django Messages -->
+    {% include 'components/messages/messages.html' %}
+
     <!-- HTMX CSRF Configuration -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -32,6 +35,19 @@
                     evt.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
                 }
             });
+
+            // Handle message fadeout
+            const messages = document.querySelectorAll('.message-item');
+            if (messages.length > 0) {
+                messages.forEach(function(message) {
+                    setTimeout(function() {
+                        message.style.opacity = '0';
+                        setTimeout(function() {
+                            message.remove();
+                        }, 500); // Wait for the transition to complete
+                    }, 5000); // 5 seconds before starting to fade out
+                });
+            }
         });
     </script>
 

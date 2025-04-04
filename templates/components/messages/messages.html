@@ -1,0 +1,21 @@
+{% if messages %}
+<div id="django-messages" class="fixed bottom-4 right-4 z-50">
+    {% for message in messages %}
+    <div class="message-item mb-3 p-4 rounded-lg shadow-lg {% if message.tags == 'error' %}bg-red-900 text-white{% elif message.tags == 'success' %}bg-green-900 text-white{% else %}bg-gray-800 text-white{% endif %} flex items-center justify-between transition-opacity duration-500 ease-in-out">
+        <div class="flex items-center">
+            {% if message.tags == 'error' %}
+            <i class="fas fa-exclamation-circle mr-3 text-red-300"></i>
+            {% elif message.tags == 'success' %}
+            <i class="fas fa-check-circle mr-3 text-green-300"></i>
+            {% else %}
+            <i class="fas fa-info-circle mr-3 text-blue-300"></i>
+            {% endif %}
+            <span>{{ message }}</span>
+        </div>
+        <button type="button" class="ml-4 text-white hover:text-gray-300 focus:outline-none" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

@@ -1,154 +1,257 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block extra_head %}
 <style>
-    .login-bg {
-        background-color: #111111;
+    /* Smooth animations */
+    * {
+        transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+    }
+
+    /* Form elements */
+    input, button {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    input:focus {
+        transform: translateY(-1px);
+    }
+
+    /* Card animation */
+    .login-card {
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        will-change: transform, box-shadow;
+    }
+
+    .login-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    }
+
+
+
+    /* Shimmer effect */
+    .login-btn {
         position: relative;
+        overflow: hidden;
+        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        will-change: transform, box-shadow;
     }
-    .login-content {
-        position: relative;
-        z-index: 2;
+
+    .login-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(249, 168, 38, 0.2), 0 4px 6px -2px rgba(249, 168, 38, 0.1);
     }
-    .form-container {
-        background-color: #111111;
-    }
-    .input-with-icon {
-        position: relative;
-    }
-    .input-with-icon input {
-        width: 100%;
-        background-color: rgba(30, 41, 59, 0.8);
-        border: 1px solid rgba(71, 85, 105, 0.5);
-    }
-    .input-icon {
+
+    .login-btn::after {
+        content: '';
         position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #ffffff;
-        z-index: 10;
-        pointer-events: none;
-        transition: all 0.2s ease;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transform: translateX(-100%);
     }
-    @keyframes fadeInUp {
+
+    .login-btn:hover::after {
+        animation: shimmer 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes shimmer {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(100%);
+        }
+    }
+
+    /* Fade in animation */
+    @keyframes fadeIn {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(10px);
         }
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
-    .animate-fadeInUp {
-        animation: fadeInUp 0.5s ease forwards;
+
+    .fade-in {
+        animation: fadeIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
-    .animate-delay-100 {
+
+    .delay-100 {
         animation-delay: 0.1s;
     }
-    .animate-delay-200 {
+
+    .delay-200 {
         animation-delay: 0.2s;
     }
-    .animate-delay-300 {
+
+    .delay-300 {
         animation-delay: 0.3s;
     }
 </style>
 {% endblock extra_head %}
 
 {% block content %}
-<section class="min-h-screen flex items-center justify-center login-bg py-12 px-4 sm:px-6 lg:px-8">
-    <div class="login-content max-w-sm w-full">
-        <!-- Header -->
-        <div class="text-center mb-6">
-            <h2 class="text-2xl font-bold text-white">
-                Welcome Back
-            </h2>
-            <p class="text-gray-400 text-sm mt-1">Sign in to your account to continue</p>
-        </div>
-
-        <div class="form-container space-y-4">
-            <div>
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="mt-4 text-center text-sm p-3 rounded-lg {% if message.tags == 'error' %}bg-red-900/50 text-red-200{% else %}bg-green-900/50 text-green-200{% endif %}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-900">
+    <div class="max-w-md w-full space-y-8 bg-gray-800 p-8 rounded-xl shadow-lg login-card fade-in">
+        <div>
+            <!-- Logo Header -->
+            <div class="flex items-center justify-center mb-6 fade-in">
+                <img src="{% static 'logo/5th_avenue_logo.jpg' %}" alt="5th Avenue Logo" class="h-16 w-16 rounded-full object-cover border-2 border-food-gold shadow-lg">
+                <div class="ml-4">
+                    <h2 class="text-2xl font-bold text-white">5th Avenue</h2>
+                    <p class="text-sm text-food-gold font-medium tracking-wide">GRILL & RESTOBAR</p>
+                </div>
             </div>
 
-            <form class="space-y-4" method="POST" action="{% url 'login' %}" id="login-form">
-                {% csrf_token %}
-                <div class="space-y-4">
-                    <div class="input-with-icon">
-                        <i class="fas fa-user input-icon"></i>
-                        <label for="username" class="sr-only">Username</label>
+            <h2 class="mt-2 text-center text-3xl font-extrabold text-white fade-in delay-100">
+                Welcome Back
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-400 fade-in delay-100">
+                Sign in to your account to continue
+            </p>
+        </div>
+
+        <!-- Include Messages Component -->
+        {% include 'components/messages/messages.html' %}
+
+        <!-- Login Form -->
+        <form class="mt-8 space-y-6 fade-in delay-200" method="POST" action="{% url 'login' %}" id="login-form">
+            {% csrf_token %}
+
+            <div class="rounded-md shadow-sm -space-y-px">
+                <!-- Username -->
+                <div class="mb-4">
+                    <label for="username" class="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                    <div class="flex items-center relative bg-gray-700 border border-gray-600 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-yellow-500 focus-within:border-yellow-500">
+                        <div class="px-3 py-3 bg-gray-600 flex items-center justify-center">
+                            <i class="fas fa-user text-yellow-500 text-lg"></i>
+                        </div>
                         <input id="username" name="username" type="text" required
-                            class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-700 bg-gray-800/80 text-white rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 sm:text-sm"
+                            class="appearance-none block w-full px-3 py-3 bg-gray-700 text-white border-0 focus:outline-none sm:text-sm"
                             placeholder="Username">
                     </div>
-                    <div class="input-with-icon">
-                        <i class="fas fa-lock input-icon"></i>
-                        <label for="password" class="sr-only">Password</label>
+                </div>
+
+                <!-- Password -->
+                <div class="mb-4">
+                    <label for="password" class="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                    <div class="flex items-center relative bg-gray-700 border border-gray-600 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-yellow-500 focus-within:border-yellow-500">
+                        <div class="px-3 py-3 bg-gray-600 flex items-center justify-center">
+                            <i class="fas fa-lock text-yellow-500 text-lg"></i>
+                        </div>
                         <input id="password" name="password" type="password" required
-                            class="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-700 bg-gray-800/80 text-white rounded-md focus:outline-none focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 sm:text-sm"
+                            class="appearance-none block w-full px-3 py-3 bg-gray-700 text-white border-0 focus:outline-none sm:text-sm"
                             placeholder="Password">
                     </div>
                 </div>
+            </div>
 
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" name="remember" id="remember"
-                            class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 border-gray-700 bg-gray-800 rounded">
-                        <label for="remember" class="ml-2 block text-sm text-gray-300">
-                            Remember me
-                        </label>
-                    </div>
-                    <div class="text-sm">
-                        <a href="#" class="font-medium text-yellow-500 hover:text-yellow-600 transition-colors duration-200">
-                            Forgot password?
-                        </a>
-                    </div>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input type="checkbox" name="remember" id="remember"
+                        class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 border-gray-700 bg-gray-800 rounded">
+                    <label for="remember" class="ml-2 block text-sm text-gray-300">
+                        Remember me
+                    </label>
                 </div>
+                <div class="text-sm">
+                    <a href="#" class="font-medium text-food-gold hover:text-yellow-600 transition-colors duration-200">
+                        Forgot password?
+                    </a>
+                </div>
+            </div>
 
-                <div>
-                    <button type="submit" id="login-button"
-                        class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-yellow-500 to-red-500 hover:from-yellow-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-all duration-200 hover:shadow-lg hover:shadow-yellow-500/20">
-                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
-                            <i class="fas fa-sign-in-alt text-white"></i>
-                        </span>
-                        Sign in
-                    </button>
-                </div>
+            <div>
+                <button type="submit" id="login-button" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-gray-900 font-semibold bg-yellow-500 hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors duration-200 login-btn">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-sign-in-alt"></i>
+                    </span>
+                    Sign in
+                </button>
+            </div>
 
-                <div class="text-center mt-6">
-                    <p class="text-sm text-gray-400">
-                        Don't have an account?
-                        <a href="{% url 'register' %}" class="font-medium text-yellow-500 hover:text-yellow-600 transition-colors duration-200">
-                            Sign up now
-                        </a>
-                    </p>
-                </div>
-            </form>
-        </div>
+
+
+            <div class="text-center mt-4 pt-4 border-t border-gray-700">
+                <p class="text-sm text-gray-400">
+                    Don't have an account?
+                    <a href="{% url 'register' %}" class="font-medium text-food-gold hover:text-yellow-600 transition-colors duration-200">
+                        Sign up now
+                    </a>
+                </p>
+            </div>
+        </form>
     </div>
-</section>
+</div>
 {% endblock content %}
 
 {% block extra_scripts %}
 <script>
+    // Enhanced animations and form handling
     document.addEventListener('DOMContentLoaded', function() {
+        // Staggered fade-in animation for elements
+        const fadeElements = document.querySelectorAll('.fade-in');
+        fadeElements.forEach((el, index) => {
+            if (!el.classList.contains('delay-100') && !el.classList.contains('delay-200') && !el.classList.contains('delay-300')) {
+                el.style.animationDelay = `${index * 0.1}s`;
+            }
+        });
+
+        // Form submission handling with smooth animation
         const loginForm = document.getElementById('login-form');
         const loginButton = document.getElementById('login-button');
 
         if (loginForm && loginButton) {
             loginForm.addEventListener('submit', function(e) {
-                console.log('Login form submitted');
                 loginButton.disabled = true;
+                loginButton.classList.add('opacity-90');
                 loginButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Signing in...';
             });
         }
+
+        // Enhanced focus effects for inputs with smooth transitions
+        const inputs = document.querySelectorAll('input[type="text"], input[type="password"]');
+        inputs.forEach(input => {
+            const inputContainer = input.closest('.flex.items-center');
+            const iconElement = inputContainer ? inputContainer.querySelector('i') : null;
+            const iconContainer = iconElement ? iconElement.closest('div') : null;
+
+            if (iconElement && inputContainer) {
+                input.addEventListener('focus', function() {
+                    iconElement.style.color = '#F9A826';
+                    iconContainer.style.backgroundColor = '#4B5563'; // gray-600 darker
+                    inputContainer.style.transform = 'translateY(-2px)';
+                });
+
+                input.addEventListener('blur', function() {
+                    iconElement.style.color = '#F9A826';
+                    iconContainer.style.backgroundColor = '#4B5563'; // back to gray-600
+                    inputContainer.style.transform = 'translateY(0)';
+                });
+            }
+        });
+
+        // Smooth hover effect for buttons
+        const buttons = document.querySelectorAll('.login-btn');
+        buttons.forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+
+            button.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
     });
 </script>
 {% endblock extra_scripts %}

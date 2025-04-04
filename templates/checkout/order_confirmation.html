@@ -13,9 +13,13 @@
                     <i class="fas fa-check-circle text-green-500 text-3xl"></i>
                 </div>
                 <h1 class="text-2xl font-bold text-green-500 mb-2">Order Placed Successfully!</h1>
+                {% if order.order_type == 'DINE_IN' %}
+                <p class="text-gray-300">Thank you for your order. Your table has been reserved and your order will be prepared for your arrival.</p>
+                {% else %}
                 <p class="text-gray-300">Thank you for your order. We've received your order and will begin processing it right away.</p>
+                {% endif %}
             </div>
-            
+
             <!-- Order Details -->
             <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden mb-8">
                 <div class="bg-gray-900 p-6 border-b border-gray-700">
@@ -25,7 +29,7 @@
                             <p class="text-gray-400 text-sm">Placed on {{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"g:i A" }}</p>
                         </div>
                         <div class="mt-4 md:mt-0">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                                 {% if order.status == 'PENDING' %}bg-yellow-900/30 text-yellow-500{% endif %}
                                 {% if order.status == 'PREPARING' %}bg-blue-900/30 text-blue-500{% endif %}
                                 {% if order.status == 'READY' %}bg-purple-900/30 text-purple-500{% endif %}
@@ -37,11 +41,11 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Order Items -->
                 <div class="p-6 border-b border-gray-700">
                     <h3 class="text-lg font-semibold mb-4">Order Items</h3>
-                    
+
                     <div class="space-y-4">
                         {% for item in order_items %}
                         <div class="flex items-start justify-between">
@@ -55,7 +59,7 @@
                                 {% endif %}
                                 <div>
                                     <div class="font-medium">{{ item.menu_item.name }}</div>
-                                    <div class="text-sm text-gray-400">{{ item.quantity }} x ${{ item.price|floatformat:2 }}</div>
+                                    <div class="text-sm text-gray-400">{{ item.quantity }} x ₱{{ item.price|floatformat:2 }}</div>
                                     {% if item.special_instructions %}
                                     <div class="text-xs text-gray-500 mt-1">
                                         <span class="font-medium">Special Instructions:</span> {{ item.special_instructions }}
@@ -63,44 +67,44 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="font-bold">${{ item.subtotal|floatformat:2 }}</div>
+                            <div class="font-bold">₱{{ item.subtotal|floatformat:2 }}</div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
-                
+
                 <!-- Order Summary -->
                 <div class="p-6 border-b border-gray-700 bg-gray-900/50">
                     <div class="flex justify-between mb-2">
                         <span class="text-gray-400">Subtotal:</span>
-                        <span>${{ order.total_amount|floatformat:2 }}</span>
+                        <span>₱{{ order.total_amount|floatformat:2 }}</span>
                     </div>
                     <div class="flex justify-between mb-2">
                         <span class="text-gray-400">Tax:</span>
-                        <span>${{ order.tax_amount|floatformat:2 }}</span>
+                        <span>₱{{ order.tax_amount|floatformat:2 }}</span>
                     </div>
                     {% if order.delivery_fee > 0 %}
                     <div class="flex justify-between mb-2">
                         <span class="text-gray-400">Delivery Fee:</span>
-                        <span>${{ order.delivery_fee|floatformat:2 }}</span>
+                        <span>₱{{ order.delivery_fee|floatformat:2 }}</span>
                     </div>
                     {% endif %}
                     {% if order.discount_amount > 0 %}
                     <div class="flex justify-between mb-2">
                         <span class="text-gray-400">Discount:</span>
-                        <span>-${{ order.discount_amount|floatformat:2 }}</span>
+                        <span>-₱{{ order.discount_amount|floatformat:2 }}</span>
                     </div>
                     {% endif %}
                     <div class="flex justify-between font-bold text-lg mt-4 pt-4 border-t border-gray-700">
                         <span>Total:</span>
-                        <span class="text-food-gold">${{ order.grand_total|floatformat:2 }}</span>
+                        <span class="text-food-gold">₱{{ order.grand_total|floatformat:2 }}</span>
                     </div>
                 </div>
-                
+
                 <!-- Payment Information -->
                 <div class="p-6 border-b border-gray-700">
                     <h3 class="text-lg font-semibold mb-4">Payment Information</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <p class="text-sm text-gray-400 mb-1">Payment Method</p>
@@ -108,7 +112,7 @@
                         </div>
                         <div>
                             <p class="text-sm text-gray-400 mb-1">Payment Status</p>
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                                 {% if order.payment_status == 'PENDING' %}bg-yellow-900/30 text-yellow-500{% endif %}
                                 {% if order.payment_status == 'PAID' %}bg-green-900/30 text-green-500{% endif %}
                                 {% if order.payment_status == 'FAILED' %}bg-red-900/30 text-red-500{% endif %}
@@ -117,14 +121,14 @@
                                 {{ order.get_payment_status_display }}
                             </span>
                         </div>
-                        
+
                         {% if payment and payment.reference_number %}
                         <div>
                             <p class="text-sm text-gray-400 mb-1">Reference Number</p>
                             <p class="font-medium">{{ payment.reference_number }}</p>
                         </div>
                         {% endif %}
-                        
+
                         {% if payment and payment.payment_date %}
                         <div>
                             <p class="text-sm text-gray-400 mb-1">Payment Date</p>
@@ -132,21 +136,21 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     {% if payment and payment.payment_proof %}
                     <div class="mt-4">
                         <p class="text-sm text-gray-400 mb-2">Payment Proof</p>
                         <a href="{{ payment.payment_proof.url }}" target="_blank" class="inline-block">
-                            <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="max-w-xs rounded-lg border border-gray-700">
+                            <img src="{{ payment.payment_proof.url }}" alt="Payment Proof" class="max-w-xs rounded-lg border border-gray-700 object-contain">
                         </a>
                     </div>
                     {% endif %}
                 </div>
-                
-                <!-- Shipping Information -->
+
+                <!-- Order Details Information -->
                 <div class="p-6">
-                    <h3 class="text-lg font-semibold mb-4">Shipping Information</h3>
-                    
+                    <h3 class="text-lg font-semibold mb-4">Order Details</h3>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <p class="text-sm text-gray-400 mb-1">Order Type</p>
@@ -154,12 +158,33 @@
                         </div>
                         <div>
                             <p class="text-sm text-gray-400 mb-1">Contact Number</p>
-                            <p class="font-medium">{{ order.contact_number }}</p>
+                            <p class="font-medium">{{ order.contact_number|default:"Not provided" }}</p>
                         </div>
+
+                        {% if order.order_type == 'DELIVERY' %}
                         <div class="md:col-span-2">
                             <p class="text-sm text-gray-400 mb-1">Delivery Address</p>
                             <p class="font-medium">{{ order.delivery_address }}</p>
                         </div>
+                        {% endif %}
+
+                        {% if order.order_type == 'DINE_IN' %}
+                        <div>
+                            <p class="text-sm text-gray-400 mb-1">Table Number</p>
+                            <p class="font-medium">{{ order.table_number }}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-400 mb-1">Number of Guests</p>
+                            <p class="font-medium">{{ order.number_of_guests }}</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <div class="bg-blue-900/30 p-4 rounded-lg border border-blue-800 mt-2">
+                                <h4 class="font-medium text-blue-400 mb-2"><i class="fas fa-info-circle mr-2"></i> Table Reservation Information</h4>
+                                <p class="text-gray-300 text-sm">Your table has been reserved. Please arrive within 30 minutes of your order time. Your order will be prepared and served at your table.</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         {% if order.special_instructions %}
                         <div class="md:col-span-2">
                             <p class="text-sm text-gray-400 mb-1">Special Instructions</p>
@@ -169,7 +194,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Action Buttons -->
             <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
                 <a href="{% url 'my_orders' %}" class="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-md transition-colors duration-200 text-center">

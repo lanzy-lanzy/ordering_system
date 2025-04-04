@@ -126,6 +126,66 @@
         {% endif %}
     </div>
 
+    <!-- Unprocessed Reservations -->
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Confirmed Reservations</h2>
+            {% if unprocessed_reservations_count > 0 %}
+            <a href="{% url 'cashier_reservations_list' %}?status=unprocessed" class="bg-food-gold hover:bg-food-gold-light text-black px-4 py-2 rounded-lg transition duration-300">
+                <i class="fas fa-utensils mr-2"></i> Process Reservations
+            </a>
+            {% else %}
+            <a href="{% url 'cashier_reservations_list' %}" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                <i class="fas fa-calendar-alt mr-2"></i> View All Reservations
+            </a>
+            {% endif %}
+        </div>
+
+        {% if unprocessed_reservations %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3">Time</th>
+                        <th class="pb-3">Guest</th>
+                        <th class="pb-3">Party Size</th>
+                        <th class="pb-3">Table</th>
+                        <th class="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reservation in unprocessed_reservations|slice:":5" %}
+                    <tr class="border-b border-gray-800">
+                        <td class="py-3 text-white font-medium">{{ reservation.time|time:"H:i" }}</td>
+                        <td class="py-3">
+                            <div>{{ reservation.name }}</div>
+                            <div class="text-xs text-gray-500">{{ reservation.phone }}</div>
+                        </td>
+                        <td class="py-3">{{ reservation.party_size }} people</td>
+                        <td class="py-3">
+                            {% if reservation.table_number %}
+                            Table {{ reservation.table_number }}
+                            {% else %}
+                            Not assigned
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            <a href="{% url 'process_reservation' reservation.id %}" class="text-food-gold hover:text-food-gold-light">
+                                <i class="fas fa-utensils mr-1"></i> Process
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="bg-gray-800 rounded-lg p-6 text-center">
+            <p class="text-gray-400">No unprocessed reservations at the moment.</p>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Pending Orders -->
     <div class="card p-6">
         <h2 class="text-xl font-bold mb-4">Pending Orders</h2>

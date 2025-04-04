@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load math_filters custom_filters %}
 
 {% block title %}Checkout - 5th Avenue Grill and Restobar{% endblock title %}
 
@@ -17,23 +18,28 @@
                             <i class="fas fa-receipt text-food-gold mr-2"></i> Order Summary
                         </h2>
 
-                        <div class="space-y-4 max-h-64 overflow-y-auto mb-4">
+                        <div class="space-y-4 mb-6">
                             {% for item in cart_items %}
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    {% if item.menu_item.image %}
-                                    <img src="{{ item.menu_item.image.url }}" alt="{{ item.menu_item.name }}" class="w-12 h-12 rounded-md object-cover mr-3">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 w-16 h-16 bg-gray-700 rounded-md overflow-hidden">
+                                    {% if item.menu_item.image and item.menu_item.image.url %}
+                                        <img src="{{ item.menu_item.image.url }}" alt="{{ item.menu_item.name }}" class="w-full h-full object-cover">
                                     {% else %}
-                                    <div class="w-12 h-12 rounded-md bg-gray-700 flex items-center justify-center mr-3">
-                                        <i class="fas fa-utensils text-gray-500"></i>
-                                    </div>
+                                        <div class="w-full h-full flex items-center justify-center text-gray-500">
+                                            <i class="fas fa-utensils text-2xl"></i>
+                                        </div>
                                     {% endif %}
-                                    <div>
-                                        <div class="font-medium">{{ item.menu_item.name }}</div>
-                                        <div class="text-sm text-gray-400">{{ item.quantity }} x ${{ item.menu_item.price|floatformat:2 }}</div>
-                                    </div>
                                 </div>
-                                <div class="font-bold">${{ item.subtotal|floatformat:2 }}</div>
+                                <div class="ml-4 flex-1">
+                                    <h3 class="text-white font-medium">{{ item.menu_item.name }}</h3>
+                                    <div class="flex justify-between text-sm text-gray-400">
+                                        <span>{{ item.quantity }} × ₱{{ item.menu_item.price|floatformat:2 }}</span>
+                                        <span>₱{{ item.subtotal|floatformat:2 }}</span>
+                                    </div>
+                                    {% if item.special_instructions %}
+                                    <p class="text-xs text-gray-500 mt-1 italic">{{ item.special_instructions }}</p>
+                                    {% endif %}
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
@@ -41,15 +47,15 @@
                         <div class="border-t border-gray-700 pt-4">
                             <div class="flex justify-between mb-2">
                                 <span class="text-gray-400">Subtotal:</span>
-                                <span>${{ subtotal|floatformat:2 }}</span>
+                                <span>₱{{ subtotal|floatformat:2 }}</span>
                             </div>
                             <div class="flex justify-between mb-2">
                                 <span class="text-gray-400">Tax (10%):</span>
-                                <span>${{ tax|floatformat:2 }}</span>
+                                <span>₱{{ tax|floatformat:2 }}</span>
                             </div>
                             <div class="flex justify-between font-bold text-lg mt-4">
                                 <span>Total:</span>
-                                <span class="text-food-gold">${{ total|floatformat:2 }}</span>
+                                <span class="text-food-gold">₱{{ total|floatformat:2 }}</span>
                             </div>
                         </div>
                     </div>
@@ -80,72 +86,238 @@
                         </div>
                         {% endif %}
 
-                        <div class="grid grid-cols-1 gap-6 mb-6">
-                            <!-- Hidden Personal Information -->
+                        <div class="grid grid-cols-1 gap-6 mb-6"
+                             x-data="{ orderType: '{{ form.initial.order_type|default:"PICKUP" }}', tableNumber: '{{ form.initial.table_number|default:"" }}', numberOfGuests: 2 }"
+                             x-init="
+                                // Initialize order type buttons
+                                setTimeout(() => {
+                                    setOrderType(orderType);
+
+                                    // If table number is set, select it
+                                    if (tableNumber) {
+                                        selectTable(tableNumber);
+                                    }
+
+                                    // Show dine-in section if order type is DINE_IN
+                                    if (orderType === 'DINE_IN') {
+                                        document.getElementById('dine-in-section').style.display = 'block';
+                                    }
+                                }, 100);
+
+                                $watch('orderType', value => {
+                                    if (value === 'DINE_IN') {
+                                        document.getElementById('dine-in-section').style.display = 'block';
+                                    } else {
+                                        document.getElementById('dine-in-section').style.display = 'none';
+                                    }
+                                });
+                                $watch('tableNumber', value => {
+                                    document.getElementById('table_number').value = value;
+                                });
+                                $watch('numberOfGuests', value => {
+                                    document.getElementById('number_of_guests').value = value;
+                                });">
+
+                            <!-- Hidden fields for user info -->
                             {{ form.first_name }}
                             {{ form.last_name }}
                             {{ form.email }}
                             {{ form.phone }}
 
-                            <!-- Order Information -->
-                            <div class="bg-blue-900/30 p-4 rounded-lg border border-blue-800 mb-4">
-                                <h3 class="text-lg font-semibold mb-2 flex items-center text-blue-400">
-                                    <i class="fas fa-info-circle mr-2"></i> Order Information
-                                </h3>
-                                <p class="text-gray-300 mb-2">
-                                    Your order will be prepared for pickup at our restaurant. After placing your order, you'll be directed to our GCash payment page.
-                                </p>
-                                <div class="flex items-center mt-3 text-gray-400">
-                                    <i class="fas fa-store text-food-gold mr-2"></i> <span>Pickup at: 5th Avenue Grill and Restobar</span>
+                            <!-- Replace the Django form field with a direct input for table_number -->
+                            <input type="hidden" name="table_number" id="table_number" value="">
+                            <input type="hidden" name="number_of_guests" id="number_of_guests" value="2">
+
+                            <!-- Order Type Selection -->
+                            <div class="form-group">
+                                <label class="block text-gray-400 mb-2">Order Type</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <button type="button"
+                                            class="order-type-button bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg flex flex-col items-center justify-center transition-colors duration-200"
+                                            data-type="PICKUP"
+                                            x-on:click="orderType = 'PICKUP'">
+                                        <i class="fas fa-shopping-bag text-xl mb-1"></i>
+                                        <span>Pickup</span>
+                                    </button>
+                                    <button type="button"
+                                            class="order-type-button bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg flex flex-col items-center justify-center transition-colors duration-200"
+                                            data-type="DELIVERY"
+                                            x-on:click="orderType = 'DELIVERY'">
+                                        <i class="fas fa-motorcycle text-xl mb-1"></i>
+                                        <span>Delivery</span>
+                                    </button>
+                                    <button type="button"
+                                            class="order-type-button bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-lg flex flex-col items-center justify-center transition-colors duration-200"
+                                            data-type="DINE_IN"
+                                            x-on:click="orderType = 'DINE_IN'">
+                                        <i class="fas fa-utensils text-xl mb-1"></i>
+                                        <span>Dine In</span>
+                                    </button>
                                 </div>
+                                <input type="hidden" name="order_type" id="order_type" value="PICKUP">
                             </div>
 
-                            <!-- Payment Method Info -->
-                            <div class="md:col-span-2 mt-4">
-                                <div class="bg-blue-900/30 p-4 rounded-lg border border-blue-800">
-                                    <h3 class="text-lg font-semibold mb-2 flex items-center text-blue-400">
-                                        <i class="fas fa-info-circle mr-2"></i> Payment Information
-                                    </h3>
-                                    <p class="text-gray-300">
-                                        You will be redirected to our GCash payment page after placing your order. There, you can scan the QR code with your GCash app and upload your payment screenshot.
-                                    </p>
+                            <!-- Dine-In Section (Hidden by default) -->
+                            <div id="dine-in-section" class="space-y-6" style="display: none;">
+                                <!-- Number of Guests -->
+                                <div class="form-group">
+                                    <label class="block text-gray-400 mb-2">Number of Guests</label>
+                                    <div class="flex items-center">
+                                        <button type="button"
+                                                class="bg-gray-700 hover:bg-gray-600 text-white h-10 w-10 rounded-l-lg flex items-center justify-center transition-colors duration-200"
+                                                x-on:click="numberOfGuests = Math.max(1, numberOfGuests - 1)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <div class="bg-gray-700 text-white h-10 px-4 flex items-center justify-center font-medium" x-text="numberOfGuests">2</div>
+                                        <button type="button"
+                                                class="bg-gray-700 hover:bg-gray-600 text-white h-10 w-10 rounded-r-lg flex items-center justify-center transition-colors duration-200"
+                                                x-on:click="numberOfGuests = Math.min(20, numberOfGuests + 1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Table Selection -->
+                                <div class="form-group">
+                                    <label class="block text-gray-400 mb-2">Select a Table</label>
+
+                                    <div class="bg-gray-900/50 p-4 rounded-lg border border-gray-700 mb-4">
+                                        <div class="flex items-center text-sm text-gray-400 mb-3">
+                                            <div class="flex items-center mr-4">
+                                                <div class="w-4 h-4 bg-gray-700 rounded-sm mr-1"></div>
+                                                <span>Available</span>
+                                            </div>
+                                            <div class="flex items-center mr-4">
+                                                <div class="w-4 h-4 bg-red-800 rounded-sm mr-1"></div>
+                                                <span>Occupied</span>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <div class="w-4 h-4 bg-food-gold rounded-sm mr-1"></div>
+                                                <span>Selected</span>
+                                            </div>
+                                        </div>
+                                        <p class="text-sm text-blue-400"><i class="fas fa-info-circle mr-1"></i> Select a table to reserve it for your dining experience.</p>
+                                    </div>
+
+                                    <!-- Restaurant Floor Plan -->
+                                    <div class="restaurant-floor-plan bg-gray-900/50 p-6 rounded-lg border border-gray-700 mb-4">
+                                        <!-- Restaurant Entrance -->
+                                        <div class="text-center mb-6">
+                                            <div class="inline-block bg-gray-700 text-gray-300 px-4 py-2 rounded-lg">
+                                                <i class="fas fa-door-open mr-2"></i> Entrance
+                                            </div>
+                                        </div>
+
+                                        <!-- Main Dining Area -->
+                                        <div class="mb-8">
+                                            <h3 class="text-gray-400 text-sm uppercase tracking-wider mb-3 border-b border-gray-700 pb-2">Main Dining Area</h3>
+
+                                            <!-- Tables Row 1 -->
+                                            <div class="grid grid-cols-3 gap-4 mb-6">
+                                                {% for i in '123'|make_list %}
+                                                <button type="button"
+                                                        onclick="selectTable('{{ i }}');"
+                                                        data-table="{{ i }}"
+                                                        data-capacity="4"
+                                                        class="table-button relative py-4 px-2 rounded-lg text-center transition-colors duration-200 {% if i in occupied_tables %}bg-red-800 text-red-300 cursor-not-allowed{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}"
+                                                        {% if i in occupied_tables %}disabled{% endif %}>
+                                                    <div class="text-center font-medium">Table {{ i }}</div>
+                                                    <div class="text-xs">4 Persons</div>
+                                                    {% if i in occupied_tables %}
+                                                    <div class="absolute top-1 right-1">
+                                                        <span class="bg-red-900 text-red-300 text-xs px-1.5 py-0.5 rounded">Occupied</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </button>
+                                                {% endfor %}
+                                            </div>
+
+                                            <!-- Tables Row 2 -->
+                                            <div class="grid grid-cols-3 gap-4">
+                                                {% for i in '456'|make_list %}
+                                                <button type="button"
+                                                        onclick="selectTable('{{ i }}');"
+                                                        data-table="{{ i }}"
+                                                        data-capacity="4"
+                                                        class="table-button relative py-4 px-2 rounded-lg text-center transition-colors duration-200 {% if i in occupied_tables %}bg-red-800 text-red-300 cursor-not-allowed{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}"
+                                                        {% if i in occupied_tables %}disabled{% endif %}>
+                                                    <div class="text-center font-medium">Table {{ i }}</div>
+                                                    <div class="text-xs">4 Persons</div>
+                                                    {% if i in occupied_tables %}
+                                                    <div class="absolute top-1 right-1">
+                                                        <span class="bg-red-900 text-red-300 text-xs px-1.5 py-0.5 rounded">Occupied</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </button>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+
+                                        <!-- Private Dining Area -->
+                                        <div>
+                                            <h3 class="text-gray-400 text-sm uppercase tracking-wider mb-3 border-b border-gray-700 pb-2">Private Dining Area</h3>
+
+                                            <!-- Private Tables -->
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <button type="button"
+                                                        onclick="selectTable('7');"
+                                                        data-table="7"
+                                                        data-capacity="6"
+                                                        class="table-button relative py-4 px-2 rounded-lg text-center transition-colors duration-200 {% if '7' in occupied_tables %}bg-red-800 text-red-300 cursor-not-allowed{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}"
+                                                        {% if '7' in occupied_tables %}disabled{% endif %}>
+                                                    <div class="text-center font-medium">Table 7</div>
+                                                    <div class="text-xs">6 Persons</div>
+                                                    {% if '7' in occupied_tables %}
+                                                    <div class="absolute top-1 right-1">
+                                                        <span class="bg-red-900 text-red-300 text-xs px-1.5 py-0.5 rounded">Occupied</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </button>
+
+                                                <button type="button"
+                                                        onclick="selectTable('8');"
+                                                        data-table="8"
+                                                        data-capacity="8"
+                                                        class="table-button relative py-4 px-2 rounded-lg text-center transition-colors duration-200 {% if '8' in occupied_tables %}bg-red-800 text-red-300 cursor-not-allowed{% else %}bg-gray-700 text-gray-300 hover:bg-gray-600{% endif %}"
+                                                        {% if '8' in occupied_tables %}disabled{% endif %}>
+                                                    <div class="text-center font-medium">Table 8</div>
+                                                    <div class="text-xs">8 Persons</div>
+                                                    {% if '8' in occupied_tables %}
+                                                    <div class="absolute top-1 right-1">
+                                                        <span class="bg-red-900 text-red-300 text-xs px-1.5 py-0.5 rounded">Occupied</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Selected Table Information -->
+                                    <div id="selected-table-info" class="hidden bg-food-gold/20 p-4 rounded-lg border border-food-gold mb-4">
+                                        <h4 class="font-medium text-food-gold mb-2 flex items-center">
+                                            <i class="fas fa-check-circle mr-2"></i> Table Selected
+                                        </h4>
+                                        <p class="text-white" id="selected-table-text">You've selected Table <span id="selected-table-number"></span>.</p>
+                                        <p class="text-sm text-gray-300 mt-1">Your table will be reserved for 30 minutes after your order is placed.</p>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Special Instructions -->
-                            <div class="form-group mt-4">
-                                <label for="{{ form.special_instructions.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">
-                                    <i class="fas fa-utensils mr-1 text-food-gold"></i> Special Instructions (Optional)
-                                </label>
-                                {{ form.special_instructions }}
-                                {% if form.special_instructions.errors %}
-                                <p class="text-red-400 text-xs mt-1">{{ form.special_instructions.errors.0 }}</p>
-                                {% endif %}
-                                <p class="text-gray-500 text-xs mt-1">Add any special instructions for your order here.</p>
+                            <div class="form-group">
+                                <label for="special_instructions" class="block text-gray-400 mb-2">Special Instructions (Optional)</label>
+                                <textarea name="special_instructions" id="special_instructions" rows="3" class="bg-gray-700 border border-gray-600 rounded-md px-4 py-2 w-full text-white focus:outline-none focus:ring-2 focus:ring-food-gold focus:border-transparent" placeholder="Any special requests or notes for your order..."></textarea>
                             </div>
-                        </div>
 
-                        <div class="mt-8">
-                            <button type="submit" id="checkout-submit" class="w-full bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-3 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
-                                <i class="fas fa-credit-card mr-2"></i> Proceed to GCash Payment
-                            </button>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <a href="/checkout/" class="text-food-gold hover:text-food-gold-light transition-colors duration-200">
-                                <i class="fas fa-sync-alt mr-1"></i> Refresh Checkout Page
-                            </a>
-                        </div>
-                        <div class="mt-2 text-center">
-                            <a href="javascript:void(0)" onclick="createTestOrder()" class="text-blue-400 hover:text-blue-300 transition-colors duration-200">
-                                <i class="fas fa-vial mr-1"></i> Create Test Order
-                            </a>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <a href="javascript:void(0)" onclick="document.getElementById('checkout-form').submit();" class="text-food-gold hover:text-food-gold-light transition-colors duration-200">
-                                Having trouble? Click here to submit
-                            </a>
-                            <div class="mt-2 text-xs text-gray-500">
-                                <p>If you continue to have issues, please try refreshing the page or contact support.</p>
+                            <!-- Submit Button -->
+                            <div class="mt-8 space-y-4">
+                                <button type="submit" id="checkout-submit-button" class="w-full bg-food-gold hover:bg-food-gold-light text-gray-900 font-bold py-3 px-6 rounded-md transition-colors duration-200">
+                                    <i class="fas fa-credit-card mr-2"></i> <span id="submit-button-text">Proceed to Payment</span>
+                                </button>
+
+                                <div id="checkout-error-message" class="hidden bg-red-900/50 text-red-300 p-4 rounded-lg text-center">
+                                    <p>If you're having trouble with the payment button, please try submitting the form again.</p>
+                                </div>
                             </div>
                         </div>
                     </form>
@@ -167,121 +339,233 @@
     textarea {
         @apply resize-none;
     }
+    .restaurant-floor-plan {
+        background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%232d3748' fill-opacity='0.4' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+    }
 </style>
 {% endblock extra_css %}
 
 {% block extra_scripts %}
 <script>
-    function createTestOrder() {
-        // Disable all buttons
-        document.querySelectorAll('button, a').forEach(el => {
-            el.style.pointerEvents = 'none';
-            el.style.opacity = '0.5';
+    // Function to validate the checkout form before standard submission
+    function validateCheckoutForm(form) {
+        // Get form values
+        const orderType = document.getElementById('order_type').value;
+        const tableNumber = document.getElementById('table_number').value;
+
+        // Validate table selection for dine-in orders
+        if (orderType === 'DINE_IN' && !tableNumber) {
+            alert('Please select a table for your dine-in order');
+            return false;
+        }
+
+        // Disable the submit button to prevent double submission
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+        }
+
+        // If validation passes, allow the form to submit normally
+        return true;
+    }
+    // Function to select a table
+    function selectTable(tableNumber) {
+        // Set the table number in the hidden input
+        const tableInput = document.getElementById('table_number');
+        if (tableInput) {
+            tableInput.value = tableNumber;
+        }
+
+        // Update Alpine.js state if available
+        try {
+            const alpineEl = document.querySelector('[x-data]');
+            if (alpineEl && window.Alpine) {
+                const alpineComponent = Alpine.$data(alpineEl);
+                if (alpineComponent) {
+                    alpineComponent.tableNumber = tableNumber;
+                }
+            }
+        } catch (e) {
+            // Silently handle errors
+        }
+
+        // Highlight the selected table button
+        document.querySelectorAll('.table-button').forEach(btn => {
+            if (btn.dataset.table === tableNumber) {
+                btn.classList.add('bg-food-gold');
+                btn.classList.add('text-white');
+                btn.classList.remove('bg-gray-700');
+                btn.classList.remove('text-gray-300');
+            } else if (!btn.disabled) {
+                btn.classList.remove('bg-food-gold');
+                btn.classList.remove('text-white');
+                btn.classList.add('bg-gray-700');
+                btn.classList.add('text-gray-300');
+            }
         });
 
-        // Create a form data object
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-        formData.append('special_instructions', 'Test order created for debugging');
+        // Show selected table information
+        const selectedTableInfo = document.getElementById('selected-table-info');
+        const selectedTableNumber = document.getElementById('selected-table-number');
 
-        // Send the form data using fetch
-        fetch('{% url 'checkout' %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        if (selectedTableInfo && selectedTableNumber) {
+            selectedTableInfo.classList.remove('hidden');
+            selectedTableNumber.textContent = tableNumber;
+
+            // Get capacity from the selected table button
+            const selectedTableBtn = document.querySelector(`.table-button[data-table="${tableNumber}"]`);
+            if (selectedTableBtn) {
+                const capacity = selectedTableBtn.dataset.capacity;
+                // Update the number of guests to match table capacity if needed
+                const guestsInput = document.getElementById('number_of_guests');
+                if (guestsInput) {
+                    const currentGuests = parseInt(guestsInput.value) || 2;
+                    const tableCapacity = parseInt(capacity) || 4;
+
+                    // If current guests is more than capacity, adjust it
+                    if (currentGuests > tableCapacity) {
+                        guestsInput.value = tableCapacity;
+
+                        // Update Alpine.js state if available
+                        try {
+                            const alpineEl = document.querySelector('[x-data]');
+                            if (alpineEl && window.Alpine) {
+                                const alpineComponent = Alpine.$data(alpineEl);
+                                if (alpineComponent) {
+                                    alpineComponent.numberOfGuests = tableCapacity;
+                                }
+                            }
+                        } catch (e) {
+                            // Silently handle errors
+                        }
+                    }
+                }
             }
-        })
-        .then(response => {
-            if (response.redirected) {
-                window.location.href = response.url;
-            } else {
-                return response.text();
-            }
-        })
-        .then(html => {
-            if (html) {
-                // If we got HTML back, there was an error
-                document.open();
-                document.write(html);
-                document.close();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('There was an error creating the test order. Please try again.');
-            // Re-enable all buttons
-            document.querySelectorAll('button, a').forEach(el => {
-                el.style.pointerEvents = '';
-                el.style.opacity = '';
-            });
-        });
+        }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Checkout page loaded');
-        const checkoutForm = document.querySelector('form[action="{% url 'checkout' %}"]');
-        console.log('Checkout form found:', checkoutForm);
+    // Function to set order type
+    function setOrderType(type) {
+        // Set the order type in the hidden input
+        const orderTypeInput = document.getElementById('order_type');
+        if (orderTypeInput) {
+            orderTypeInput.value = type;
+        }
 
+        // Update Alpine.js state if available
+        try {
+            const alpineEl = document.querySelector('[x-data]');
+            if (alpineEl && window.Alpine) {
+                const alpineComponent = Alpine.$data(alpineEl);
+                if (alpineComponent) {
+                    alpineComponent.orderType = type;
+                }
+            }
+        } catch (e) {
+            // Silently handle errors
+        }
+
+        // Show/hide dine-in section
+        const dineInSection = document.getElementById('dine-in-section');
+        if (dineInSection) {
+            dineInSection.style.display = type === 'DINE_IN' ? 'block' : 'none';
+        }
+
+        // Highlight the selected order type button
+        document.querySelectorAll('.order-type-button').forEach(btn => {
+            if (btn.dataset.type === type) {
+                btn.classList.add('bg-food-gold');
+                btn.classList.add('text-gray-900');
+                btn.classList.remove('bg-gray-700');
+                btn.classList.remove('text-white');
+            } else {
+                btn.classList.remove('bg-food-gold');
+                btn.classList.remove('text-gray-900');
+                btn.classList.add('bg-gray-700');
+                btn.classList.add('text-white');
+            }
+        });
+
+        // Update button text based on order type
+        const submitButton = document.querySelector('#checkout-submit-button');
+        const buttonText = document.querySelector('#submit-button-text');
+        const buttonIcon = submitButton ? submitButton.querySelector('i') : null;
+        if (buttonText) {
+            if (type === 'DINE_IN') {
+                buttonText.textContent = 'Reserve Table & Proceed to Payment';
+                if (buttonIcon) {
+                    buttonIcon.className = 'fas fa-utensils mr-2';
+                }
+            } else {
+                buttonText.textContent = 'Proceed to Payment';
+                if (buttonIcon) {
+                    buttonIcon.className = 'fas fa-credit-card mr-2';
+                }
+            }
+        }
+    }
+
+    // Initialize when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded, initializing checkout page');
+
+        // Set default order type
+        setOrderType('PICKUP');
+
+        // Add click handlers to all table buttons
+        document.querySelectorAll('.table-button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!this.disabled) {
+                    selectTable(this.dataset.table);
+                }
+            });
+        });
+
+        // Add click handlers to order type buttons
+        document.querySelectorAll('.order-type-button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                setOrderType(this.dataset.type);
+            });
+        });
+
+        // Handle form submission
+        const checkoutForm = document.getElementById('checkout-form');
         if (checkoutForm) {
             checkoutForm.addEventListener('submit', function(e) {
-                console.log('Form submitted');
                 // Prevent default form submission
                 e.preventDefault();
 
-                // Disable the submit button
+                // Get form values
+                const orderType = document.getElementById('order_type').value;
+                const tableNumber = document.getElementById('table_number').value;
+
+                // For dine-in orders, ensure a table is selected
+                if (orderType === 'DINE_IN') {
+                    if (!tableNumber) {
+                        // If no table is selected, use table 1 by default
+                        document.getElementById('table_number').value = '1';
+                        alert('No table was selected. Table 1 has been automatically selected for you.');
+                    }
+                }
+
+                // Disable the submit button to prevent double submission
                 const submitButton = this.querySelector('button[type="submit"]');
                 if (submitButton) {
                     submitButton.disabled = true;
-                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+                    const buttonText = submitButton.querySelector('#submit-button-text');
+                    if (buttonText) {
+                        buttonText.textContent = 'Processing...';
+                    }
+                    const buttonIcon = submitButton.querySelector('i');
+                    if (buttonIcon) {
+                        buttonIcon.className = 'fas fa-spinner fa-spin mr-2';
+                    }
                 }
 
-                // Create a FormData object
-                const formData = new FormData(this);
-
-                // Send the form data using fetch
-                fetch('{% url 'checkout' %}', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                })
-                .then(response => {
-                    if (response.redirected) {
-                        window.location.href = response.url;
-                    } else {
-                        return response.text();
-                    }
-                })
-                .then(html => {
-                    if (html) {
-                        // If we got HTML back, there was an error
-                        document.open();
-                        document.write(html);
-                        document.close();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('There was an error processing your order. Please try again.');
-                    if (submitButton) {
-                        submitButton.disabled = false;
-                        submitButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i> Proceed to GCash Payment';
-                    }
-                });
+                // Submit the form
+                this.submit();
             });
-
-            // Add a direct click handler to the submit button as well
-            const submitButton = checkoutForm.querySelector('button[type="submit"]');
-            if (submitButton) {
-                console.log('Submit button found:', submitButton);
-                submitButton.addEventListener('click', function(e) {
-                    console.log('Submit button clicked');
-                    // Submit the form
-                    checkoutForm.dispatchEvent(new Event('submit'));
-                });
-            }
         }
     });
 </script>

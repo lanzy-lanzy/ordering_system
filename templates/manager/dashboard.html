@@ -78,6 +78,21 @@
 
         <div class="card p-6">
             <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold">Pending Reservations</h2>
+                <span class="bg-yellow-900 text-yellow-300 text-xs px-2 py-1 rounded-full">{{ pending_reservations }}</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <div class="text-gray-400">
+                    <p>Reservations awaiting confirmation</p>
+                </div>
+                <a href="{% url 'reservations_dashboard' %}?status=PENDING" class="text-food-gold hover:text-food-gold-light">
+                    View Reservations <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold">Inventory Alerts</h2>
                 <span class="bg-red-900 text-red-300 text-xs px-2 py-1 rounded-full">{{ low_stock_items|add:out_of_stock_items }}</span>
             </div>
@@ -115,9 +130,9 @@
         </div>
     </div>
 
-    <!-- Top Selling Items -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="card p-6">
+    <!-- Top Selling Items & Cashier Sales -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="card p-6 md:col-span-2">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-bold">Top Selling Items</h2>
                 <a href="{% url 'sales_report' %}" class="text-food-gold hover:text-food-gold-light text-sm">
@@ -139,7 +154,7 @@
                         <tr class="border-b border-gray-800">
                             <td class="py-3">{{ item.menu_item__name }}</td>
                             <td class="py-3">{{ item.total_quantity }}</td>
-                            <td class="py-3">${{ item.total_sales|floatformat:2 }}</td>
+                            <td class="py-3">₱{{ item.total_sales|floatformat:2 }}</td>
                         </tr>
                         {% empty %}
                         <tr>
@@ -148,6 +163,39 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Cashier Sales Today -->
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Cashier Sales Today</h2>
+                <a href="{% url 'cashier_sales_report' %}" class="text-food-gold hover:text-food-gold-light text-sm">
+                    View Report <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <div class="overflow-y-auto max-h-80">
+                <div class="space-y-3">
+                    {% for sale in cashier_sales %}
+                    <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-food-gold bg-opacity-20 flex items-center justify-center text-food-gold mr-3">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">{{ sale.full_name }}</p>
+                                <p class="text-xs text-gray-400">{{ sale.order_count }} orders</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-green-400">₱{{ sale.total_sales|floatformat:2 }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-500 text-center py-4">No cashier sales today</p>
+                    {% endfor %}
+                </div>
             </div>
         </div>
 
@@ -203,6 +251,67 @@
         </div>
     </div>
 
+    <!-- Pending Reservations -->
+    {% if recent_pending_reservations %}
+    <div class="card p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold flex items-center">
+                <i class="fas fa-bell text-yellow-500 mr-2"></i> Pending Reservations
+                <span class="ml-2 px-2 py-1 bg-red-600 text-white text-xs rounded-full animate-pulse">{{ pending_reservations_count }}</span>
+            </h2>
+            <a href="{% url 'reservations_dashboard' %}?status=PENDING" class="text-food-gold hover:text-food-gold-light text-sm">
+                View All <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="text-left text-gray-400 border-b border-gray-800">
+                        <th class="pb-3 pl-3">Date & Time</th>
+                        <th class="pb-3">Guest</th>
+                        <th class="pb-3">Party Size</th>
+                        <th class="pb-3">Table</th>
+                        <th class="pb-3">Submitted</th>
+                        <th class="pb-3 pr-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reservation in recent_pending_reservations %}
+                    <tr class="border-b border-gray-800 hover:bg-gray-800 transition-colors duration-200">
+                        <td class="py-4 pl-3">
+                            <div class="font-medium text-white">{{ reservation.date|date:"M d, Y" }}</div>
+                            <div class="text-sm text-gray-400">{{ reservation.time|time:"H:i" }}</div>
+                        </td>
+                        <td class="py-4">
+                            <div>{{ reservation.name }}</div>
+                            <div class="text-sm text-gray-500">{{ reservation.phone }}</div>
+                        </td>
+                        <td class="py-4">{{ reservation.party_size }} people</td>
+                        <td class="py-4">
+                            {% if reservation.table_number %}
+                            Table {{ reservation.table_number }}
+                            {% else %}
+                            Not assigned
+                            {% endif %}
+                        </td>
+                        <td class="py-4">
+                            <div class="text-sm text-gray-400">{{ reservation.created_at|timesince }} ago</div>
+                        </td>
+                        <td class="py-4 pr-3">
+                            <a href="{% url 'update_reservation_status' reservation.id %}?next=manager_dashboard"
+                               class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg text-sm inline-flex items-center">
+                                <i class="fas fa-check mr-1"></i> Confirm
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Quick Links -->
     <div class="card p-6">
         <h2 class="text-xl font-bold mb-4">Quick Actions</h2>
@@ -227,9 +336,12 @@
                 <span>Performance Metrics</span>
             </a>
 
-            <a href="{% url 'reservations_dashboard' %}" class="bg-yellow-900 hover:bg-yellow-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center">
+            <a href="{% url 'reservations_dashboard' %}?status=PENDING" class="bg-yellow-900 hover:bg-yellow-800 text-white p-4 rounded-lg flex flex-col items-center justify-center text-center relative">
                 <i class="fas fa-calendar-alt text-2xl mb-2"></i>
                 <span>Reservations</span>
+                {% if pending_reservations > 0 %}
+                <span class="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse">{{ pending_reservations }}</span>
+                {% endif %}
             </a>
         </div>
     </div>

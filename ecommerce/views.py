@@ -1,4 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.db import transaction
+from django.urls import reverse
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_POST
@@ -8,9 +10,9 @@ from django.utils import timezone
 from django.db import models
 from django.db.models import Count, Sum
 from decimal import Decimal
-from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation, StaffProfile, CustomerProfile, Payment
+from .models import Category, MenuItem, Cart, CartItem, Order, OrderItem, Review, Reservation, StaffProfile, CustomerProfile, Payment, Refund, ReservationPayment, StaffActivity
 from django.contrib.auth.forms import PasswordChangeForm
-from .forms import RegistrationForm, CheckoutForm, GCashPaymentForm, ReservationForm
+from .forms import RegistrationForm, CheckoutForm, GCashPaymentForm, ReservationForm, ReservationPaymentForm
 
 
 def redirect_based_on_role(user):
@@ -205,6 +207,20 @@ def view_cart(request):
     })
 
 
+def get_occupied_tables():
+    """Get a list of currently occupied tables"""
+    # Get all active dine-in orders (orders that are not completed or cancelled)
+    active_orders = Order.objects.filter(
+        order_type='DINE_IN',
+        status__in=['PENDING', 'PREPARING', 'READY']
+    )
+
+    # Extract table numbers from active orders
+    occupied_tables = [order.table_number for order in active_orders if order.table_number]
+
+    return occupied_tables
+
+
 @login_required
 def checkout(request):
     """Checkout process"""
@@ -224,21 +240,71 @@ def checkout(request):
         messages.error(request, 'Your cart is empty. Please add items before checkout.')
         return redirect('view_cart')
 
+    # Get occupied tables for dine-in orders
+    occupied_tables = get_occupied_tables()
+
     if request.method == 'POST':
-        # Create the order directly without form validation for testing
+        # Get form data
+        order_type = request.POST.get('order_type', 'PICKUP')
+        table_number = request.POST.get('table_number', '')
+        number_of_guests = request.POST.get('number_of_guests', 2)
+        special_instructions = request.POST.get('special_instructions', '')
+
+        # Convert number_of_guests to integer
+        try:
+            number_of_guests = int(number_of_guests)
+        except (ValueError, TypeError):
+            number_of_guests = 2
+
+        # Process order data
+
+        # Set default values based on order type
+        delivery_address = ''
+        contact_number = ''
+        payment_status = 'PENDING'
+        order_status = 'PENDING'
+
+        # Customize based on order type
+        if order_type == 'PICKUP':
+            delivery_address = 'Pickup at restaurant'
+        elif order_type == 'DELIVERY':
+            delivery_address = request.user.customer_profile.address if hasattr(request.user, 'customer_profile') and request.user.customer_profile.address else 'Please update your address'
+            contact_number = request.user.customer_profile.phone if hasattr(request.user, 'customer_profile') and request.user.customer_profile.phone else ''
+        elif order_type == 'DINE_IN':
+            # For dine-in orders, we need table number and guests
+            if not table_number:
+                messages.error(request, 'Please select a table for dine-in orders.')
+                return render(request, 'checkout/checkout.html', {
+                    'form': CheckoutForm(user=request.user, data=request.POST),
+                    'cart_items': cart_items,
+                    'subtotal': subtotal,
+                    'tax': tax,
+                    'total': total,
+                    'occupied_tables': occupied_tables
+                })
+
+            # Set dine-in specific values
+            order_status = 'PREPARING'  # Dine-in orders start in preparing status
+            # All orders should start with PENDING payment status to go through payment flow
+            payment_status = 'PENDING'
+
+        # Create the order with all the collected information
         order = Order.objects.create(
             user=request.user,
-            status='PENDING',
-            order_type='PICKUP',  # Default to pickup
+            status=order_status,
+            order_type=order_type,
             payment_method='GCASH',
-            payment_status='PENDING',
+            payment_status=payment_status,
             total_amount=subtotal,
             tax_amount=tax,
             delivery_fee=0,  # You can add delivery fee logic here
             discount_amount=0,  # You can add discount logic here
-            delivery_address='Pickup at restaurant',
-            contact_number=request.user.customer_profile.phone if hasattr(request.user, 'customer_profile') and request.user.customer_profile.phone else '',
-            special_instructions=request.POST.get('special_instructions', '')
+            delivery_address=delivery_address,
+            contact_number=contact_number,
+            table_number=table_number,
+            number_of_guests=number_of_guests,
+            special_instructions=special_instructions,
+            preparing_at=timezone.now() if order_type == 'DINE_IN' else None  # Set preparing timestamp for dine-in
         )
 
         # Add order items
@@ -254,17 +320,35 @@ def checkout(request):
         # Clear the cart
         cart.cart_items.all().delete()
 
-        # Always redirect to GCash payment page
-        return redirect('gcash_payment', order_id=order.id)
+        # Order created successfully
+
+        # Set success message
+        if order_type == 'DINE_IN':
+            messages.success(request, 'Your table has been reserved! Please complete the payment to confirm your order.')
+        else:
+            messages.success(request, 'Your order has been placed! Please complete the payment.')
+
+        # Create payment URL and redirect
+        payment_url = reverse('gcash_payment', kwargs={'order_id': order.id})
+        return redirect(payment_url)
     else:
-        form = CheckoutForm(user=request.user)
+        # Check for URL parameters
+        initial_data = {}
+        if 'table' in request.GET:
+            initial_data['table_number'] = request.GET.get('table')
+
+        if 'order_type' in request.GET:
+            initial_data['order_type'] = request.GET.get('order_type')
+
+        form = CheckoutForm(user=request.user, initial=initial_data)
 
     return render(request, 'checkout/checkout.html', {
         'form': form,
         'cart_items': cart_items,
         'subtotal': subtotal,
         'tax': tax,
-        'total': total
+        'total': total,
+        'occupied_tables': occupied_tables
     })
 
 
@@ -756,28 +840,64 @@ def orders_list(request):
     return render(request, 'accounts/orders.html', context)
 
 
+@login_required
 def make_reservation(request):
-    """Allow customers to make a reservation"""
+    """Allow registered customers to make a reservation with table selection and menu items"""
+    # Get available tables
+    occupied_tables = get_occupied_tables()
+
+    # Get menu items and categories for ordering
+    menu_items = MenuItem.objects.filter(is_available=True)
+    categories = Category.objects.filter(is_active=True)
+
+    # Get user profile information
+    user_email = request.user.email
+    user_phone = ''
+    if hasattr(request.user, 'customer_profile'):
+        user_phone = request.user.customer_profile.phone
+
     if request.method == 'POST':
         form = ReservationForm(request.POST, user=request.user if request.user.is_authenticated else None)
         if form.is_valid():
-            reservation = form.save(commit=False)
-            if request.user.is_authenticated:
-                reservation.user = request.user
-            reservation.save()
+            with transaction.atomic():
+                # Save the reservation
+                reservation = form.save(commit=False)
+                reservation.user = request.user  # Always associate with the logged-in user
 
-            # Check if this is an AJAX request
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Your reservation has been submitted successfully! We will confirm it shortly.'
-                })
+                # Add table number if selected
+                table_number = request.POST.get('table_number')
+                if table_number:
+                    reservation.table_number = table_number
 
-            messages.success(request, 'Your reservation has been submitted successfully! We will confirm it shortly.')
-            if request.user.is_authenticated:
-                return redirect('my_reservations')
-            else:
-                return redirect('home')
+                # Process menu items if any were selected
+                menu_items_data = request.POST.get('menu_items_data')
+                total_amount = Decimal('0.00')
+
+                if menu_items_data:
+                    try:
+                        import json
+                        menu_items_json = json.loads(menu_items_data)
+
+                        if menu_items_json and len(menu_items_json) > 0:
+                            # Calculate total amount for the reservation
+                            for item in menu_items_json:
+                                menu_item = MenuItem.objects.get(id=item['id'])
+                                quantity = item['quantity']
+                                total_amount += menu_item.price * Decimal(str(quantity))
+                    except Exception as e:
+                        # Log the error but continue with the reservation
+                        print(f"Error processing menu items: {str(e)}")
+
+                # Set the total amount for the reservation
+                reservation.total_amount = total_amount
+                reservation.save()
+
+                # Store menu items in session for later use
+                request.session['reservation_menu_items'] = menu_items_data
+                request.session['reservation_id'] = reservation.id
+
+                # Redirect to payment page
+                return redirect('reservation_payment', reservation_id=reservation.id)
         else:
             # If AJAX request and form is invalid
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -791,14 +911,111 @@ def make_reservation(request):
                     'errors': errors
                 })
     else:
-        form = ReservationForm(user=request.user if request.user.is_authenticated else None)
+        form = ReservationForm(initial={
+            'name': request.user.get_full_name() or request.user.username,
+            'email': user_email,
+            'phone': user_phone
+        }, user=request.user)
 
     context = {
         'form': form,
+        'occupied_tables': occupied_tables,
+        'menu_items': menu_items,
+        'categories': categories,
         'active_section': 'make_reservation'
     }
 
     return render(request, 'reservations/make_reservation.html', context)
+
+
+@login_required
+def reservation_payment(request, reservation_id):
+    """GCash payment page for reservations"""
+    try:
+        reservation = Reservation.objects.get(id=reservation_id, user=request.user)
+
+        # Check if reservation is already paid
+        if reservation.payment_status == 'PAID':
+            messages.info(request, 'This reservation has already been paid.')
+            return redirect('my_reservations')
+
+        # Get or create a payment record
+        payment, created = ReservationPayment.objects.get_or_create(
+            reservation=reservation,
+            status='PENDING',
+            defaults={
+                'amount': Decimal('0.00'),  # Will be set based on payment type
+                'payment_method': 'GCASH'
+            }
+        )
+
+        if request.method == 'POST':
+            form = ReservationPaymentForm(request.POST, request.FILES, instance=payment)
+            if form.is_valid():
+                payment = form.save(commit=False)
+
+                # Calculate payment amount based on payment type
+                payment_type = form.cleaned_data['payment_type']
+                if payment_type == 'FULL':
+                    payment.amount = reservation.total_amount
+                else:  # DEPOSIT (50%)
+                    payment.amount = reservation.total_amount * Decimal('0.5')
+
+                payment.status = 'PENDING'  # Will be verified by staff
+                payment.save()
+
+                # Process menu items if any were selected
+                menu_items_data = request.session.get('reservation_menu_items')
+                if menu_items_data:
+                    try:
+                        import json
+                        menu_items_json = json.loads(menu_items_data)
+
+                        # Create an order for the menu items
+                        order = Order.objects.create(
+                            user=request.user,
+                            status='PENDING',
+                            order_type='DINE_IN',
+                            payment_method='GCASH',
+                            payment_status='PENDING',
+                            total_amount=reservation.total_amount,
+                            tax_amount=Decimal('0.00'),
+                            table_number=reservation.table_number,
+                            number_of_guests=reservation.party_size,
+                            special_instructions=reservation.special_requests
+                        )
+
+                        # Add order items
+                        for item in menu_items_json:
+                            menu_item = MenuItem.objects.get(id=item['id'])
+                            OrderItem.objects.create(
+                                order=order,
+                                menu_item=menu_item,
+                                quantity=item['quantity'],
+                                price=menu_item.price
+                            )
+
+                        # Clear session data
+                        if 'reservation_menu_items' in request.session:
+                            del request.session['reservation_menu_items']
+                        if 'reservation_id' in request.session:
+                            del request.session['reservation_id']
+                    except Exception as e:
+                        messages.error(request, f"Error processing menu items: {str(e)}")
+
+                messages.success(request, 'Your payment has been submitted and is awaiting verification. You will receive a confirmation once it is approved.')
+                return redirect('my_reservations')
+        else:
+            form = ReservationPaymentForm(instance=payment)
+
+        return render(request, 'reservations/reservation_payment.html', {
+            'reservation': reservation,
+            'payment': payment,
+            'form': form
+        })
+    except Reservation.DoesNotExist:
+        messages.error(request, 'Reservation not found.')
+        return redirect('my_reservations')
 
 
 @login_required
@@ -887,16 +1104,51 @@ def update_reservation_status(request, reservation_id):
     """Update the status of a reservation"""
     reservation = get_object_or_404(Reservation, id=reservation_id)
 
+    # Get the next parameter for redirect
+    next_page = request.GET.get('next', 'reservations')
+
     if request.method == 'POST':
         new_status = request.POST.get('status')
         if new_status in dict(Reservation.STATUS_CHOICES):
             reservation.status = new_status
             reservation.save()
+
+            # Log the activity
+            StaffActivity.objects.create(
+                staff=request.user,
+                action='UPDATE_RESERVATION',
+                details=f"Updated reservation #{reservation_id} status to {dict(Reservation.STATUS_CHOICES)[new_status]}"
+            )
+
             messages.success(request, f'Reservation status updated to {dict(Reservation.STATUS_CHOICES)[new_status]}')
         else:
             messages.error(request, 'Invalid status provided')
 
-    return redirect('reservations')
+    # Handle GET requests with status parameter (for quick actions from dashboard)
+    elif request.method == 'GET' and 'status' in request.GET:
+        new_status = request.GET.get('status')
+        if new_status in dict(Reservation.STATUS_CHOICES):
+            reservation.status = new_status
+            reservation.save()
+
+            # Log the activity
+            StaffActivity.objects.create(
+                staff=request.user,
+                action='UPDATE_RESERVATION',
+                details=f"Updated reservation #{reservation_id} status to {dict(Reservation.STATUS_CHOICES)[new_status]}"
+            )
+
+            messages.success(request, f'Reservation status updated to {dict(Reservation.STATUS_CHOICES)[new_status]}')
+        else:
+            messages.error(request, 'Invalid status provided')
+
+    # Redirect based on the next parameter
+    if next_page == 'manager_dashboard':
+        return redirect('manager_dashboard')
+    elif next_page == 'reservations_dashboard':
+        return redirect('reservations_dashboard')
+    else:
+        return redirect('reservations')
 
 
 @login_required
@@ -945,6 +1197,17 @@ def profile(request):
                 user.staff_profile.profile_picture = profile_picture
 
             user.staff_profile.save()
+
+        # Update customer profile if it exists
+        if hasattr(user, 'customer_profile'):
+            if phone:
+                user.customer_profile.phone = phone
+
+            # Handle profile picture upload
+            if profile_picture:
+                user.customer_profile.profile_picture = profile_picture
+
+            user.customer_profile.save()
         # If you have a UserProfile model with additional fields
         elif hasattr(user, 'profile'):
             user.profile.phone = phone
@@ -1148,12 +1411,131 @@ def my_orders(request):
     """Display customer's order history"""
     orders = Order.objects.filter(user=request.user).order_by('-created_at')
 
+    # Filter by status if provided
+    status_filter = request.GET.get('status')
+    if status_filter and status_filter != 'all':
+        orders = orders.filter(status=status_filter)
+
     context = {
         'orders': orders,
+        'status_filter': status_filter or 'all',
+        'status_choices': Order.STATUS_CHOICES,
         'active_section': 'orders'
     }
 
     return render(request, 'accounts/my_orders.html', context)
+
+
+@login_required
+def view_customer_order(request, order_id):
+    """View detailed information about a customer's order"""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    order_items = order.order_items.all()
+
+    # Get payment information if available
+    payment = Payment.objects.filter(order=order).first()
+
+    # Calculate time elapsed since order creation
+    time_elapsed = None
+    if order.created_at:
+        time_elapsed = timezone.now() - order.created_at
+
+    # Get order timeline data
+    timeline_events = [
+        {'time': order.created_at, 'status': 'Order Placed', 'icon': 'fa-shopping-cart', 'color': 'text-blue-400'}
+    ]
+
+    if order.preparing_at:
+        timeline_events.append({'time': order.preparing_at, 'status': 'Preparing', 'icon': 'fa-utensils', 'color': 'text-yellow-400'})
+
+    if order.ready_at:
+        timeline_events.append({'time': order.ready_at, 'status': 'Ready for Pickup', 'icon': 'fa-check-circle', 'color': 'text-green-400'})
+
+    if order.completed_at:
+        timeline_events.append({'time': order.completed_at, 'status': 'Completed', 'icon': 'fa-flag-checkered', 'color': 'text-gray-400'})
+
+    if order.cancelled_at:
+        timeline_events.append({'time': order.cancelled_at, 'status': 'Cancelled', 'icon': 'fa-times-circle', 'color': 'text-red-400'})
+
+    # Sort timeline events by time
+    timeline_events = sorted([event for event in timeline_events if event['time']], key=lambda x: x['time'])
+
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'payment': payment,
+        'time_elapsed': time_elapsed,
+        'timeline_events': timeline_events,
+        'active_section': 'orders'
+    }
+
+    return render(request, 'accounts/view_customer_order.html', context)
+
+
+@login_required
+def customer_cancel_order(request, order_id):
+    """Allow customers to cancel their own orders with restrictions"""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # Check if order can be cancelled by customer
+    # Only allow cancellation if order is still pending and within a time window (15 minutes)
+    time_window = timezone.now() - timezone.timedelta(minutes=15)
+
+    if order.status != 'PENDING' or order.created_at < time_window:
+        messages.error(request, 'This order can no longer be cancelled online. Please contact customer support.')
+        return redirect('my_orders')
+
+    if request.method == 'POST':
+        cancellation_reason = request.POST.get('cancellation_reason', 'CUSTOMER_REQUEST')
+        cancellation_notes = request.POST.get('cancellation_notes', 'Customer cancelled online')
+
+        # Begin transaction to ensure all changes are atomic
+        with transaction.atomic():
+            # 1. Update order status
+            order.status = 'CANCELLED'
+            order.cancelled_at = timezone.now()
+            order.cancellation_reason = cancellation_reason
+            order.cancellation_notes = cancellation_notes
+            order.cancelled_by = request.user
+            order.save()
+
+            # 2. Handle payment if already paid
+            if order.payment_status == 'PAID':
+                # Create refund record
+                refund = Refund.objects.create(
+                    order=order,
+                    amount=order.grand_total,
+                    reason=f"Customer cancelled order online",
+                    status='PENDING',
+                    initiated_by=request.user,
+                    notes=cancellation_notes
+                )
+
+                # Update payment status
+                order.payment_status = 'REFUNDED'
+                order.save(update_fields=['payment_status'])
+
+                # Update any existing payments
+                for payment in Payment.objects.filter(order=order, status='COMPLETED'):
+                    payment.status = 'REFUNDED'
+                    payment.save()
+
+                messages.info(request, f'A refund of ₱{order.grand_total} has been initiated for this order')
+
+            # 3. Free up table reservation (for dine-in)
+            if order.order_type == 'DINE_IN' and order.table_number:
+                messages.info(request, f'Your table reservation has been cancelled')
+
+        messages.success(request, f'Your order has been cancelled successfully')
+        return redirect('my_orders')
+
+    context = {
+        'order': order,
+        'cancellation_reasons': Order.CANCELLATION_REASON_CHOICES,
+        'active_section': 'orders'
+    }
+
+    return render(request, 'customer/cancel_order.html', context)
 
 
 @login_required

@@ -14,7 +14,7 @@
         -webkit-text-fill-color: transparent;
         background-clip: text;
     }
-    
+
     /* Simplified hover scale with hardware acceleration */
     .hover-scale {
         transform: translateZ(0); /* Hardware acceleration */
@@ -24,31 +24,112 @@
     .hover-scale:hover {
         transform: translateZ(0) scale(1.03);
     }
-    
+
     /* Optimized transitions for interactive elements */
     a, button {
         transition: color 0.2s ease, background-color 0.2s ease;
         will-change: color, background-color;
     }
-    
+
     /* Remove heavy transitions */
     .mobile-menu-transition {
         transition: transform 0.2s ease;
         will-change: transform;
     }
-    
+
     /* Optimize scroll behavior */
     html {
         scroll-behavior: auto; /* Remove smooth scroll for better performance */
     }
-    
-    /* Simplified fade-in animation */
-    .fade-in {
-        animation: simpleFadeIn 0.3s ease forwards;
+
+    /* Animations */
+    .fade-in, .animate-fade-in {
+        animation: simpleFadeIn 0.5s ease forwards;
     }
-    
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .animate-fade-in-down {
+        animation: fadeInDown 0.6s ease forwards;
+    }
+
+    /* Staggered animation for menu items */
+    .menu-item {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.5s ease forwards;
+    }
+
+    /* Button hover effect */
+    .cart-btn {
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+    }
+
+    .cart-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: 0.5s;
+        z-index: -1;
+    }
+
+    .cart-btn:hover::before {
+        left: 100%;
+    }
+
+    .menu-item:nth-child(1) { animation-delay: 0.1s; }
+    .menu-item:nth-child(2) { animation-delay: 0.2s; }
+    .menu-item:nth-child(3) { animation-delay: 0.3s; }
+    .menu-item:nth-child(4) { animation-delay: 0.4s; }
+    .menu-item:nth-child(5) { animation-delay: 0.5s; }
+    .menu-item:nth-child(6) { animation-delay: 0.6s; }
+    .menu-item:nth-child(7) { animation-delay: 0.7s; }
+    .menu-item:nth-child(8) { animation-delay: 0.8s; }
+    .menu-item:nth-child(9) { animation-delay: 0.9s; }
+
     @keyframes simpleFadeIn {
         from { opacity: 0; }
         to { opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Message notifications */
+    .message-item {
+        opacity: 1;
+        transition: opacity 0.5s ease-in-out;
+    }
+
+    #django-messages {
+        max-width: 90%;
+        width: 400px;
     }
 </style>
