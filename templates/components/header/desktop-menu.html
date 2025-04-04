@@ -1,87 +1,87 @@
-<div class="hidden md:flex space-x-6">
-    <a href="/" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-        <i class="fas fa-home mr-1 text-food-gold"></i> Home
+<div class="hidden md:flex space-x-6 items-center">
+    <a href="/" class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-3 py-2 rounded-lg hover:bg-black/20">
+        <i class="fas fa-home mr-2 text-food-gold"></i> Home
     </a>
-    <a href="{% url 'menu' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-        <i class="fas fa-utensils mr-1 text-food-gold"></i> Menu
+    <a href="{% url 'menu' %}" class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-3 py-2 rounded-lg hover:bg-black/20">
+        <i class="fas fa-utensils mr-2 text-food-gold"></i> Menu
     </a>
-    <a href="{% url 'make_reservation' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-        <i class="far fa-calendar-alt mr-1 text-food-gold"></i> Reservations
+    <a href="{% url 'make_reservation' %}" class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-3 py-2 rounded-lg hover:bg-black/20">
+        <i class="far fa-calendar-alt mr-2 text-food-gold"></i> Reservations
     </a>
-    <a href="/#about" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-        <i class="fas fa-info-circle mr-1 text-food-gold"></i> About Us
+    <a href="/#about" class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-3 py-2 rounded-lg hover:bg-black/20">
+        <i class="fas fa-info-circle mr-2 text-food-gold"></i> About Us
     </a>
-    <a href="/#contact" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-        <i class="fas fa-envelope mr-1 text-food-gold"></i> Contact
+    <a href="/#contact" class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-3 py-2 rounded-lg hover:bg-black/20">
+        <i class="fas fa-envelope mr-2 text-food-gold"></i> Contact
     </a>
 
     {% if user.is_authenticated %}
     <div class="relative group">
-        <button class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-            <i class="fas fa-user-circle mr-1 text-food-gold"></i>
+        <button class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-3 py-2 rounded-lg hover:bg-black/20">
+            <i class="fas fa-user-circle mr-2 text-food-gold"></i>
             {% if user.first_name %}
                 {{ user.first_name }}
             {% else %}
                 {{ user.username }}
             {% endif %}
-            <i class="fas fa-chevron-down ml-1 text-xs"></i>
+            <i class="fas fa-chevron-down ml-1 text-xs group-hover:rotate-180 transition-transform duration-300"></i>
         </button>
-        <div class="absolute right-0 mt-2 w-48 bg-food-black rounded-md shadow-lg py-1 z-50 hidden group-hover:block">
+        <div class="absolute right-0 mt-2 w-56 bg-gradient-to-b from-food-black to-black rounded-xl shadow-xl py-2 z-50 hidden group-hover:block border border-food-gold/20 backdrop-blur-sm">
             {% if user.is_superuser %}
-                <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                     <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
                 </a>
             {% elif user.is_staff %}
                 {% with role=user.staff_profile.role|default:'' %}
                     {% if role == 'ADMIN' %}
-                        <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                        <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                             <i class="fas fa-tachometer-alt mr-2"></i> Admin Dashboard
                         </a>
                     {% elif role == 'MANAGER' %}
-                        <a href="{% url 'manager_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                        <a href="{% url 'manager_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                             <i class="fas fa-tachometer-alt mr-2"></i> Manager Dashboard
                         </a>
                     {% elif role == 'CASHIER' %}
-                        <a href="{% url 'cashier_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                        <a href="{% url 'cashier_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                             <i class="fas fa-cash-register mr-2"></i> Cashier Dashboard
                         </a>
                     {% else %}
-                        <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                        <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                             <i class="fas fa-tachometer-alt mr-2"></i> Staff Dashboard
                         </a>
                     {% endif %}
                 {% endwith %}
             {% else %}
-                <a href="{% url 'customer_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+                <a href="{% url 'customer_dashboard' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                     <i class="fas fa-tachometer-alt mr-2"></i> My Dashboard
                 </a>
             {% endif %}
-            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+            <a href="{% url 'profile' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                 <i class="fas fa-user mr-2"></i> My Profile
             </a>
-            <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+            <a href="{% url 'my_orders' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-food-gold/10 hover:text-food-gold rounded-lg mx-2 transition-all duration-200">
                 <i class="fas fa-history mr-2"></i> Order History
             </a>
-            <div class="border-t border-gray-700 my-1"></div>
-            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-food-gold">
+            <div class="border-t border-gray-700/50 my-2 mx-2"></div>
+            <a href="{% url 'logout' %}" class="block px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg mx-2 transition-all duration-200">
                 <i class="fas fa-sign-out-alt mr-2"></i> Logout
             </a>
         </div>
     </div>
     {% else %}
-    <div class="flex space-x-4">
-        <a href="{% url 'login' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-            <i class="fas fa-sign-in-alt mr-1 text-food-gold"></i> Login
+    <div class="flex space-x-3">
+        <a href="{% url 'login' %}" class="text-white hover:text-food-gold transition-all duration-300 font-medium flex items-center px-4 py-2 rounded-lg hover:bg-black/20 border border-transparent hover:border-food-gold/30">
+            <i class="fas fa-sign-in-alt mr-2 text-food-gold"></i> Login
         </a>
-        <a href="{% url 'register' %}" class="text-white hover:text-food-black transition duration-300 font-medium flex items-center">
-            <i class="fas fa-user-plus mr-1 text-food-gold"></i> Register
+        <a href="{% url 'register' %}" class="bg-food-gold/20 text-white hover:bg-food-gold/30 transition-all duration-300 font-medium flex items-center px-4 py-2 rounded-lg border border-food-gold/50 hover:border-food-gold">
+            <i class="fas fa-user-plus mr-2 text-food-gold"></i> Register
         </a>
     </div>
     {% endif %}
 
-    <a href="{% url 'view_cart' %}" class="bg-white text-food-red hover:bg-food-black hover:text-white px-5 py-2 rounded-full font-bold transition duration-300 flex items-center shadow-lg hover-scale relative">
+    <a href="{% url 'view_cart' %}" class="bg-gradient-to-r from-food-gold to-food-red text-white hover:from-food-red hover:to-food-gold px-5 py-2 rounded-full font-bold transition-all duration-300 flex items-center shadow-lg hover:shadow-food-gold/30 hover:-translate-y-1 relative">
         <i class="fas fa-shopping-cart mr-2"></i>
         Cart
-        <span id="cart-count" class="absolute -top-2 -right-2 bg-food-gold text-food-black text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">{{ cart_count }}</span>
+        <span id="cart-count" class="absolute -top-2 -right-2 bg-white text-food-black text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-food-gold shadow-sm">{{ cart_count }}</span>
     </a>
 </div>

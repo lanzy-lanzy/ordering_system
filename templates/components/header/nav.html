@@ -1,7 +1,11 @@
-<header class="bg-gradient-to-r from-food-red to-food-gold shadow-xl sticky top-0 z-50">
-    <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
-        {% include 'components/header/logo.html' %}
-        {% include 'components/header/desktop-menu.html' %}
-        {% include 'components/header/mobile-menu.html' %}
-    </nav>
+<header class="bg-gradient-to-r from-food-red via-food-black to-food-gold shadow-xl sticky top-0 z-50 border-b border-food-gold/30">
+    <div class="backdrop-blur-sm bg-black/10">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="transform hover:scale-105 transition-transform duration-300 ease-in-out">
+                {% include 'components/header/logo.html' %}
+            </div>
+            {% include 'components/header/desktop-menu.html' %}
+            {% include 'components/header/mobile-menu.html' %}
+        </nav>
+    </div>
 </header>
