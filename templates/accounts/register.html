@@ -275,14 +275,39 @@
                         <div class="px-3 py-3 bg-gray-600 flex items-center justify-center">
                             <i class="fas fa-lock text-yellow-500 text-lg"></i>
                         </div>
-                        <div class="w-full">
+                        <div class="w-full relative">
                             {{ form.password1 }}
+                            <button type="button" class="toggle-password absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-500 focus:outline-none" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
                     </div>
                     {% if form.password1.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ form.password1.errors.0 }}</p>
                     {% endif %}
-                    <p class="text-xs text-gray-500 mt-1">{{ form.password1.help_text }}</p>
+
+                    <!-- Password Requirements Box -->
+                    <div class="mt-3 p-3 bg-gray-700 border border-gray-600 rounded-md">
+                        <h4 class="text-sm font-medium text-yellow-500 mb-2">Password Requirements:</h4>
+                        <ul class="space-y-1 text-xs text-gray-300">
+                            <li class="flex items-center password-req" data-requirement="length">
+                                <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                                <span>Your password must contain at least 8 characters.</span>
+                            </li>
+                            <li class="flex items-center password-req" data-requirement="similar">
+                                <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                                <span>Your password can't be too similar to your other personal information.</span>
+                            </li>
+                            <li class="flex items-center password-req" data-requirement="common">
+                                <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                                <span>Your password can't be a commonly used password.</span>
+                            </li>
+                            <li class="flex items-center password-req" data-requirement="numeric">
+                                <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                                <span>Your password can't be entirely numeric.</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
                 <!-- Confirm Password -->
@@ -292,13 +317,37 @@
                         <div class="px-3 py-3 bg-gray-600 flex items-center justify-center">
                             <i class="fas fa-lock text-yellow-500 text-lg"></i>
                         </div>
-                        <div class="w-full">
+                        <div class="w-full relative">
                             {{ form.password2 }}
+                            <button type="button" class="toggle-password absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-yellow-500 focus:outline-none" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
+                    </div>
+                    <div id="password-match-indicator" class="hidden mt-1 text-xs">
+                        <i class="fas fa-check-circle text-green-500 mr-1"></i>
+                        <span class="text-green-500">Passwords match</span>
+                    </div>
+                    <div id="password-mismatch-indicator" class="hidden mt-1 text-xs">
+                        <i class="fas fa-times-circle text-red-500 mr-1"></i>
+                        <span class="text-red-500">Passwords don't match</span>
                     </div>
                     {% if form.password2.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ form.password2.errors.0 }}</p>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- Terms and Conditions Checkbox -->
+            <div class="mb-4">
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input id="terms" name="terms" type="checkbox" required class="h-4 w-4 text-yellow-500 focus:ring-yellow-500 border-gray-600 rounded bg-gray-700">
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="terms" class="font-medium text-gray-400">I agree to the <a href="#" id="terms-link" class="text-yellow-500 hover:text-yellow-400">Terms and Conditions</a> and <a href="#" id="privacy-link" class="text-yellow-500 hover:text-yellow-400">Privacy Policy</a></label>
+                        <p id="terms-error" class="hidden text-red-500 text-xs mt-1">You must agree to the terms and conditions</p>
+                    </div>
                 </div>
             </div>
 
@@ -322,6 +371,14 @@
         </form>
     </div>
 </div>
+
+<!-- Terms and Conditions Modal -->
+{% include "components/modals/modal_template.html" with modal_id="terms-modal" modal_title="Terms and Conditions" modal_content="components/modals/terms_conditions.html" %}
+
+<!-- Privacy Policy Modal -->
+{% include "components/modals/modal_template.html" with modal_id="privacy-modal" modal_title="Privacy Policy" modal_content="components/modals/privacy_policy.html" %}
+
+
 {% endblock content %}
 
 {% block extra_scripts %}
@@ -336,12 +393,212 @@
             }
         });
 
-        // Form submission handling with smooth animation
+        // Form validation and submission handling
         const registerForm = document.querySelector('form');
         const registerButton = document.getElementById('register-button');
+        const termsCheckbox = document.getElementById('terms');
+        const termsError = document.getElementById('terms-error');
+        const requiredFields = document.querySelectorAll('input[required]');
+        const passwordField = document.getElementById('{{ form.password1.id_for_label }}');
+        const confirmPasswordField = document.getElementById('{{ form.password2.id_for_label }}');
+        const passwordMatchIndicator = document.getElementById('password-match-indicator');
+        const passwordMismatchIndicator = document.getElementById('password-mismatch-indicator');
+        const passwordRequirements = document.querySelectorAll('.password-req');
 
+        // Toggle password visibility
+        const togglePasswordButtons = document.querySelectorAll('.toggle-password');
+        togglePasswordButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const input = this.parentElement.querySelector('input');
+                const icon = this.querySelector('i');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
+
+        // Password validation
+        function validatePassword(password) {
+            const requirements = {
+                length: password.length >= 8,
+                similar: true, // This is server-side validated
+                common: true,  // This is server-side validated
+                numeric: !/^\d+$/.test(password)
+            };
+
+            passwordRequirements.forEach(req => {
+                const reqType = req.dataset.requirement;
+                const icon = req.querySelector('i');
+
+                if (requirements[reqType]) {
+                    icon.classList.remove('fa-times-circle', 'text-red-500');
+                    icon.classList.add('fa-check-circle', 'text-green-500');
+                } else {
+                    icon.classList.remove('fa-check-circle', 'text-green-500');
+                    icon.classList.add('fa-times-circle', 'text-red-500');
+                }
+            });
+
+            return Object.values(requirements).every(Boolean);
+        }
+
+        // Check if passwords match
+        function checkPasswordsMatch() {
+            if (confirmPasswordField.value === '') {
+                passwordMatchIndicator.classList.add('hidden');
+                passwordMismatchIndicator.classList.add('hidden');
+                return;
+            }
+
+            if (passwordField.value === confirmPasswordField.value) {
+                passwordMatchIndicator.classList.remove('hidden');
+                passwordMismatchIndicator.classList.add('hidden');
+                return true;
+            } else {
+                passwordMatchIndicator.classList.add('hidden');
+                passwordMismatchIndicator.classList.remove('hidden');
+                return false;
+            }
+        }
+
+        // Validate form fields
+        function validateForm() {
+            let isValid = true;
+
+            // Check required fields
+            requiredFields.forEach(field => {
+                const container = field.closest('.flex.items-center') || field.parentElement;
+
+                if (!field.value.trim()) {
+                    isValid = false;
+                    container.classList.add('border-red-500');
+
+                    // Create or show error message
+                    let errorMsg = field.nextElementSibling;
+                    if (!errorMsg || !errorMsg.classList.contains('field-error')) {
+                        errorMsg = document.createElement('p');
+                        errorMsg.classList.add('text-red-500', 'text-xs', 'mt-1', 'field-error');
+                        errorMsg.textContent = `${field.getAttribute('placeholder') || field.getAttribute('name')} is required`;
+                        field.parentElement.appendChild(errorMsg);
+                    } else {
+                        errorMsg.classList.remove('hidden');
+                    }
+                } else {
+                    container.classList.remove('border-red-500');
+
+                    // Hide error message if it exists
+                    const errorMsg = field.nextElementSibling;
+                    if (errorMsg && errorMsg.classList.contains('field-error')) {
+                        errorMsg.classList.add('hidden');
+                    }
+                }
+            });
+
+            // Check terms checkbox
+            if (!termsCheckbox.checked) {
+                isValid = false;
+                termsError.classList.remove('hidden');
+            } else {
+                termsError.classList.add('hidden');
+            }
+
+            // Check password validation
+            if (passwordField.value) {
+                const isPasswordValid = validatePassword(passwordField.value);
+                if (!isPasswordValid) isValid = false;
+            }
+
+            // Check passwords match
+            if (passwordField.value && confirmPasswordField.value) {
+                const doPasswordsMatch = checkPasswordsMatch();
+                if (!doPasswordsMatch) isValid = false;
+            }
+
+            return isValid;
+        }
+
+        // Add event listeners for real-time validation
+        passwordField.addEventListener('input', function() {
+            validatePassword(this.value);
+            if (confirmPasswordField.value) checkPasswordsMatch();
+        });
+
+        confirmPasswordField.addEventListener('input', checkPasswordsMatch);
+
+        termsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                termsError.classList.add('hidden');
+            }
+        });
+
+        // Modal handling
+        const termsLink = document.getElementById('terms-link');
+        const privacyLink = document.getElementById('privacy-link');
+        const termsModal = document.getElementById('terms-modal');
+        const privacyModal = document.getElementById('privacy-modal');
+        const closeButtons = document.querySelectorAll('.close-modal');
+
+        // Open modals
+        termsLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            termsModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        });
+
+        privacyLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            privacyModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        });
+
+        // Close modals
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                termsModal.classList.add('hidden');
+                privacyModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            });
+        });
+
+        // Close modals when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target === termsModal || e.target === privacyModal) {
+                termsModal.classList.add('hidden');
+                privacyModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+
+        // Close modals with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                termsModal.classList.add('hidden');
+                privacyModal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+
+        // Form submission
         if (registerForm && registerButton) {
             registerForm.addEventListener('submit', function(e) {
+                if (!validateForm()) {
+                    e.preventDefault();
+                    // Scroll to the first error
+                    const firstError = document.querySelector('.border-red-500, .text-red-500:not(.hidden)');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                // If validation passes, show loading state
                 registerButton.disabled = true;
                 registerButton.classList.add('opacity-90');
                 registerButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating account...';
@@ -351,11 +608,13 @@
         // Add styling to form fields
         const formFields = document.querySelectorAll('input, textarea, select');
         formFields.forEach(field => {
-            field.classList.add('appearance-none', 'relative', 'block', 'w-full', 'px-3', 'py-2', 'border-0', 'bg-gray-700', 'text-white', 'focus:outline-none', 'focus:ring-0', 'transition-all', 'duration-200', 'sm:text-sm');
+            if (field.type !== 'checkbox') {
+                field.classList.add('appearance-none', 'relative', 'block', 'w-full', 'px-3', 'py-2', 'border-0', 'bg-gray-700', 'text-white', 'focus:outline-none', 'focus:ring-0', 'transition-all', 'duration-200', 'sm:text-sm');
+            }
         });
 
         // Enhanced focus effects for inputs with smooth transitions
-        const inputs = document.querySelectorAll('input, textarea, select');
+        const inputs = document.querySelectorAll('input:not([type="checkbox"]), textarea, select');
         inputs.forEach(input => {
             const inputContainer = input.closest('.flex.items-center');
             const iconElement = inputContainer ? inputContainer.querySelector('i') : null;

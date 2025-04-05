@@ -896,14 +896,31 @@ def make_reservation(request):
                 request.session['reservation_menu_items'] = menu_items_data
                 request.session['reservation_id'] = reservation.id
 
-                # Redirect to payment page
-                return redirect('reservation_payment', reservation_id=reservation.id)
+                # Check if this is an AJAX request
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Reservation created successfully.',
+                        'reservation_id': reservation.id,
+                        'redirect_url': reverse('reservation_payment', args=[reservation.id])
+                    })
+                else:
+                    # Redirect to payment page for non-AJAX requests
+                    return redirect('reservation_payment', reservation_id=reservation.id)
         else:
             # If AJAX request and form is invalid
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 errors = {}
                 for field, error_list in form.errors.items():
                     errors[field] = [str(error) for error in error_list]
+
+                # Log the errors for debugging
+                print(f"Form validation errors: {errors}")
+
+                # Check specifically for time field errors
+                if 'time' in errors:
+                    print(f"Time field error: {errors['time']}")
+                    print(f"Time value submitted: {request.POST.get('time')}")
 
                 return JsonResponse({
                     'success': False,
@@ -1039,12 +1056,21 @@ def my_reservations(request):
     elif date_filter == 'past':
         reservations = reservations.filter(date__lt=today)
 
+    # Get data for reservation modal
+    occupied_tables = get_occupied_tables()
+    menu_items = MenuItem.objects.filter(is_available=True)
+    categories = Category.objects.filter(is_active=True)
+
     context = {
         'reservations': reservations,
         'status_filter': status_filter or 'all',
         'date_filter': date_filter,
         'status_choices': Reservation.STATUS_CHOICES,
-        'active_section': 'my_reservations'
+        'active_section': 'my_reservations',
+        # Reservation modal data
+        'occupied_tables': occupied_tables,
+        'menu_items': menu_items,
+        'categories': categories
     }
 
     return render(request, 'reservations/my_reservations.html', context)
@@ -1394,13 +1420,22 @@ def customer_dashboard(request):
         order_count=models.Count('orderitem')
     ).order_by('-order_count')[:5]
 
+    # Get data for reservation modal
+    occupied_tables = get_occupied_tables()
+    menu_items = MenuItem.objects.filter(is_available=True)
+    categories = Category.objects.filter(is_active=True)
+
     context = {
         'recent_orders': recent_orders,
         'user_reviews': user_reviews,
         'total_orders': total_orders,
         'total_spent': total_spent,
         'favorite_items': favorite_items,
-        'active_section': 'dashboard'
+        'active_section': 'dashboard',
+        # Reservation modal data
+        'occupied_tables': occupied_tables,
+        'menu_items': menu_items,
+        'categories': categories
     }
 
     return render(request, 'accounts/customer_dashboard.html', context)

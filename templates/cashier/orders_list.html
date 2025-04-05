@@ -197,7 +197,7 @@
                             <td class="py-3">{{ order.total_amount|currency }}</td>
                             <td class="py-3">
                                 <div class="flex flex-col">
-                                    <span class="text-xs {% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'PENDING' %}text-yellow-400{% elif order.payment_status == 'FAILED' %}text-red-400{% else %}text-gray-400{% endif %}">
+                                    <span class="text-xs {% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'UNPAID' %}text-yellow-400{% elif order.payment_status == 'FAILED' %}text-red-400{% else %}text-gray-400{% endif %}">
                                         {{ order.get_payment_status_display }}
                                     </span>
                                     <span class="text-xs text-gray-500 mt-1">{{ order.get_payment_method_display }}</span>

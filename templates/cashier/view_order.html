@@ -334,7 +334,7 @@
                     <div class="grid grid-cols-2 gap-3 mb-3">
                         <div class="bg-gray-800 p-3 rounded-lg">
                             <div class="text-xs text-gray-500 mb-1">Status</div>
-                            <div class="font-medium {% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'PENDING' %}text-yellow-400{% else %}text-red-400{% endif %}">
+                            <div class="font-medium {% if order.payment_status == 'PAID' %}text-green-400{% elif order.payment_status == 'UNPAID' %}text-yellow-400{% else %}text-red-400{% endif %}">
                                 {{ order.get_payment_status_display }}
                             </div>
                         </div>

@@ -464,11 +464,16 @@ class Command(BaseCommand):
                 last_name='User'
             )
 
-            # Create or update staff profile
-            if hasattr(admin_user, 'staff_profile'):
+            # Update staff profile (it should already exist due to the signal)
+            try:
+                admin_user.refresh_from_db()  # Refresh to ensure we have the latest data
                 admin_user.staff_profile.role = 'ADMIN'
+                admin_user.staff_profile.phone = '09123456789'
                 admin_user.staff_profile.save()
-            else:
+                self.stdout.write(self.style.SUCCESS('Admin staff profile updated'))
+            except StaffProfile.DoesNotExist:
+                self.stdout.write(self.style.WARNING('Admin staff profile not found, this is unusual'))
+                # Only create if it doesn't exist (which shouldn't happen due to signals)
                 StaffProfile.objects.create(
                     user=admin_user,
                     role='ADMIN',
@@ -488,12 +493,21 @@ class Command(BaseCommand):
                 is_staff=True
             )
 
-            # Create staff profile
-            StaffProfile.objects.create(
-                user=manager_user,
-                role='MANAGER',
-                phone='09123456788'
-            )
+            # Update staff profile (it should already exist due to the signal)
+            try:
+                manager_user.refresh_from_db()  # Refresh to ensure we have the latest data
+                manager_user.staff_profile.role = 'MANAGER'
+                manager_user.staff_profile.phone = '09123456788'
+                manager_user.staff_profile.save()
+                self.stdout.write(self.style.SUCCESS('Manager staff profile updated'))
+            except StaffProfile.DoesNotExist:
+                self.stdout.write(self.style.WARNING('Manager staff profile not found, this is unusual'))
+                # Only create if it doesn't exist (which shouldn't happen due to signals)
+                StaffProfile.objects.create(
+                    user=manager_user,
+                    role='MANAGER',
+                    phone='09123456788'
+                )
 
             self.stdout.write(self.style.SUCCESS('Manager user created'))
 
@@ -508,12 +522,21 @@ class Command(BaseCommand):
                 is_staff=True
             )
 
-            # Create staff profile
-            StaffProfile.objects.create(
-                user=cashier_user,
-                role='CASHIER',
-                phone='09123456787'
-            )
+            # Update staff profile (it should already exist due to the signal)
+            try:
+                cashier_user.refresh_from_db()  # Refresh to ensure we have the latest data
+                cashier_user.staff_profile.role = 'CASHIER'
+                cashier_user.staff_profile.phone = '09123456787'
+                cashier_user.staff_profile.save()
+                self.stdout.write(self.style.SUCCESS('Cashier staff profile updated'))
+            except StaffProfile.DoesNotExist:
+                self.stdout.write(self.style.WARNING('Cashier staff profile not found, this is unusual'))
+                # Only create if it doesn't exist (which shouldn't happen due to signals)
+                StaffProfile.objects.create(
+                    user=cashier_user,
+                    role='CASHIER',
+                    phone='09123456787'
+                )
 
             self.stdout.write(self.style.SUCCESS('Cashier user created'))
 

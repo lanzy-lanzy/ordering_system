@@ -138,10 +138,31 @@ class Reservation(models.Model):
         ordering = ['-date', '-time']
 
     def clean(self):
+        errors = {}
+
+        # Check required fields
+        if not self.date:
+            errors['date'] = "Reservation date is required"
+        if not self.time:
+            errors['time'] = "Reservation time is required"
+            # Return early if time is missing to avoid comparison errors
+            if errors:
+                raise ValidationError(errors)
+
+        # Check date is not in the past
         if self.date < timezone.now().date():
-            raise ValidationError("Reservation date cannot be in the past")
-        if self.date == timezone.now().date() and self.time < timezone.now().time():
-            raise ValidationError("Reservation time cannot be in the past")
+            errors['date'] = "Reservation date cannot be in the past"
+
+        # Only check time if the date is today
+        if self.date == timezone.now().date():
+            # Add a buffer of 30 minutes to allow for immediate reservations
+            current_time = timezone.now()
+            buffer_time = current_time + timezone.timedelta(minutes=30)
+            if self.time < buffer_time.time():
+                errors['time'] = "Reservation time must be at least 30 minutes in the future"
+
+        if errors:
+            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -183,7 +204,7 @@ class Order(models.Model):
     ]
 
     PAYMENT_STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
+        ('UNPAID', 'Unpaid'),
         ('PAID', 'Paid'),
         ('FAILED', 'Failed'),
         ('REFUNDED', 'Refunded'),
@@ -197,7 +218,7 @@ class Order(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     order_type = models.CharField(max_length=20, choices=ORDER_TYPE_CHOICES, default='DELIVERY')
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='CASH')
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='PENDING')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='UNPAID')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     delivery_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)

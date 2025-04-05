@@ -162,7 +162,7 @@ def new_order(request):
                 total_amount += price * quantity
 
             # Set default payment status and order status based on order type
-            payment_status = 'PAID' if order_type == 'DINE_IN' else 'PENDING'
+            payment_status = 'PAID' if order_type == 'DINE_IN' else 'UNPAID'
             payment_method = 'CASH_ON_HAND' if order_type == 'DINE_IN' else 'PENDING'
             order_status = 'PREPARING' if order_type == 'DINE_IN' else 'PENDING'
 

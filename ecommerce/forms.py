@@ -177,12 +177,28 @@ class ReservationForm(forms.ModelForm):
         date = cleaned_data.get('date')
         time = cleaned_data.get('time')
 
+        # Check if date and time are provided
+        if not date:
+            self.add_error('date', "Reservation date is required")
+            return cleaned_data
+        if not time:
+            self.add_error('time', "Reservation time is required")
+            return cleaned_data
+
         # Check if date is in the past
-        if date and date < timezone.now().date():
+        if date < timezone.now().date():
             self.add_error('date', "Reservation date cannot be in the past")
+            return cleaned_data
 
         # Check if time is in the past for today's reservations
-        if date and time and date == timezone.now().date() and time < timezone.now().time():
-            self.add_error('time', "Reservation time cannot be in the past")
+        # Only check if the date is today
+        if date == timezone.now().date():
+            # Add a buffer of 30 minutes to allow for immediate reservations
+            current_time = timezone.now()
+            buffer_time = current_time + timezone.timedelta(minutes=30)
+            if time < buffer_time.time():
+                self.add_error('time', "Reservation time must be at least 30 minutes in the future")
+                # Log for debugging
+                print(f"Time validation failed: Current time: {current_time.time()}, Buffer time: {buffer_time.time()}, Selected time: {time}")
 
         return cleaned_data

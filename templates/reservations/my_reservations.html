@@ -123,7 +123,7 @@
         <div class="p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold text-white">Reservation Details</h3>
-                <button id="close-reservation-modal" class="text-gray-400 hover:text-white">
+                <button id="close-details-modal" class="text-gray-400 hover:text-white">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -140,7 +140,7 @@
 
 <!-- Reservation Modal -->
 <div id="reservation-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 hidden">
-    <div class="bg-gray-800 rounded-lg shadow-lg max-w-3xl w-full mx-4 border border-gray-700 overflow-y-auto max-h-[90vh]">
+    <div class="bg-gray-800 rounded-lg shadow-lg max-w-4xl w-full mx-4 border border-gray-700 overflow-y-auto max-h-[90vh]">
         <div class="p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-white">Make a Reservation</h3>
@@ -150,65 +150,7 @@
             </div>
 
             <div id="reservation-form-container">
-                <form id="reservation-form" method="post" action="{% url 'make_reservation' %}" class="space-y-6">
-                    {% csrf_token %}
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="id_name" class="block text-white font-medium mb-2">Name</label>
-                            <input type="text" name="name" id="id_name" value="{{ request.user.get_full_name }}" required
-                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
-                        </div>
-
-                        <div>
-                            <label for="id_email" class="block text-white font-medium mb-2">Email</label>
-                            <input type="email" name="email" id="id_email" value="{{ request.user.email }}" required
-                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="id_phone" class="block text-white font-medium mb-2">Phone Number</label>
-                        <input type="text" name="phone" id="id_phone" value="{{ request.user.customer_profile.phone }}" required
-                               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="id_date" class="block text-white font-medium mb-2">Date</label>
-                            <input type="date" name="date" id="id_date" required
-                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
-                            <p class="text-gray-500 text-xs mt-1">Select the date for your reservation</p>
-                        </div>
-
-                        <div>
-                            <label for="id_time" class="block text-white font-medium mb-2">Time</label>
-                            <input type="time" name="time" id="id_time" required
-                                   class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
-                            <p class="text-gray-500 text-xs mt-1">Select the time for your reservation</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="id_party_size" class="block text-white font-medium mb-2">Number of Guests</label>
-                        <input type="number" name="party_size" id="id_party_size" min="1" max="20" value="2" required
-                               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold">
-                        <p class="text-gray-500 text-xs mt-1">Number of guests (maximum 20)</p>
-                    </div>
-
-                    <div>
-                        <label for="id_special_requests" class="block text-white font-medium mb-2">Special Requests</label>
-                        <textarea name="special_requests" id="id_special_requests" rows="3"
-                                  class="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-food-gold"></textarea>
-                        <p class="text-gray-500 text-xs mt-1">Any special requests or notes for your reservation</p>
-                    </div>
-
-                    <div class="flex justify-end">
-                        <button type="submit" class="bg-food-gold hover:bg-food-gold-light text-black font-bold py-3 px-6 rounded-lg transition duration-300">
-                            Submit Reservation
-                        </button>
-                    </div>
-                </form>
+                {% include 'reservations/reservation_form_modal.html' %}
             </div>
 
             <div id="reservation-success" class="hidden text-center py-8">
@@ -242,7 +184,79 @@
 </div>
 
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>
+<style>
+    @keyframes pulse-border {
+        0% {
+            box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(234, 179, 8, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
+        }
+    }
+
+    .pulse-animation {
+        animation: pulse-border 2s infinite;
+    }
+</style>
 <script>
+    // Note: We're using a simpler approach for form submission
+    // Alpine.js component initialization
+    function reservationFormData() {
+        return {
+            showMenuItems: false,
+            selectedTable: '',
+            selectedMenuItems: [],
+
+            // Add menu item to selection
+            addMenuItem(id, name, price) {
+                // Check if item already exists
+                const existingItem = this.selectedMenuItems.find(item => item.id === id);
+
+                if (existingItem) {
+                    // Increment quantity if already exists
+                    existingItem.quantity += 1;
+                } else {
+                    // Add new item
+                    this.selectedMenuItems.push({
+                        id: id,
+                        name: name,
+                        price: parseFloat(price),
+                        quantity: 1
+                    });
+                }
+            },
+
+            // Remove menu item from selection
+            removeMenuItem(id) {
+                const index = this.selectedMenuItems.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    this.selectedMenuItems.splice(index, 1);
+                }
+            },
+
+            // Update quantity of menu item
+            updateQuantity(id, newQuantity) {
+                const item = this.selectedMenuItems.find(item => item.id === id);
+                if (item) {
+                    if (newQuantity <= 0) {
+                        this.removeMenuItem(id);
+                    } else {
+                        item.quantity = newQuantity;
+                    }
+                }
+            },
+
+            // Calculate total price
+            get totalPrice() {
+                return this.selectedMenuItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2);
+            }
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Reservation Modal
         const reservationModal = document.getElementById('reservation-modal');
@@ -265,9 +279,29 @@
 
         // Set minimum date to today
         const dateInput = document.getElementById('id_date');
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.min = today;
-        dateInput.value = today;
+        if (dateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.min = today;
+            dateInput.value = today;
+        }
+
+        // Set a default time that's at least 30 minutes in the future
+        const timeInput = document.getElementById('id_time');
+        if (timeInput) {
+            const now = new Date();
+            const minTime = new Date(now.getTime() + 30 * 60000); // current time + 30 minutes
+
+            // Round up to nearest half hour
+            const minutes = minTime.getMinutes();
+            if (minutes % 30 !== 0) {
+                minTime.setMinutes(Math.ceil(minutes / 30) * 30);
+            }
+
+            // Format as HH:MM
+            const hours = minTime.getHours().toString().padStart(2, '0');
+            const mins = minTime.getMinutes().toString().padStart(2, '0');
+            timeInput.value = `${hours}:${mins}`;
+        }
 
         // Open reservation modal
         openReservationModalBtn.addEventListener('click', function(e) {
@@ -298,69 +332,162 @@
         }
 
         // Make another reservation
-        makeAnotherReservationBtn.addEventListener('click', function() {
-            reservationSuccess.classList.add('hidden');
-            reservationFormContainer.classList.remove('hidden');
-            reservationForm.reset();
-            dateInput.value = today;
-        });
+        if (makeAnotherReservationBtn) {
+            makeAnotherReservationBtn.addEventListener('click', function() {
+                reservationSuccess.classList.add('hidden');
+                reservationFormContainer.classList.remove('hidden');
+                if (reservationForm) {
+                    reservationForm.reset();
+                    if (dateInput) {
+                        dateInput.value = today;
+                    }
+                }
+            });
+        }
 
         // Try again after error
-        tryAgainBtn.addEventListener('click', function() {
-            reservationError.classList.add('hidden');
-            reservationFormContainer.classList.remove('hidden');
-        });
+        if (tryAgainBtn) {
+            tryAgainBtn.addEventListener('click', function() {
+                reservationError.classList.add('hidden');
+                reservationFormContainer.classList.remove('hidden');
+
+                // Update the time field to ensure it's valid
+                const timeInput = document.getElementById('id_time');
+                if (timeInput) {
+                    const now = new Date();
+                    const minTime = new Date(now.getTime() + 30 * 60000); // current time + 30 minutes
+
+                    // Round up to nearest half hour
+                    const minutes = minTime.getMinutes();
+                    if (minutes % 30 !== 0) {
+                        minTime.setMinutes(Math.ceil(minutes / 30) * 30);
+                    }
+
+                    // Format as HH:MM
+                    const hours = minTime.getHours().toString().padStart(2, '0');
+                    const mins = minTime.getMinutes().toString().padStart(2, '0');
+                    timeInput.value = `${hours}:${mins}`;
+                }
+            });
+        }
 
         // Handle form submission
-        reservationForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+        if (reservationForm) {
+            reservationForm.addEventListener('submit', function(e) {
+                e.preventDefault();
 
-            // Show loading state
-            const submitBtn = reservationForm.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Submitting...';
-
-            // Get form data
-            const formData = new FormData(reservationForm);
-
-            // Send AJAX request
-            fetch(reservationForm.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                // Validate the form
+                const tableInput = document.getElementById('table_number');
+                if (!tableInput || !tableInput.value) {
+                    alert('Please select a table for your reservation.');
+                    return;
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
 
-                if (data.success) {
-                    // Show success message
-                    reservationFormContainer.classList.add('hidden');
-                    reservationSuccess.classList.remove('hidden');
-                } else {
-                    // Show error message with details
-                    errorMessage.textContent = data.message || 'There was an error submitting your reservation. Please try again.';
+                // Set a default time that's at least 30 minutes in the future
+                const timeInput = document.getElementById('id_time');
+                if (timeInput) {
+                    // Check if date is today and time is at least 30 minutes in the future
+                    const dateInput = document.getElementById('id_date');
+                    const today = new Date().toISOString().split('T')[0];
+                    if (dateInput && dateInput.value === today) {
+                        const now = new Date();
+                        const selectedTime = new Date(today + 'T' + timeInput.value);
+                        const minTime = new Date(now.getTime() + 30 * 60000); // current time + 30 minutes
+
+                        if (selectedTime < minTime) {
+                            // Update the time to be valid
+                            const validTime = new Date(minTime.getTime());
+                            // Round up to nearest half hour
+                            const minutes = validTime.getMinutes();
+                            if (minutes % 30 !== 0) {
+                                validTime.setMinutes(Math.ceil(minutes / 30) * 30);
+                            }
+
+                            // Format as HH:MM
+                            const hours = validTime.getHours().toString().padStart(2, '0');
+                            const mins = validTime.getMinutes().toString().padStart(2, '0');
+                            timeInput.value = `${hours}:${mins}`;
+
+                            alert(`The time has been adjusted to ${hours}:${mins} to ensure it's at least 30 minutes in the future.`);
+                        }
+                    }
+                }
+
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const originalBtnText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Submitting...';
+
+                // Get form data
+                const formData = new FormData(this);
+
+                // Add AJAX header
+                const headers = new Headers();
+                headers.append('X-Requested-With', 'XMLHttpRequest');
+
+                // Submit the form via AJAX
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: headers
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Reset button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+
+                    if (data.success) {
+                        // Always redirect to payment page
+                        if (data.redirect_url) {
+                            console.log('Redirecting to:', data.redirect_url);
+                            window.location.href = data.redirect_url;
+                        } else if (data.reservation_id) {
+                            // Construct the URL if redirect_url is not provided but reservation_id is
+                            const paymentUrl = `/reservations/${data.reservation_id}/payment/`;
+                            console.log('Redirecting to constructed URL:', paymentUrl);
+                            window.location.href = paymentUrl;
+                        } else {
+                            // Fallback to success message if no redirect information is available
+                            console.log('No redirect information available, showing success message');
+                            reservationFormContainer.classList.add('hidden');
+                            reservationSuccess.classList.remove('hidden');
+                        }
+                    } else {
+                        // Show error message
+                        const errorText = document.getElementById('error-message');
+                        if (errorText) {
+                            if (data.errors) {
+                                let errorMsg = '';
+                                for (const field in data.errors) {
+                                    errorMsg += data.errors[field].join(' ') + ' ';
+                                }
+                                errorText.textContent = errorMsg || 'Please correct the errors below.';
+                            } else {
+                                errorText.textContent = data.message || 'There was an error submitting your reservation.';
+                            }
+                        }
+                        reservationFormContainer.classList.add('hidden');
+                        reservationError.classList.remove('hidden');
+                    }
+                })
+                .catch(error => {
+                    // Reset button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+
+                    // Show error message
+                    const errorText = document.getElementById('error-message');
+                    if (errorText) {
+                        errorText.textContent = 'There was an error submitting your reservation. Please try again.';
+                    }
                     reservationFormContainer.classList.add('hidden');
                     reservationError.classList.remove('hidden');
-                }
-            })
-            .catch(error => {
-                // Reset button state
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-
-                // Show error message
-                errorMessage.textContent = 'There was an error submitting your reservation. Please try again.';
-                reservationFormContainer.classList.add('hidden');
-                reservationError.classList.remove('hidden');
-                console.error('Error:', error);
+                    console.error('Error:', error);
+                });
             });
-        });
+        }
 
         // Reservation details modal functions
         function openReservationDetailsModal(reservationId) {
@@ -435,14 +562,18 @@
             });
         });
 
-        closeDetailsModalBtn.addEventListener('click', closeReservationDetailsModal);
+        if (closeDetailsModalBtn) {
+            closeDetailsModalBtn.addEventListener('click', closeReservationDetailsModal);
+        }
 
         // Close modal when clicking outside
-        reservationDetailsModal.addEventListener('click', function(e) {
-            if (e.target === reservationDetailsModal) {
-                closeReservationDetailsModal();
-            }
-        });
+        if (reservationDetailsModal) {
+            reservationDetailsModal.addEventListener('click', function(e) {
+                if (e.target === reservationDetailsModal) {
+                    closeReservationDetailsModal();
+                }
+            });
+        }
     });
 </script>
 {% endblock extra_scripts %}
