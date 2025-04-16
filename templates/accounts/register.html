@@ -224,7 +224,7 @@
 
                 <!-- City, State, Zip -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div>
+                    {% comment %} <div>
                         <label for="{{ form.city.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">City</label>
                         <div class="flex items-center relative bg-gray-700 border border-gray-600 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-yellow-500 focus-within:border-yellow-500">
                             <div class="px-3 py-3 bg-gray-600 flex items-center justify-center">
@@ -251,7 +251,7 @@
                         {% if form.state.errors %}
                         <p class="text-red-500 text-xs mt-1">{{ form.state.errors.0 }}</p>
                         {% endif %}
-                    </div>
+                    </div> {% endcomment %}
                     <div>
                         <label for="{{ form.zip_code.id_for_label }}" class="block text-sm font-medium text-gray-400 mb-1">ZIP Code</label>
                         <div class="flex items-center relative bg-gray-700 border border-gray-600 rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-yellow-500 focus-within:border-yellow-500">
